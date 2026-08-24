@@ -1,0 +1,1061 @@
+<meta charset="utf-8">
+<title>TAS Tree Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ============================================================
+   TOKENS — light is the bare :root; dark redefines tokens only.
+   ============================================================ */
+:root{
+  --bg:#f2f5f3; --grid:#e2e8e4;
+  --surface:#ffffff; --surface-2:#eaefeb; --surface-3:#e0e7e2;
+  --ink:#16242a; --muted:#54635f; --faint:#7f8d88;
+  --accent:#2c6b64; --accent-2:#3c8d7f; --accent-soft:#dcebe7; --accent-ink:#1c4b46;
+  --border:#d7e0da; --border-strong:#c1ccc5;
+  --risk:#a5721a; --risk-bg:#f6eed8; --risk-line:#c9922a;
+  --good:#2f7d5b; --good-bg:#dcefe4;
+  --alert:#b23a2e; --alert-bg:#f7e3df;
+  --dim:#a8b4af;
+  --on-accent:#ffffff;
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(22,36,42,.05),0 6px 18px rgba(22,36,42,.07);
+  --shadow-lift:0 2px 8px rgba(22,36,42,.09),0 16px 36px rgba(22,36,42,.13);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1518; --grid:#1b2528;
+    --surface:#172023; --surface-2:#1d282b; --surface-3:#243033;
+    --ink:#e6ebe8; --muted:#a0aeaa; --faint:#7d8b87;
+    --accent:#62b5aa; --accent-2:#7ac9bb; --accent-soft:#1a3835; --accent-ink:#a4ddd5;
+    --border:#293537; --border-strong:#39474a;
+    --risk:#dca544; --risk-bg:#33290f; --risk-line:#a87c26;
+    --good:#71c99c; --good-bg:#183025;
+    --alert:#e58274; --alert-bg:#35201d;
+    --dim:#4d5a5d;
+    --on-accent:#07201d;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.4);
+    --shadow-lift:0 2px 8px rgba(0,0,0,.4),0 18px 40px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1518; --grid:#1b2528;
+  --surface:#172023; --surface-2:#1d282b; --surface-3:#243033;
+  --ink:#e6ebe8; --muted:#a0aeaa; --faint:#7d8b87;
+  --accent:#62b5aa; --accent-2:#7ac9bb; --accent-soft:#1a3835; --accent-ink:#a4ddd5;
+  --border:#293537; --border-strong:#39474a;
+  --risk:#dca544; --risk-bg:#33290f; --risk-line:#a87c26;
+  --good:#71c99c; --good-bg:#183025;
+  --alert:#e58274; --alert-bg:#35201d;
+  --dim:#4d5a5d;
+  --on-accent:#07201d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.4);
+  --shadow-lift:0 2px 8px rgba(0,0,0,.4),0 18px 40px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--accent-ink);text-underline-offset:2px}
+
+/* ============================================================ LAYOUT */
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+header.bar{
+  flex:none;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:12px clamp(12px,2.5vw,22px);
+  background:var(--surface);border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow);z-index:5;
+}
+.title-wrap{min-width:0;flex:1}
+.kick{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);display:block}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(17px,2.3vw,22px);line-height:1.15;margin:1px 0 0;letter-spacing:-.01em}
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.btn{
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);
+  border-radius:9px;padding:7px 12px;font-size:13.5px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.solid:hover{filter:brightness(1.06);color:var(--on-accent)}
+.btn.icon{padding:7px 9px}
+.btn svg{width:15px;height:15px;flex:none}
+
+.seg{display:flex;border:1px solid var(--border-strong);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{border:none;background:transparent;color:var(--muted);padding:7px 13px;font-size:13.5px;font-weight:600;transition:.15s}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:not([aria-pressed="true"]):hover{color:var(--accent-ink);background:var(--surface-2)}
+.seg button:focus-visible{outline:3px solid var(--accent-soft);outline-offset:-3px}
+
+.main{flex:1;display:flex;min-height:0}
+@media (max-width:900px){ .main{flex-direction:column} }
+
+/* ---------------- graph ---------------- */
+.stage{position:relative;flex:1;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
+@media (max-width:900px){ .stage{flex:none;height:56vh} }
+#svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#svg.grabbing{cursor:grabbing}
+
+.zoomer{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:3}
+.zoomer .btn{background:var(--surface);box-shadow:var(--shadow)}
+
+.legend{
+  position:absolute;right:12px;top:12px;z-index:3;background:var(--surface);
+  border:1px solid var(--border);border-radius:11px;padding:10px 12px;box-shadow:var(--shadow);
+  font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px;max-width:200px;
+}
+.legend .lh{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.legend .row{display:flex;align-items:center;gap:7px}
+.legend .sw{width:14px;height:11px;border-radius:3px;border:1.5px solid var(--border-strong);background:var(--surface-2);flex:none}
+.legend .sw.q{border-color:var(--accent);background:var(--accent-soft)}
+.legend .sw.r{border-color:var(--risk-line);background:var(--risk-bg)}
+.legend .sw.o{border-color:var(--good);background:var(--good-bg)}
+@media (max-width:620px){ .legend{display:none} }
+
+.hint{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:3;
+  background:var(--surface);border:1px solid var(--border);border-radius:999px;
+  padding:6px 14px;font-size:12.5px;color:var(--muted);box-shadow:var(--shadow);
+  pointer-events:none;max-width:calc(100% - 130px);text-align:center;
+}
+
+/* SVG node styling */
+.node{cursor:pointer}
+.node .card{fill:var(--surface);stroke:var(--border-strong);stroke-width:1.5}
+.node.t-decision .card{stroke:var(--accent)}
+.node.t-start .card{fill:var(--accent);stroke:var(--accent)}
+.node.t-risk .card{fill:var(--risk-bg);stroke:var(--risk-line)}
+.node.t-outcome .card,.node.t-result .card{fill:var(--good-bg);stroke:var(--good)}
+.node .ttl{font-family:var(--sans);font-size:13.5px;font-weight:650;fill:var(--ink)}
+.node.t-start .ttl{fill:var(--on-accent)}
+.node .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;fill:var(--accent);text-transform:uppercase}
+.node.t-risk .eyebrow{fill:var(--risk)}
+.node.t-outcome .eyebrow,.node.t-result .eyebrow{fill:var(--good)}
+.node.t-start .eyebrow{fill:var(--on-accent);opacity:.85}
+.node .meta{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+
+.node.on-path .card{stroke-width:2.5;filter:url(#glow)}
+.node.current .card{stroke-width:3}
+.node.current .pulse{fill:none;stroke:var(--accent);stroke-width:2;opacity:.5}
+.node.off .card,.node.off .ttl,.node.off .eyebrow,.node.off .meta{opacity:.34}
+.node.reachable .card{stroke-dasharray:6 4}
+.node:hover .card{stroke:var(--accent);filter:url(#glow)}
+.node:focus{outline:none}
+.node:focus-visible .card{stroke:var(--accent);stroke-width:3}
+.node .focusring{fill:none;stroke:var(--accent);stroke-width:2.5;opacity:0;rx:14}
+.node:focus-visible .focusring{opacity:1}
+
+.edge{fill:none;stroke:var(--border-strong);stroke-width:1.8}
+.edge.grant{stroke-dasharray:5 4;stroke:var(--dim)}
+.edge.on-path{stroke:var(--accent);stroke-width:3}
+.edge.off{opacity:.3}
+.elabel{font-family:var(--sans);font-size:10.5px;font-weight:600;fill:var(--muted)}
+.elabel.on-path{fill:var(--accent-ink)}
+.ebg{fill:var(--bg);stroke:var(--border);stroke-width:1;rx:5}
+.ebg.on-path{fill:var(--accent-soft);stroke:var(--accent)}
+.egroup.off{opacity:.3}
+
+/* ---------------- panel ---------------- */
+.panel{
+  flex:none;width:min(400px,42vw);border-left:1px solid var(--border);
+  background:var(--surface);display:flex;flex-direction:column;min-height:0;
+}
+@media (max-width:900px){
+  .panel{width:auto;flex:1;border-left:none;border-top:1px solid var(--border);min-height:0}
+}
+.pscroll{overflow-y:auto;padding:18px clamp(14px,2vw,20px) 26px;min-height:0}
+
+.crumbs{display:flex;flex-wrap:wrap;gap:5px;padding:11px clamp(14px,2vw,20px);border-bottom:1px solid var(--border);background:var(--surface-2);flex:none}
+.crumbs .c{font-size:11.5px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 9px;color:var(--muted);white-space:nowrap}
+.crumbs .c b{color:var(--ink);font-weight:600}
+.crumbs .none{font-size:11.5px;color:var(--faint)}
+
+.peyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 7px}
+.ptitle{font-family:var(--serif);font-weight:600;font-size:clamp(19px,2.6vw,24px);line-height:1.18;margin:0 0 9px;letter-spacing:-.005em;text-wrap:balance}
+.phelp{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+
+.riskbox{background:var(--risk-bg);border:1px solid var(--risk-line);border-radius:11px;padding:12px 14px;margin:0 0 16px}
+.riskbox .rh{font-weight:700;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--risk);margin-bottom:5px;display:flex;gap:6px;align-items:center}
+.riskbox p{margin:0;font-size:13.5px;color:var(--ink)}
+
+.answers{display:grid;gap:9px;margin-top:4px}
+.ans{
+  display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;
+  background:var(--surface);border:1.5px solid var(--border-strong);border-radius:11px;
+  padding:12px 13px;color:var(--ink);transition:transform .12s,border-color .15s,box-shadow .15s;
+}
+.ans:hover{border-color:var(--accent);box-shadow:var(--shadow-lift);transform:translateY(-1px)}
+.ans:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
+.ans .k{flex:none;width:22px;height:22px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border-strong);
+  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--accent);margin-top:1px}
+.ans:hover .k{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ans .tx{flex:1;min-width:0}
+.ans .al{display:block;font-weight:650;font-size:14.5px}
+.ans .an{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.ans .gr{display:inline-block;margin-top:5px;font-family:var(--mono);font-size:10.5px;color:var(--good);background:var(--good-bg);border-radius:5px;padding:2px 6px}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
+.sx{font-family:var(--mono);font-size:11.5px;background:var(--accent-soft);color:var(--accent-ink);border-radius:6px;padding:3px 7px}
+
+.card2{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin:0 0 12px;box-shadow:var(--shadow)}
+.card2.key{border-left:4px solid var(--accent)}
+.card2.warn{border-left:4px solid var(--risk);background:var(--risk-bg)}
+.card2.danger{border-left:4px solid var(--alert);background:var(--alert-bg)}
+.card2.soft{border-left:4px solid var(--good)}
+.card2 .rk{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.card2.warn .rk{color:var(--risk)} .card2.danger .rk{color:var(--alert)} .card2.soft .rk{color:var(--good)}
+.card2 h3{font-family:var(--serif);font-weight:600;font-size:17px;margin:0 0 7px;line-height:1.25}
+.card2 p{margin:0 0 8px;font-size:14px}
+.card2 p.m{color:var(--muted)}
+.card2 p:last-child{margin-bottom:0}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0}
+@media (max-width:1150px){ .two{grid-template-columns:1fr} }
+.mini{border:1px dashed var(--border-strong);border-radius:9px;padding:10px 11px;background:var(--surface)}
+.mini .mh{font-weight:650;font-size:13px;margin-bottom:2px}
+.mini .md{font-size:12.5px;color:var(--muted)}
+
+.check{list-style:none;padding:0;margin:6px 0 0}
+.check li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);font-size:13.5px}
+.check li:first-child{border-top:none}
+.check .cx{flex:none;width:19px;height:19px;border-radius:5px;background:var(--good-bg);color:var(--good);display:grid;place-items:center;margin-top:1px}
+.check .cx svg{width:12px;height:12px}
+.check li b{font-weight:650}
+.check li span.d{color:var(--muted);font-size:12.5px;display:block}
+
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:6px 0 0;display:grid;gap:9px}
+ol.steps li{counter-increment:s;position:relative;padding-left:34px;font-size:13.5px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:23px;height:23px;border-radius:6px;
+  background:var(--accent);color:var(--on-accent);font-family:var(--serif);font-weight:600;display:grid;place-items:center;font-size:12.5px}
+ol.steps .d{color:var(--muted);font-size:12.5px}
+
+.sectitle{font-weight:700;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:24px 0 10px}
+.reflinks{display:flex;flex-direction:column;gap:5px;margin-top:6px;font-size:13.5px}
+.disc{font-size:11.5px;color:var(--faint);border-top:1px solid var(--border);margin-top:22px;padding-top:13px}
+.inspect{font-size:12.5px;color:var(--muted);background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:9px;padding:9px 11px;margin-bottom:14px}
+.inspect b{color:var(--ink)}
+
+.anim{animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes ping{0%{r:6;opacity:.55}100%{r:26;opacity:0}}
+.node.current .pulse{animation:ping 2.1s ease-out infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------------- print ---------------- */
+#printSummary{display:none}
+@media print{
+  body{overflow:visible;background:#fff;color:#000}
+  .shell{display:none!important}
+  #printSummary{display:block;padding:0;font-size:11pt;color:#000}
+  #printSummary h2{font-family:var(--serif);font-size:19pt;margin:0 0 4pt}
+  #printSummary h3{font-size:12pt;margin:14pt 0 4pt;border-bottom:1px solid #999;padding-bottom:2pt}
+  #printSummary .pc{display:inline-block;border:1px solid #999;border-radius:9pt;padding:1pt 6pt;margin:2pt 3pt 2pt 0;font-size:9pt}
+  #printSummary .psx{font-family:var(--mono);font-size:9pt;border:1px solid #bbb;border-radius:3pt;padding:1pt 4pt;margin:2pt 3pt 2pt 0;display:inline-block}
+  #printSummary ul{margin:4pt 0;padding-left:16pt}
+  #printSummary li{margin:3pt 0}
+  #printSummary .pd{font-size:8.5pt;color:#444;border-top:1px solid #999;margin-top:14pt;padding-top:6pt}
+  #printSummary .sub{color:#333;font-size:10pt;margin:0 0 8pt}
+}
+</style>
+
+<div class="shell">
+  <header class="bar">
+    <div class="title-wrap">
+      <span class="kick">Clean Air Act · Treated as a State</span>
+      <h1>TAS Decision Tree</h1>
+    </div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="View mode">
+        <button id="mExplore" aria-pressed="true">Explore</button>
+        <button id="mGuided" aria-pressed="false">Step me through</button>
+      </div>
+      <button class="btn" id="btnPrint" title="Print or save a PDF summary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+        Print
+      </button>
+      <button class="btn" id="btnReset">Reset</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage">
+      <svg id="svg" role="application" aria-label="Interactive TAS decision tree. Use Tab to move between nodes and Enter to choose."></svg>
+      <div class="zoomer">
+        <button class="btn icon" id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="btn icon" id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+        <button class="btn icon" id="zFit" aria-label="Fit tree to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg></button>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="lh">Legend</span>
+        <span class="row"><span class="sw q"></span> Question</span>
+        <span class="row"><span class="sw r"></span> Risk decision</span>
+        <span class="row"><span class="sw o"></span> Outcome</span>
+        <span class="row" style="margin-top:2px;color:var(--faint)">Drag to pan · scroll to zoom</span>
+      </div>
+      <div class="hint" id="hint">Click an answer, or click the next node on the tree</div>
+    </div>
+
+    <aside class="panel">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="pscroll" id="pscroll"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="printSummary"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   1. THE TREE DATA  —  edit this object to change the tool's content.
+      Every node: { type, lane, eyebrow, title, help, risk, answers[] }
+        type   : 'start' | 'decision' | 'risk' | 'outcome' | 'result'
+        lane   : horizontal offset in lane-units (0 = centre spine)
+        answers: [{ label, short, note, to, grants }]
+                 to     -> id of the next node
+                 grants -> id of an outcome this answer adds to the result
+      Vertical position (layer) is COMPUTED by longest-path from the root.
+   ========================================================================== */
+var NODES = {
+  root:{
+    type:'start', lane:0, eyebrow:'Start here',
+    title:'Should our Tribe seek TAS — and for what?',
+    help:'This tool walks the same questions EPA and your counsel would ask. It reflects the eligibility criteria at 40 CFR Part 49 and maps your situation to the Clean Air Act sections you may want to pursue.',
+    answers:[{label:'Begin', short:'Begin', to:'q1'}]
+  },
+  q1:{
+    type:'decision', lane:0, eyebrow:'Question 1 · Boundaries',
+    title:'Are any of the Tribe’s jurisdictional boundaries disputed?',
+    help:'For a reservation this is the exterior boundary. For off-reservation areas it is the legal basis for your jurisdiction. When you apply, EPA must share your boundary showing with neighbouring state and local air agencies, who may comment on it.',
+    answers:[
+      {label:'No — our boundaries are clear', short:'No — clear', note:'No known dispute over our reservation boundary or jurisdictional basis.', to:'q2'},
+      {label:'Yes — some or all are disputed', short:'Yes — disputed', note:'One or more neighbouring governments contest our boundaries or jurisdiction.', to:'q1b'},
+      {label:'We’re not sure yet', short:'Not sure', note:'Not confirmed with counsel — we will treat it cautiously.', to:'q1b'}
+    ]
+  },
+  q1b:{
+    type:'risk', lane:0, eyebrow:'Question 1b · Boundary risk',
+    title:'How would you like to proceed?',
+    risk:'When you apply for TAS, EPA must provide your application and boundary showing to the appropriate governmental entities (state and local air agencies). They may comment and, after approval, challenge the boundaries in court. An adverse ruling could <b>narrow the CAA regulatory jurisdiction EPA recognizes</b> for the Tribe. This does <b>not</b> affect land title or ownership — but it is a real strategic decision. Coordinate closely with Tribal counsel and Council.',
+    answers:[
+      {label:'Pursue TAS for undisputed areas only', short:'Undisputed only', note:'Apply now over clearly-undisputed lands, and affirm the disputed areas remain claimed but excluded for now.', to:'q2'},
+      {label:'Pursue TAS for our full claimed area', short:'Full area', note:'Accept the litigation risk and proceed with the full jurisdictional showing.', to:'q2'},
+      {label:'Don’t pursue TAS right now', short:'Don’t pursue', note:'Use non-TAS pathways instead.', to:'out_nontas'}
+    ]
+  },
+  q2:{
+    type:'decision', lane:0, eyebrow:'Question 2 · Sources',
+    title:'How many air-pollution sources are within your jurisdiction?',
+    help:'Sources include factories, power plants, large boilers and similar permitted or permittable facilities on your lands.',
+    answers:[
+      {label:'Many', short:'Many', note:'Multiple significant sources we may want to permit, inspect and enforce.', to:'q3', grants:'out_regulatory'},
+      {label:'A few, or a localized issue', short:'A few', note:'A small number of sources — or something like wood smoke we would address with an ordinance.', to:'q3', grants:'out_targeted'},
+      {label:'None or very few', short:'None/very few', note:'Little or no industrial activity on our lands.', to:'q3'}
+    ]
+  },
+  q3:{
+    type:'decision', lane:0, eyebrow:'Question 3 · Good neighbour',
+    title:'Do outside sources affect your air, or do you want a formal voice in nearby permits and plans?',
+    help:'This is the Clean Air Act “good neighbour” role: early review of, and standing to comment on, neighbouring states’ implementation plans and permits that could affect your air quality.',
+    answers:[
+      {label:'Yes', short:'Yes', note:'Outside sources impact us, or we want early review of others’ plans and permits.', to:'q4', grants:'out_participatory'},
+      {label:'No', short:'No', note:'Not a priority for us right now.', to:'q4'}
+    ]
+  },
+  q4:{
+    type:'decision', lane:0, eyebrow:'Question 4 · Capacity',
+    title:'Do you have the capacity to run an air program?',
+    help:'Staffing and data skills, plus the executive, legislative and judicial mechanisms to administer and enforce a program. Lacking capacity does not disqualify you — you may submit a plan showing how you will build it.',
+    answers:[
+      {label:'Yes, we’re ready', short:'Ready', note:'We have staff and the governmental mechanisms in place.', to:'results'},
+      {label:'Not yet — we’d need to build it', short:'Building', note:'We would grow into it, take delegation, or partner with others.', to:'results', grants:'out_capacity'},
+      {label:'Unsure', short:'Unsure', note:'We have not assessed this yet.', to:'results', grants:'out_capacity'}
+    ]
+  },
+
+  /* ---- outcome nodes ---- */
+  out_regulatory:{
+    type:'outcome', lane:1, eyebrow:'Regulatory TAS',
+    title:'Be the primary implementing authority',
+    body:'Develop and run the programs that permit, inspect and enforce on the sources in your jurisdiction. You choose <b>how</b>:',
+    options:[
+      {h:'Develop your own programs → EPA approval', d:'You tailor the rules and are the primary enforcer. Once approved they are federally enforceable.'},
+      {h:'Take delegation of federal rules', d:'No rule-writing — use existing federal rules (40 CFR part 71). You permit and inspect; enforcement is referred to EPA. A good capacity-building first step.'}
+    ],
+    sections:['§110 TIP','O₃ plans §§181–185','PM plans §§188–189','SO₂/NO₂/Pb §§191–192','CO plans §§186–187','Regional haze §169A','PSD §165','NSR §173','§167 enforcement','Title V §§501–507','§111 NSPS','§112 air toxics','§114 records','§129 solid-waste combustion','§303 emergency powers']
+  },
+  out_targeted:{
+    type:'outcome', lane:2, eyebrow:'Targeted Regulatory TAS',
+    title:'Address a specific, localized issue',
+    body:'Even with only a few sources a focused program can help — for example a burning ordinance for wood smoke under a Tribal Implementation Plan.',
+    sections:['§110 TIP','PM NAAQS']
+  },
+  out_participatory:{
+    type:'outcome', lane:1, eyebrow:'Participatory TAS',
+    title:'A formal “good neighbour” voice',
+    body:'Get early review of, and standing to comment on, neighbouring states’ plans and permits — and petition EPA when outside sources affect your air.',
+    sections:['§126(a)/(b)','§110(a)(2)(D)(i)','§505(a)','§105 grants','§319 monitoring','§107(d) designations']
+  },
+  out_capacity:{
+    type:'outcome', lane:1, eyebrow:'Capacity building',
+    title:'You can pursue TAS while you build capacity',
+    body:'Not being “ready” is not a barrier. Options that lower the lift:',
+    checks:[
+      {h:'Submit a capability plan', d:'Show EPA how you will gain the technical expertise over time.'},
+      {h:'Take delegation instead of writing rules', d:'Use federal rules under 40 CFR part 71 to start.'},
+      {h:'Phase your program', d:'Seek TAS for a few sections now, add more later.'},
+      {h:'Partner or form a consortium', d:'Share staff and expertise with neighbouring Tribes.'}
+    ]
+  },
+  out_nontas:{
+    type:'outcome', lane:-1.45, eyebrow:'No TAS required',
+    title:'Non-TAS pathways',
+    body:'You can protect your air and build capacity without TAS, and revisit once the boundary question is resolved.',
+    checks:[
+      {h:'Use your inherent Tribal authority', d:'Develop your own programs without submitting them to EPA for approval.'},
+      {h:'Grants', d:'§103 (investigative) grants need no TAS; §105 (programmatic) grants can flow through a Performance Partnership Grant (PPG). Note §105 without TAS carries the standard 40% match, whereas TAS reduces it to 5% (then up to 10%).'},
+      {h:'Run programs directly', d:'Monitoring, environmental education, indoor-air and radon programs — all without TAS.'}
+    ],
+    terminal:true
+  },
+  results:{
+    type:'result', lane:0, eyebrow:'Result',
+    title:'Your tailored pathway',
+    terminal:true
+  }
+};
+
+/* Content shown on every completed result */
+var CRITERIA = [
+  {h:'Federal recognition', d:'Listed by the Department of the Interior. § 49.6(a)'},
+  {h:'A governing body carrying out substantial duties', d:'A narrative on your government’s form, functions and source of authority. § 49.6(b)'},
+  {h:'A jurisdictional showing', d:'Reservation: map + legal description of exterior boundaries. Off-reservation: a statement of legal counsel on the basis for jurisdiction. § 49.6(c)'},
+  {h:'Reasonable capability — or a plan to build it', d:'§ 49.6(d). You may reuse documentation from a prior TAS approval per § 49.7(a)(8).'}
+];
+var NEXT_STEPS = [
+  {h:'Bring this result to Tribal leadership, Council and legal counsel.', d:'The boundary and sovereignty stakes make this a governance decision, not just a technical one.'},
+  {h:'Assemble your jurisdictional showing.', d:'Map and legal description (reservation), or a counsel statement (off-reservation).'},
+  {h:'Document your governing body and capability — or a plan to build it.', d:''},
+  {h:'Contact your EPA Regional Office Tribal air lead (or OAQPS).', d:'They can confirm scope and help streamline the application.'},
+  {h:'Review the detailed CAA-section summary before finalizing which sections to seek.', d:''}
+];
+var LINKS = [
+  {t:'CAA: Summary of content & applicability for TAS (Titles I, III, V)', u:'https://www.epa.gov/tribal-air/clean-air-act-summary-content-applicability-tas-titles-i-iii-and-v'},
+  {t:'Tribal Authority Rule (TAR) under the Clean Air Act', u:'https://www.epa.gov/tribal-air/tribal-authority-rule-tar-under-clean-air-act'}
+];
+var DISCLAIMER = 'General information to support your discussion — not legal advice, and not an official EPA product. Confirm all citations against 40 CFR Part 49 and the current Clean Air Act, and consult Tribal legal counsel before applying.';
+
+/* ============================================================================
+   2. LAYOUT  —  layers by longest-path, x from lane, sizes from wrapped text
+   ========================================================================== */
+var NODE_W=212, LANE_W=246, LAYER_H=150, PAD=15, LINE_H=17;
+var measurer=document.createElement('canvas').getContext('2d');
+
+function wrap(text,maxW,font){
+  measurer.font=font;
+  var words=String(text).split(/\s+/), lines=[], cur='';
+  for(var i=0;i<words.length;i++){
+    var test=cur?cur+' '+words[i]:words[i];
+    if(measurer.measureText(test).width>maxW && cur){ lines.push(cur); cur=words[i]; }
+    else cur=test;
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+/* successors of a node: answer targets + granted outcomes */
+function succ(id){
+  var n=NODES[id], out=[];
+  (n.answers||[]).forEach(function(a){
+    if(a.to) out.push(a.to);
+    if(a.grants) out.push(a.grants);
+  });
+  return out;
+}
+
+var LAYER={}, GRAPH={ids:[],pos:{},edges:[]};
+
+function computeLayers(){
+  LAYER={};
+  var ids=Object.keys(NODES);
+  ids.forEach(function(i){ LAYER[i]=0; });
+  /* longest-path relaxation (graph is a small DAG) */
+  for(var pass=0;pass<ids.length+2;pass++){
+    var changed=false;
+    ids.forEach(function(id){
+      succ(id).forEach(function(s){
+        if(LAYER[s]<LAYER[id]+1){ LAYER[s]=LAYER[id]+1; changed=true; }
+      });
+    });
+    if(!changed) break;
+  }
+}
+
+function buildGraph(){
+  computeLayers();
+  GRAPH={ids:Object.keys(NODES),pos:{},edges:[]};
+  var titleFont='650 13.5px '+getComputedStyle(document.body).fontFamily;
+
+  GRAPH.ids.forEach(function(id){
+    var n=NODES[id];
+    var lines=wrap(n.title,NODE_W-PAD*2,titleFont);
+    var h=PAD + 12 + lines.length*LINE_H + PAD - 2;
+    if(n.sections||n.checks||n.options) h+=13;
+    GRAPH.pos[id]={
+      x:(n.lane||0)*LANE_W, y:LAYER[id]*LAYER_H,
+      w:NODE_W, h:h, lines:lines, meta:metaFor(n)
+    };
+  });
+
+  /* edges */
+  GRAPH.ids.forEach(function(id){
+    var n=NODES[id];
+    (n.answers||[]).forEach(function(a,ai){
+      if(a.to) GRAPH.edges.push({from:id,to:a.to,label:a.short||a.label,ai:ai,kind:'answer'});
+      if(a.grants) GRAPH.edges.push({from:id,to:a.grants,label:'+ adds',ai:ai,kind:'grant'});
+    });
+  });
+}
+function metaFor(n){
+  if(n.sections) return n.sections.length+' CAA sections';
+  if(n.checks) return n.checks.length+' options';
+  if(n.options) return n.options.length+' ways to do it';
+  return '';
+}
+
+/* ============================================================================
+   3. STATE
+   ========================================================================== */
+var state={
+  path:[],        // [{node, ai}]  chosen steps
+  current:'root',
+  selected:'root',
+  collected:[],   // granted outcome ids, in order
+  guided:false,
+  done:false
+};
+
+function reachableFrom(id){
+  var n=NODES[id]; if(!n.answers) return [];
+  var r=[];
+  n.answers.forEach(function(a){ if(a.to && r.indexOf(a.to)<0) r.push(a.to); });
+  return r;
+}
+/* node ids that lie on the chosen path (incl. granted outcomes) */
+function pathNodes(){
+  var set={root:true};
+  state.path.forEach(function(st){
+    set[st.node]=true;
+    var a=NODES[st.node].answers[st.ai];
+    if(a.to) set[a.to]=true;
+    if(a.grants) set[a.grants]=true;
+  });
+  set[state.current]=true;
+  return set;
+}
+function pathEdgeKey(e){ return e.from+'>'+e.to+'#'+e.ai; }
+function pathEdges(){
+  var set={};
+  state.path.forEach(function(st){
+    var a=NODES[st.node].answers[st.ai];
+    if(a.to) set[st.node+'>'+a.to+'#'+st.ai]=true;
+    if(a.grants) set[st.node+'>'+a.grants+'#'+st.ai]=true;
+  });
+  return set;
+}
+
+function choose(nodeId,ai){
+  var a=NODES[nodeId].answers[ai];
+  if(!a) return;
+  /* if re-answering a node already in the path, truncate back to it */
+  var idx=-1;
+  for(var i=0;i<state.path.length;i++){ if(state.path[i].node===nodeId){ idx=i; break; } }
+  if(idx>=0) state.path=state.path.slice(0,idx);
+  state.path.push({node:nodeId,ai:ai});
+  /* Recompute the collected outcomes strictly from the (possibly truncated)
+     path, so re-answering an earlier question drops outcomes it had granted. */
+  state.collected=[];
+  state.path.forEach(function(st){
+    var an=NODES[st.node].answers[st.ai];
+    if(an.grants && state.collected.indexOf(an.grants)<0) state.collected.push(an.grants);
+  });
+  state.current=a.to;
+  state.selected=a.to;
+  state.done=!!NODES[a.to].terminal;
+  render();
+  focusNode(a.to);
+}
+function reset(){
+  state.path=[]; state.current='root'; state.selected='root';
+  state.collected=[]; state.done=false;
+  render(); fit();
+}
+
+/* ============================================================================
+   4. SVG RENDER
+   ========================================================================== */
+var SVGNS='http://www.w3.org/2000/svg';
+var svg=document.getElementById('svg');
+var view={tx:0,ty:0,s:1};
+var gRoot,gEdges,gNodes;
+
+function el(name,attrs,parent){
+  var e=document.createElementNS(SVGNS,name);
+  if(attrs) for(var k in attrs) e.setAttribute(k,attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+
+function initSvg(){
+  svg.innerHTML='';
+  var defs=el('defs',null,svg);
+  var f=el('filter',{id:'glow',x:'-30%',y:'-30%',width:'160%',height:'160%'},defs);
+  el('feDropShadow',{dx:'0',dy:'1','stdDeviation':'3','flood-color':'currentColor','flood-opacity':'0.22'},f);
+  gRoot=el('g',{id:'gRoot'},svg);
+  gEdges=el('g',{id:'gEdges'},gRoot);
+  gNodes=el('g',{id:'gNodes'},gRoot);
+}
+
+function applyView(){
+  gRoot.setAttribute('transform','translate('+view.tx+','+view.ty+') scale('+view.s+')');
+}
+
+function edgePath(a,b){
+  var x1=a.x+a.w/2, y1=a.y+a.h, x2=b.x+b.w/2, y2=b.y;
+  var dy=Math.max(28,(y2-y1)/2);
+  return 'M'+x1+','+y1+' C'+x1+','+(y1+dy)+' '+x2+','+(y2-dy)+' '+x2+','+y2;
+}
+
+function render(){
+  buildGraph();
+  var onPath=pathNodes(), onEdge=pathEdges(), reach=reachableFrom(state.current);
+  gEdges.innerHTML=''; gNodes.innerHTML='';
+
+  /* ---- edges ---- */
+  GRAPH.edges.forEach(function(e){
+    var a=GRAPH.pos[e.from], b=GRAPH.pos[e.to];
+    if(!a||!b) return;
+    var key=pathEdgeKey(e), isOn=!!onEdge[key];
+    var g=el('g',{class:'egroup'+(isOn?'':(state.path.length?' off':''))},gEdges);
+    el('path',{class:'edge '+e.kind+(isOn?' on-path':''),d:edgePath(a,b)},g);
+    if(e.kind==='answer'){
+      var mx=(a.x+a.w/2 + b.x+b.w/2)/2, my=(a.y+a.h + b.y)/2;
+      var tw=e.label.length*5.9+12;
+      el('rect',{class:'ebg'+(isOn?' on-path':''),x:mx-tw/2,y:my-9,width:tw,height:18,rx:5},g);
+      var t=el('text',{class:'elabel'+(isOn?' on-path':''),x:mx,y:my+4,'text-anchor':'middle'},g);
+      t.textContent=e.label;
+    }
+  });
+
+  /* ---- nodes ---- */
+  GRAPH.ids.forEach(function(id){
+    var n=NODES[id], p=GRAPH.pos[id];
+    var cls='node t-'+n.type;
+    if(onPath[id]) cls+=' on-path'; else if(state.path.length) cls+=' off';
+    if(id===state.current) cls+=' current';
+    if(reach.indexOf(id)>=0 && id!==state.current) cls+=' reachable';
+
+    var g=el('g',{class:cls,transform:'translate('+p.x+','+p.y+')',tabindex:'0',role:'button',
+      'aria-label':(n.eyebrow?n.eyebrow+': ':'')+n.title+(id===state.current?' (current step)':'')},gNodes);
+    g.dataset.id=id;
+
+    el('rect',{class:'card',x:0,y:0,width:p.w,height:p.h,rx:13},g);
+    el('rect',{class:'focusring',x:-4,y:-4,width:p.w+8,height:p.h+8,rx:16},g);
+
+    if(n.eyebrow){
+      var eb=el('text',{class:'eyebrow',x:PAD,y:PAD+2},g);
+      eb.textContent=n.eyebrow.toUpperCase();
+    }
+    p.lines.forEach(function(ln,i){
+      var t=el('text',{class:'ttl',x:PAD,y:PAD+16+i*LINE_H},g);
+      t.textContent=ln;
+    });
+    if(p.meta){
+      var m=el('text',{class:'meta',x:PAD,y:p.h-PAD+4},g);
+      m.textContent=p.meta;
+    }
+    if(id===state.current){
+      el('circle',{class:'pulse',cx:p.w/2,cy:p.h+2,r:6},g);
+    }
+
+    g.addEventListener('click',function(){ onNodeActivate(id); });
+    g.addEventListener('keydown',function(ev){
+      if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); onNodeActivate(id); }
+      else handleArrow(ev,id);
+    });
+  });
+
+  renderPanel();
+  renderCrumbs();
+  updateHint();
+}
+
+/* clicking a node: advance if it is a valid next step, else inspect it */
+function onNodeActivate(id){
+  var reach=reachableFrom(state.current);
+  if(reach.indexOf(id)>=0){
+    var answers=NODES[state.current].answers;
+    for(var i=0;i<answers.length;i++){
+      if(answers[i].to===id){ choose(state.current,i); return; }
+    }
+  }
+  state.selected=id;
+  render();
+}
+
+function focusNode(id){
+  centerOn(id);
+  var g=gNodes.querySelector('[data-id="'+id+'"]');
+  if(g) g.focus({preventScroll:true});
+}
+
+function handleArrow(ev,id){
+  var order=GRAPH.ids.slice().sort(function(a,b){
+    if(LAYER[a]!==LAYER[b]) return LAYER[a]-LAYER[b];
+    return (NODES[a].lane||0)-(NODES[b].lane||0);
+  });
+  var i=order.indexOf(id), next=null;
+  if(ev.key==='ArrowDown'||ev.key==='ArrowRight') next=order[i+1];
+  else if(ev.key==='ArrowUp'||ev.key==='ArrowLeft') next=order[i-1];
+  if(next){ ev.preventDefault(); state.selected=next; render(); focusNode(next); }
+}
+
+/* ---------------- pan / zoom ---------------- */
+function bbox(){
+  var xs=[],ys=[],xe=[],ye=[];
+  GRAPH.ids.forEach(function(id){
+    var p=GRAPH.pos[id];
+    xs.push(p.x); ys.push(p.y); xe.push(p.x+p.w); ye.push(p.y+p.h);
+  });
+  var x=Math.min.apply(null,xs), y=Math.min.apply(null,ys);
+  return {x:x,y:y,w:Math.max.apply(null,xe)-x,h:Math.max.apply(null,ye)-y};
+}
+function fit(){
+  var r=svg.getBoundingClientRect(), b=bbox(), pad=44;
+  /* If the host container has no size yet (hidden tab, pane not yet shown),
+     still apply a sane view so the tree is never left at raw coordinates. */
+  if(!r.width||!r.height||!b.w){
+    view.s=0.62; view.tx=-b.x*view.s+40; view.ty=24;
+    applyView();
+    return;
+  }
+  var s=Math.min((r.width-pad*2)/b.w,(r.height-pad*2)/b.h,1.15);
+  s=Math.max(0.25,s);
+  view.s=s;
+  view.tx=(r.width-b.w*s)/2-b.x*s;
+  view.ty=(r.height-b.h*s)/2-b.y*s;
+  applyView();
+}
+function centerOn(id){
+  var p=GRAPH.pos[id]; if(!p) return;
+  var r=svg.getBoundingClientRect();
+  view.tx=r.width/2-(p.x+p.w/2)*view.s;
+  view.ty=r.height*0.42-(p.y+p.h/2)*view.s;
+  applyView();
+}
+function zoomBy(k,cx,cy){
+  var r=svg.getBoundingClientRect();
+  if(cx==null){ cx=r.width/2; cy=r.height/2; }
+  var ns=Math.min(2.2,Math.max(0.22,view.s*k));
+  var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
+  view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns;
+  applyView();
+}
+
+var drag=null;
+svg.addEventListener('pointerdown',function(e){
+  if(e.target.closest('.node')) return;
+  drag={x:e.clientX,y:e.clientY,tx:view.tx,ty:view.ty};
+  svg.classList.add('grabbing');
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener('pointermove',function(e){
+  if(!drag) return;
+  view.tx=drag.tx+(e.clientX-drag.x);
+  view.ty=drag.ty+(e.clientY-drag.y);
+  applyView();
+});
+svg.addEventListener('pointerup',function(e){
+  drag=null; svg.classList.remove('grabbing');
+  try{ svg.releasePointerCapture(e.pointerId); }catch(err){}
+});
+svg.addEventListener('wheel',function(e){
+  e.preventDefault();
+  var r=svg.getBoundingClientRect();
+  zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+
+/* pinch */
+var pinch=null;
+svg.addEventListener('touchstart',function(e){
+  if(e.touches.length===2){
+    pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:true});
+svg.addEventListener('touchmove',function(e){
+  if(e.touches.length===2 && pinch){
+    e.preventDefault();
+    var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    var r=svg.getBoundingClientRect();
+    zoomBy(d/pinch,(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,(e.touches[0].clientY+e.touches[1].clientY)/2-r.top);
+    pinch=d;
+  }
+},{passive:false});
+svg.addEventListener('touchend',function(){ pinch=null; },{passive:true});
+
+/* ============================================================================
+   5. PANEL
+   ========================================================================== */
+var pscroll=document.getElementById('pscroll');
+var crumbsEl=document.getElementById('crumbs');
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderCrumbs(){
+  if(!state.path.length){ crumbsEl.innerHTML='<span class="none">No answers yet — start at the top of the tree.</span>'; return; }
+  var h='';
+  state.path.forEach(function(st){
+    var a=NODES[st.node].answers[st.ai];
+    if(st.node==='root') return;
+    h+='<span class="c">'+esc(a.short||a.label)+'</span>';
+  });
+  crumbsEl.innerHTML=h||'<span class="none">Started</span>';
+}
+
+function chipsHtml(arr){
+  return '<div class="chips">'+arr.map(function(s){ return '<span class="sx">'+esc(s)+'</span>'; }).join('')+'</div>';
+}
+function checksHtml(arr){
+  return '<ul class="check">'+arr.map(function(c){
+    return '<li><span class="cx">'+TICK+'</span><span><b>'+c.h+'</b>'+(c.d?'<span class="d">'+c.d+'</span>':'')+'</span></li>';
+  }).join('')+'</ul>';
+}
+function outcomeCard(id,kind){
+  var o=NODES[id];
+  var h='<div class="card2 '+(kind||'key')+'"><div class="rk">'+esc(o.eyebrow)+'</div><h3>'+esc(o.title)+'</h3>';
+  if(o.body) h+='<p class="m">'+o.body+'</p>';
+  if(o.options){
+    h+='<div class="two">'+o.options.map(function(x){
+      return '<div class="mini"><div class="mh">'+x.h+'</div><div class="md">'+x.d+'</div></div>';
+    }).join('')+'</div>';
+  }
+  if(o.checks) h+=checksHtml(o.checks);
+  if(o.sections) h+='<p class="m" style="margin:9px 0 0">Sections you may seek:</p>'+chipsHtml(o.sections);
+  return h+'</div>';
+}
+
+function renderPanel(){
+  var id=state.selected, n=NODES[id];
+  var isCurrent=(id===state.current);
+  var h='<div class="anim">';
+
+  if(!isCurrent && !state.done){
+    h+='<div class="inspect">You’re inspecting <b>'+esc(n.eyebrow||n.title)+'</b>. '
+      + 'Your current step is <b>'+esc(NODES[state.current].eyebrow||NODES[state.current].title)+'</b>.'
+      + ' <button class="btn" style="margin-top:8px" data-goto="current">Go to my current step</button></div>';
+  }
+
+  if(n.type==='result'){ h+=resultHtml(); }
+  else if(n.type==='outcome'){
+    h+='<p class="peyebrow">'+esc(n.eyebrow)+'</p><h2 class="ptitle">'+esc(n.title)+'</h2>';
+    if(n.body) h+='<p class="phelp">'+n.body+'</p>';
+    if(n.options) h+='<div class="two">'+n.options.map(function(x){
+      return '<div class="mini"><div class="mh">'+x.h+'</div><div class="md">'+x.d+'</div></div>'; }).join('')+'</div>';
+    if(n.checks) h+=checksHtml(n.checks);
+    if(n.sections) h+='<p class="phelp" style="margin:12px 0 0">Sections you may seek:</p>'+chipsHtml(n.sections);
+    if(id==='out_nontas' && state.current==='out_nontas'){
+      h+='<div class="sectitle">Before you file, if you revisit TAS</div>'+criteriaHtml()+nextStepsHtml()+linksHtml();
+    }
+    h+='<p class="disc">'+DISCLAIMER+'</p>';
+  }
+  else {
+    h+='<p class="peyebrow">'+esc(n.eyebrow||'')+'</p><h2 class="ptitle">'+esc(n.title)+'</h2>';
+    if(n.risk) h+='<div class="riskbox"><div class="rh">⚠ Understand the risk first</div><p>'+n.risk+'</p></div>';
+    if(n.help) h+='<p class="phelp">'+esc(n.help)+'</p>';
+    if(n.answers){
+      var chosen=null;
+      state.path.forEach(function(st){ if(st.node===id) chosen=st.ai; });
+      h+='<div class="answers">'+n.answers.map(function(a,i){
+        var g=a.grants?'<span class="gr">+ '+esc(NODES[a.grants].eyebrow)+'</span>':'';
+        var mark=(chosen===i)?' ✓':'';
+        return '<button class="ans" data-node="'+id+'" data-ai="'+i+'">'
+          +'<span class="k">'+(i+1)+'</span><span class="tx"><span class="al">'+esc(a.label)+mark+'</span>'
+          +(a.note?'<span class="an">'+esc(a.note)+'</span>':'')+g+'</span></button>';
+      }).join('')+'</div>';
+    }
+    if(id==='root') h+='<p class="disc">'+DISCLAIMER+'</p>';
+  }
+
+  h+='</div>';
+  pscroll.innerHTML=h;
+  pscroll.scrollTop=0;
+}
+
+function criteriaHtml(){
+  return '<div class="card2"><p class="m" style="margin-top:0">To be approved, your Tribe must be able to demonstrate all four (40 CFR §§ 49.6 / 49.7):</p>'+checksHtml(CRITERIA)+'</div>';
+}
+function nextStepsHtml(){
+  return '<div class="sectitle">Next steps</div><div class="card2"><ol class="steps">'+NEXT_STEPS.map(function(s){
+    return '<li><b>'+s.h+'</b>'+(s.d?'<div class="d">'+s.d+'</div>':'')+'</li>'; }).join('')+'</ol></div>';
+}
+function linksHtml(){
+  return '<div class="card2"><div class="rk">Reference</div><div class="reflinks">'+LINKS.map(function(l){
+    return '<a href="'+l.u+'" target="_blank" rel="noopener">'+l.t+' ↗</a>'; }).join('')+'</div></div>';
+}
+
+function verdict(){
+  var c=state.collected;
+  var reg=c.indexOf('out_regulatory')>=0, tgt=c.indexOf('out_targeted')>=0, par=c.indexOf('out_participatory')>=0;
+  if(reg&&par) return {t:'Pursue Regulatory + Participatory TAS', s:'You have sources to manage and reasons to influence what happens next door — seek both roles. They are not mutually exclusive.'};
+  if(tgt&&par) return {t:'Pursue Targeted + Participatory TAS', s:'A focused program at home, plus a formal voice in the decisions made around you.'};
+  if(reg) return {t:'Pursue Regulatory TAS', s:'Become the primary implementing authority for the air-pollution sources in your jurisdiction.'};
+  if(tgt) return {t:'Pursue Targeted Regulatory TAS', s:'A focused program can address your specific local air-quality issue.'};
+  if(par) return {t:'Pursue Participatory (good-neighbour) TAS', s:'Get a formal, early voice in the state and local decisions that affect your air quality.'};
+  return {t:'TAS may offer limited near-term benefit', s:'With few sources and no outside concern, non-TAS programs may serve you now — but the option stays open as things change.'};
+}
+function boundaryFlag(){
+  var b=null,d=null;
+  state.path.forEach(function(st){
+    if(st.node==='q1') b=NODES.q1.answers[st.ai].short;
+    if(st.node==='q1b') d=NODES.q1b.answers[st.ai].short;
+  });
+  return {b:b,d:d};
+}
+
+function resultHtml(){
+  var v=verdict(), f=boundaryFlag();
+  var h='<p class="peyebrow">Your tailored result</p><h2 class="ptitle">'+esc(v.t)+'</h2><p class="phelp">'+esc(v.s)+'</p>';
+
+  if(f.b && f.b.indexOf('No')!==0){
+    var extra = f.d==='Undisputed only'
+      ? 'Applying over <b>undisputed areas only</b> is the lower-risk route you chose — be sure to affirm the excluded areas remain claimed.'
+      : (f.d==='Full area' ? 'You chose to proceed over the <b>full claimed area</b> — have counsel prepare for a possible challenge.' : '');
+    h+='<div class="card2 danger"><div class="rk">Keep in view</div><h3>Your boundary showing carries risk</h3>'
+      +'<p>Because a boundary question exists, your application will be shared with the appropriate governmental entities, who may challenge it. An adverse ruling could <b>narrow your recognized CAA regulatory jurisdiction</b> — not your land title. '+extra+'</p></div>';
+  }
+
+  h+='<div class="sectitle">Recommended pathway'+(state.collected.filter(function(x){return x!=='out_capacity';}).length>1?'s':'')+'</div>';
+  ['out_regulatory','out_targeted','out_participatory'].forEach(function(o){
+    if(state.collected.indexOf(o)>=0) h+=outcomeCard(o,'key');
+  });
+  if(!state.collected.filter(function(x){return x!=='out_capacity';}).length){
+    h+='<div class="card2 soft"><div class="rk">Worth knowing</div><h3>You have strong options without TAS today</h3>'
+      +'<p class="m">With little source activity and no outside concern right now, the non-TAS pathways below may meet your needs. TAS remains available whenever sources appear or priorities shift.</p></div>';
+  }
+  if(state.collected.indexOf('out_capacity')>=0) h+=outcomeCard('out_capacity','warn');
+
+  /* non-TAS options are always worth showing */
+  var nt=NODES.out_nontas;
+  h+='<div class="card2 soft"><div class="rk">No TAS required</div><h3>Also available — with or without TAS</h3>'+checksHtml(nt.checks)+'</div>';
+
+  h+='<div class="sectitle">Before you file — the four eligibility criteria</div>'+criteriaHtml();
+  h+=nextStepsHtml()+linksHtml();
+  h+='<p class="disc">'+DISCLAIMER+'</p>';
+  return h;
+}
+
+/* panel delegation */
+pscroll.addEventListener('click',function(e){
+  var a=e.target.closest('[data-ai]');
+  if(a){ choose(a.getAttribute('data-node'),parseInt(a.getAttribute('data-ai'),10)); return; }
+  var g=e.target.closest('[data-goto]');
+  if(g){ state.selected=state.current; render(); centerOn(state.current); }
+});
+
+/* ============================================================================
+   6. MODES, HINT, PRINT
+   ========================================================================== */
+var mExplore=document.getElementById('mExplore'), mGuided=document.getElementById('mGuided');
+function setMode(guided){
+  state.guided=guided;
+  mExplore.setAttribute('aria-pressed',String(!guided));
+  mGuided.setAttribute('aria-pressed',String(guided));
+  if(guided){ state.selected=state.current; render(); centerOn(state.current); }
+  else { render(); fit(); }
+  updateHint();
+}
+mExplore.addEventListener('click',function(){ setMode(false); });
+mGuided.addEventListener('click',function(){ setMode(true); });
+
+function updateHint(){
+  var el2=document.getElementById('hint');
+  if(state.done){ el2.textContent='Complete — your result is in the panel. Print it, or Reset to try another path.'; return; }
+  if(state.guided) el2.textContent='Guided mode — answer in the panel; the tree follows you.';
+  else el2.textContent='Click an answer in the panel, or click the next node on the tree.';
+}
+
+document.getElementById('zIn').addEventListener('click',function(){ zoomBy(1.2); });
+document.getElementById('zOut').addEventListener('click',function(){ zoomBy(1/1.2); });
+document.getElementById('zFit').addEventListener('click',fit);
+document.getElementById('btnReset').addEventListener('click',reset);
+
+document.getElementById('btnPrint').addEventListener('click',function(){
+  buildPrint(); window.print();
+});
+function buildPrint(){
+  var v=state.done?verdict():{t:'TAS decision — in progress',s:'This path is not yet complete.'};
+  var h='<h2>'+esc(v.t)+'</h2><p class="sub">'+esc(v.s)+'</p>';
+  h+='<h3>Answers chosen</h3>';
+  if(state.path.length<2) h+='<p>No answers recorded yet.</p>';
+  else {
+    h+='<div>';
+    state.path.forEach(function(st){
+      if(st.node==='root') return;
+      var n=NODES[st.node], a=n.answers[st.ai];
+      h+='<span class="pc">'+esc((n.eyebrow||'').replace(/^Question\s*/,'Q')+': '+(a.short||a.label))+'</span>';
+    });
+    h+='</div>';
+  }
+  var real=state.collected.filter(function(x){return x!=='out_capacity';});
+  if(state.collected.length){
+    h+='<h3>Recommended pathways</h3>';
+    state.collected.forEach(function(id){
+      var o=NODES[id];
+      h+='<p><b>'+esc(o.eyebrow)+' — '+esc(o.title)+'</b></p>';
+      if(o.options) h+='<ul>'+o.options.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+      if(o.checks) h+='<ul>'+o.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+      if(o.sections) h+='<div>'+o.sections.map(function(s){return '<span class="psx">'+esc(s)+'</span>';}).join('')+'</div>';
+    });
+  }
+  if(!real.length && state.done){
+    h+='<h3>Non-TAS pathways</h3><ul>'+NODES.out_nontas.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+  }
+  h+='<h3>The four eligibility criteria (40 CFR §§ 49.6 / 49.7)</h3><ul>'
+    +CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
+  h+='<h3>Next steps</h3><ul>'+NEXT_STEPS.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
+  h+='<h3>Reference</h3><ul>'+LINKS.map(function(l){return '<li>'+l.t+' — '+l.u+'</li>';}).join('')+'</ul>';
+  h+='<p class="pd">'+DISCLAIMER+'</p>';
+  document.getElementById('printSummary').innerHTML=h;
+}
+
+/* ============================================================================
+   7. BOOT
+   ========================================================================== */
+initSvg();
+render();
+fit();
+window.addEventListener('resize',function(){ fit(); });
+
+/* Re-fit once the stage actually has a size (covers hidden-then-shown panes,
+   late font loading, and orientation changes). Only auto-fits while the user
+   has not yet started answering, so it never yanks the view mid-session. */
+var stageEl=document.querySelector('.stage'), lastW=0, lastH=0;
+if(window.ResizeObserver){
+  new ResizeObserver(function(entries){
+    var r=entries[0].contentRect;
+    if(r.width<2||r.height<2) return;
+    if(Math.abs(r.width-lastW)<2 && Math.abs(r.height-lastH)<2) return;
+    lastW=r.width; lastH=r.height;
+    if(!state.path.length) fit();
+  }).observe(stageEl);
+}
+</script>

@@ -1,0 +1,1191 @@
+<meta charset="utf-8">
+<title>TAS Pathfinder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ===========================================================
+   TOKENS
+   =========================================================== */
+:root{
+  --bg:#f1f5f3; --bg-2:#e7ede9;
+  --surface:#ffffff; --surface-2:#eaf0ec; --surface-3:#dfe7e2;
+  --ink:#15232a; --muted:#53625e; --faint:#7e8c88;
+  --accent:#2c6b64; --accent-2:#3f9184; --accent-soft:#dbeae6; --accent-ink:#1b4a45;
+  --border:#d6e0da; --border-strong:#bfcbc4;
+  --risk:#a5721a; --risk-bg:#f7efd9; --risk-line:#c9922a;
+  --good:#2f7d5b; --good-bg:#dbeee3; --good-line:#57a97f;
+  --alert:#b23a2e; --alert-bg:#f8e4e0;
+  --on-accent:#ffffff;
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+  --sh-1:0 1px 2px rgba(21,35,42,.05),0 6px 18px rgba(21,35,42,.06);
+  --sh-2:0 2px 8px rgba(21,35,42,.08),0 18px 40px rgba(21,35,42,.12);
+  --amb:.55;
+  --ease:cubic-bezier(.22,.68,0,1);
+  --spine:44px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1417; --bg-2:#111a1d;
+    --surface:#161f22; --surface-2:#1c272a; --surface-3:#232f32;
+    --ink:#e5eae7; --muted:#9faead; --faint:#7b8a86;
+    --accent:#5fb4a9; --accent-2:#7cc9bb; --accent-soft:#183734; --accent-ink:#a3ddd4;
+    --border:#283436; --border-strong:#384649;
+    --risk:#dca544; --risk-bg:#312810; --risk-line:#a87c26;
+    --good:#6fc99b; --good-bg:#173025; --good-line:#3f8f68;
+    --alert:#e58274; --alert-bg:#341f1c;
+    --on-accent:#06201d;
+    --sh-1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
+    --sh-2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
+    --amb:.30;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1417; --bg-2:#111a1d;
+  --surface:#161f22; --surface-2:#1c272a; --surface-3:#232f32;
+  --ink:#e5eae7; --muted:#9faead; --faint:#7b8a86;
+  --accent:#5fb4a9; --accent-2:#7cc9bb; --accent-soft:#183734; --accent-ink:#a3ddd4;
+  --border:#283436; --border-strong:#384649;
+  --risk:#dca544; --risk-bg:#312810; --risk-line:#a87c26;
+  --good:#6fc99b; --good-bg:#173025; --good-line:#3f8f68;
+  --alert:#e58274; --alert-bg:#341f1c;
+  --on-accent:#06201d;
+  --sh-1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
+  --sh-2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
+    --amb:.30;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--sans);font-size:16.5px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 12% -5%,var(--bg-2) 0%,transparent 55%),
+                   radial-gradient(circle at 92% 8%,var(--bg-2) 0%,transparent 45%);
+  background-attachment:fixed;
+}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--accent-ink);text-underline-offset:2px}
+
+/* =========================================================== TOP BAR */
+.topbar{
+  position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);
+  background:color-mix(in srgb,var(--surface) 86%,transparent);
+  border-bottom:1px solid var(--border);
+}
+@supports not (backdrop-filter:blur(4px)){ .topbar{background:var(--surface)} }
+.topbar .in{max-width:820px;margin:0 auto;padding:10px clamp(14px,3vw,22px);display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent)}
+.brand .mk svg{width:17px;height:17px}
+.brand .tx{min-width:0}
+.brand .kk{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);
+  display:block;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand h1{font-family:var(--serif);font-weight:600;font-size:16px;margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-actions{display:flex;gap:7px;flex:none}
+/* very narrow hosts: drop the eyebrow so the name never gets squeezed */
+@media (max-width:760px){
+  .brand .kk{display:none}
+  .brand h1{font-size:15px}
+}
+@media (max-width:430px){
+  .brand .mk{display:none}
+  .btn{padding:6px 9px;font-size:12px}
+}
+
+.btn{border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:9px;
+  padding:7px 12px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;
+  transition:border-color .18s,color .18s,transform .12s,box-shadow .18s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink);transform:translateY(-1px);box-shadow:var(--sh-1)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.solid:hover{color:var(--on-accent);filter:brightness(1.07)}
+.btn svg{width:14px;height:14px;flex:none}
+.btn.sm{padding:4px 9px;font-size:11.5px;border-radius:7px}
+
+/* progress rail */
+.rail{height:3px;background:var(--surface-3);position:relative;overflow:hidden}
+.rail .fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .75s var(--ease)}
+.rail .fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:26px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent-2) 70%,white))}
+
+/* =========================================================== SHELL */
+.wrap{max-width:820px;margin:0 auto;padding:clamp(18px,4vw,34px) clamp(14px,3vw,22px) 30vh;position:relative;z-index:1}
+
+/* =========================================================== HERO */
+.hero{position:relative;padding-left:calc(var(--spine) + 6px);margin-bottom:6px}
+.hero .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.hero h2{font-family:var(--serif);font-weight:600;font-size:clamp(27px,5.2vw,40px);line-height:1.08;letter-spacing:-.015em;margin:0 0 12px;text-wrap:balance}
+.hero p{color:var(--muted);font-size:16.5px;margin:0 0 18px;max-width:56ch}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.facts span{font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 11px}
+.hero .disc{font-size:12.5px;color:var(--faint);border-left:3px solid var(--border-strong);padding-left:12px;margin:18px 0 0;max-width:62ch}
+@media (max-width:620px){ .hero{padding-left:0} }
+
+/* =========================================================== STEP */
+.step{position:relative;padding-left:calc(var(--spine) + 6px);padding-bottom:8px}
+@media (max-width:620px){ .step{padding-left:32px} :root{--spine:26px} }
+
+/* spine: connector grows in */
+.step .conn{position:absolute;left:calc(var(--spine)/2 - 1px);top:0;width:2px;height:100%;
+  background:linear-gradient(180deg,var(--border-strong),var(--border-strong));
+  transform:scaleY(0);transform-origin:top center;transition:transform .5s var(--ease)}
+.step.in .conn{transform:scaleY(1)}
+.step.on .conn{background:linear-gradient(180deg,var(--accent),var(--accent-2))}
+.step:last-of-type .conn{background:linear-gradient(180deg,var(--accent),transparent)}
+
+/* spine dot */
+.step .dot{position:absolute;left:0;top:2px;width:var(--spine);height:var(--spine);display:grid;place-items:center;z-index:2}
+.step .dot i{display:block;width:15px;height:15px;border-radius:50%;background:var(--surface);
+  border:2.5px solid var(--border-strong);transition:.4s var(--ease);position:relative}
+.step.on .dot i{border-color:var(--accent);background:var(--accent);transform:scale(1.15)}
+.step.done .dot i{border-color:var(--good);background:var(--good)}
+.step.done .dot i::after{content:'';position:absolute;left:3px;top:1px;width:4px;height:7px;
+  border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.step.on .dot::before{content:'';position:absolute;width:15px;height:15px;border-radius:50%;
+  border:2px solid var(--accent);animation:ping 2.2s ease-out infinite}
+@keyframes ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.9);opacity:0}}
+
+/* step entrance */
+.step{opacity:0;transform:translateY(22px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.step.in{opacity:1;transform:none}
+
+/* question head */
+.qhead .qtag{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.qhead h3{font-family:var(--serif);font-weight:600;font-size:clamp(21px,3.6vw,29px);line-height:1.16;
+  letter-spacing:-.01em;margin:0 0 9px;text-wrap:balance}
+.qhead .help{color:var(--muted);font-size:15px;margin:0 0 16px;max-width:58ch}
+
+/* collapsed (answered) look */
+.step.done{padding-bottom:4px}
+.step.done .qhead h3{font-size:16px;font-family:var(--sans);font-weight:600;color:var(--muted);margin:0 0 5px;
+  transition:font-size .4s var(--ease),color .4s}
+.step.done .qhead .help,.step.done .riskbox{display:none}
+.answered{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:4px}
+.answered .pick{display:inline-flex;align-items:center;gap:7px;background:var(--good-bg);border:1px solid var(--good-line);
+  color:var(--ink);border-radius:9px;padding:5px 11px;font-size:14px;font-weight:600;
+  animation:pop .4s var(--ease) both}
+@keyframes pop{from{opacity:0;transform:scale(.9) translateY(-4px)}to{opacity:1;transform:none}}
+.answered .pick svg{width:13px;height:13px;color:var(--good)}
+
+/* collapsible body */
+.body{overflow:hidden;transition:max-height .5s var(--ease),opacity .35s ease}
+
+/* risk box */
+.riskbox{background:var(--risk-bg);border:1px solid var(--risk-line);border-radius:12px;padding:13px 15px;margin:0 0 18px;
+  animation:slidein .5s var(--ease) both}
+.riskbox .rh{font-weight:700;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--risk);
+  margin-bottom:6px;display:flex;gap:7px;align-items:center}
+.riskbox p{margin:0;font-size:14px}
+@keyframes slidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- options (the animated reveal) ---------- */
+.opts{display:grid;gap:10px;margin-top:2px}
+.opt{
+  display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  background:var(--surface);border:1.5px solid var(--border-strong);border-radius:13px;padding:14px 15px;
+  color:var(--ink);position:relative;overflow:hidden;
+  opacity:0;transform:translateY(16px) scale(.985);
+  animation:optin .5s var(--ease) forwards;
+  animation-delay:calc(var(--i) * 85ms + 180ms);
+  transition:border-color .18s,box-shadow .2s,transform .15s;
+}
+@keyframes optin{to{opacity:1;transform:none}}
+.opt::before{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent,var(--accent-soft),transparent);
+  transform:translateX(-110%);transition:transform .5s var(--ease);pointer-events:none;opacity:.7}
+.opt:hover{border-color:var(--accent);box-shadow:var(--sh-2);transform:translateY(-2px)}
+.opt:hover::before{transform:translateX(110%)}
+.opt:active{transform:translateY(0) scale(.995)}
+.opt:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
+.opt .kb{flex:none;width:24px;height:24px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border-strong);
+  display:grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--accent);margin-top:1px;
+  font-family:var(--mono);transition:.18s}
+.opt:hover .kb{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.opt .tx{flex:1;min-width:0}
+.opt .ol{display:block;font-weight:650;font-size:15.5px}
+.opt .on{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.opt .grant{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-family:var(--mono);font-size:10.5px;
+  color:var(--good);background:var(--good-bg);border:1px solid var(--good-line);border-radius:6px;padding:2px 7px}
+.opt .go{margin-left:auto;align-self:center;color:var(--faint);flex:none;transition:.2s;
+  width:18px;height:18px} /* explicit size: an unsized inline SVG defaults to 300x150 */
+.opt:hover .go{color:var(--accent);transform:translateX(4px)}
+
+/* leaving options */
+.opt.leave{animation:optout .34s var(--ease) forwards}
+@keyframes optout{to{opacity:0;transform:translateY(-8px) scale(.96);max-height:0;margin-top:-4px}}
+
+/* ---------- outcome branch ---------- */
+.branch{position:relative;margin:12px 0 4px;padding-left:20px;
+  animation:branchin .55s var(--ease) both;animation-delay:.15s}
+@keyframes branchin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.branch::before{content:'';position:absolute;left:0;top:-6px;width:16px;height:24px;
+  border-left:2px dashed var(--good-line);border-bottom:2px dashed var(--good-line);border-bottom-left-radius:10px}
+.badge{display:inline-flex;align-items:center;gap:8px;background:var(--good-bg);border:1px solid var(--good-line);
+  border-radius:10px;padding:7px 12px;font-size:13.5px}
+.badge b{font-weight:650}
+.badge .pl{font-family:var(--mono);color:var(--good);font-weight:700}
+
+/* =========================================================== RESULT */
+.result{position:relative;padding-left:calc(var(--spine) + 6px)}
+@media (max-width:620px){ .result{padding-left:32px} }
+.result .dot{position:absolute;left:0;top:2px;width:var(--spine);height:var(--spine);display:grid;place-items:center}
+.result .dot i{width:19px;height:19px;border-radius:50%;background:var(--good);border:2.5px solid var(--good);
+  box-shadow:0 0 0 5px var(--good-bg)}
+.rpill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--good);background:var(--good-bg);border-radius:999px;padding:5px 12px;margin-bottom:12px}
+.rpill svg{width:12px;height:12px;flex:none}
+/* safety net: any inline SVG in this app without an explicit size */
+svg:not([width]){max-width:100%}
+.result h2{font-family:var(--serif);font-weight:600;font-size:clamp(24px,4.6vw,35px);line-height:1.1;
+  letter-spacing:-.015em;margin:0 0 10px;text-wrap:balance}
+.result .rsub{color:var(--muted);font-size:16px;margin:0 0 22px;max-width:58ch}
+
+.reveal{opacity:0;transform:translateY(20px);animation:optin .55s var(--ease) forwards;
+  animation-delay:calc(var(--i) * 95ms + 120ms)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:17px 18px;margin:0 0 13px;box-shadow:var(--sh-1)}
+.card.key{border-left:4px solid var(--accent)}
+.card.warn{border-left:4px solid var(--risk);background:var(--risk-bg)}
+.card.danger{border-left:4px solid var(--alert);background:var(--alert-bg)}
+.card.soft{border-left:4px solid var(--good)}
+.card .rk{font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+.card.warn .rk{color:var(--risk)} .card.danger .rk{color:var(--alert)} .card.soft .rk{color:var(--good)}
+.card h4{font-family:var(--serif);font-weight:600;font-size:18.5px;margin:0 0 8px;line-height:1.24}
+.card p{margin:0 0 9px;font-size:14.5px} .card p.m{color:var(--muted)} .card p:last-child{margin-bottom:0}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+@media (max-width:640px){ .two{grid-template-columns:1fr} }
+.mini{border:1px dashed var(--border-strong);border-radius:10px;padding:11px 12px;background:var(--surface)}
+.mini .mh{font-weight:650;font-size:13.5px;margin-bottom:3px}
+.mini .md{font-size:13px;color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.sx{font-family:var(--mono);font-size:12px;background:var(--accent-soft);color:var(--accent-ink);border-radius:7px;padding:3px 8px;
+  opacity:0;animation:optin .4s var(--ease) forwards;animation-delay:calc(var(--i) * 32ms + 200ms)}
+
+.check{list-style:none;padding:0;margin:7px 0 0}
+.check li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.check li:first-child{border-top:none}
+.check .cx{flex:none;width:20px;height:20px;border-radius:6px;background:var(--good-bg);color:var(--good);
+  display:grid;place-items:center;margin-top:1px}
+.check .cx svg{width:12px;height:12px}
+.check li b{font-weight:650}
+.check li span.d{color:var(--muted);font-size:13px;display:block}
+
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:7px 0 0;display:grid;gap:10px}
+ol.steps li{counter-increment:s;position:relative;padding-left:36px;font-size:14px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:7px;
+  background:var(--accent);color:var(--on-accent);font-family:var(--serif);font-weight:600;display:grid;place-items:center;font-size:13px}
+ol.steps .d{color:var(--muted);font-size:13px}
+
+.sectitle{font-weight:700;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin:26px 0 11px}
+.reflinks{display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:14px}
+.disc2{font-size:12px;color:var(--faint);border-top:1px solid var(--border);margin-top:24px;padding-top:14px}
+.ractions{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .step,.reveal,.opt,.sx,.check li,.mapnode{opacity:1!important;transform:none!important}
+  .sectitle::after{transform:scaleX(1)!important}
+  .ambient{display:none}
+}
+
+/* =========================================================== AMBIENT BACKDROP */
+.ambient{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.ambient span{position:absolute;display:block;border-radius:50%;filter:blur(66px);opacity:var(--amb);
+  background:radial-gradient(circle,var(--accent-soft) 0%,transparent 72%);will-change:transform}
+.ambient span:nth-child(1){width:56vw;height:56vw;left:-16vw;top:-20vw;animation:dr1 54s ease-in-out infinite}
+.ambient span:nth-child(2){width:44vw;height:44vw;right:-14vw;top:6vh;animation:dr2 68s ease-in-out infinite}
+.ambient span:nth-child(3){width:40vw;height:40vw;left:20vw;bottom:-18vh;animation:dr3 61s ease-in-out infinite;
+  background:radial-gradient(circle,var(--good-bg) 0%,transparent 72%)}
+@keyframes dr1{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(6vw,4vh,0) scale(1.13)}}
+@keyframes dr2{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-5vw,7vh,0) scale(1.09)}}
+@keyframes dr3{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(5vw,-5vh,0) scale(1.15)}}
+
+/* =========================================================== MICRO-TRANSITIONS */
+.sectitle{display:flex;align-items:center;gap:11px}
+.sectitle::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border-strong),transparent);
+  transform:scaleX(0);transform-origin:left center;
+  animation:ruleIn .8s var(--ease) forwards;animation-delay:calc(var(--i) * 95ms + 300ms)}
+.sectitle.ruled::after{transform:scaleX(1)}
+@keyframes ruleIn{to{transform:scaleX(1)}}
+.check li{opacity:0;animation:optin .45s var(--ease) forwards}
+.check li:nth-child(1){animation-delay:.22s}
+.check li:nth-child(2){animation-delay:.30s}
+.check li:nth-child(3){animation-delay:.38s}
+.check li:nth-child(4){animation-delay:.46s}
+.check li:nth-child(5){animation-delay:.54s}
+.settled{opacity:1}
+.card.settled{transition:transform .28s var(--ease),box-shadow .28s var(--ease),border-color .2s}
+.card.settled:hover{transform:translateY(-2px);box-shadow:var(--sh-2)}
+.sx.settled{animation:none;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.sx.settled:hover{transform:translateY(-1px) scale(1.05);box-shadow:var(--sh-1)}
+.mini{transition:border-color .2s,background .2s}
+.mini:hover{border-color:var(--accent);background:var(--accent-soft)}
+.opt .kb{transition:background .18s,border-color .18s,color .18s,transform .2s var(--ease)}
+.opt:hover .kb{transform:scale(1.08) rotate(-4deg)}
+.answered .pick{transition:box-shadow .2s}
+.answered .pick:hover{box-shadow:var(--sh-1)}
+.reflinks a{transition:padding-left .2s var(--ease)}
+.reflinks a:hover{padding-left:4px}
+
+/* =========================================================== FULL MAP OVERLAY */
+.mapwrap{position:fixed;inset:0;z-index:60}
+.mapwrap[hidden]{display:none}
+.mapbg{position:absolute;inset:0;background:rgba(12,22,26,.52);animation:fadeIn .28s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.mapcard{position:absolute;inset:clamp(8px,2.5vw,38px);background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;box-shadow:var(--sh-2);display:flex;flex-direction:column;overflow:hidden;
+  animation:mapIn .42s var(--ease) both}
+@keyframes mapIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+.maphead{flex:none;display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border)}
+.maphead .mkick{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);display:block}
+.maphead h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:1px 0 0;line-height:1.2}
+.maphead .grow{flex:1}
+.mapacts{display:flex;gap:7px;flex:none}
+.mapbody{flex:1;min-height:0;position:relative;overflow:hidden;background:var(--bg)}
+#mapSvg{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#mapSvg.grabbing{cursor:grabbing}
+.mapfoot{flex:none;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 18px;
+  border-top:1px solid var(--border);background:var(--surface-2);font-size:12px;color:var(--muted)}
+.mleg{display:inline-flex;align-items:center;gap:6px}
+.mleg i{width:13px;height:10px;border-radius:3px;border:1.5px solid var(--border-strong);background:var(--surface);display:block}
+.mleg i.d1{border-color:var(--good);background:var(--good-bg)}
+.mleg i.d2{border-color:var(--accent);background:var(--accent-soft)}
+.mleg i.d3{opacity:.45}
+.mapfoot .mtip{margin-left:auto;color:var(--faint)}
+@media (max-width:640px){ .mapfoot .mtip{display:none} }
+.mapnode{opacity:0;animation:optin .45s var(--ease) forwards;animation-delay:calc(var(--i) * 45ms + 130ms)}
+.mapnode.clickable{cursor:pointer}
+.mapnode .mc{fill:var(--surface);stroke:var(--border-strong);stroke-width:1.5;transition:stroke .18s,stroke-width .18s}
+.mapnode .mt{font-size:12px;font-weight:650;fill:var(--ink)}
+.mapnode .mg{font-family:var(--mono);font-size:8px;letter-spacing:.1em;fill:var(--faint)}
+.mapnode.dim{opacity:.42}
+.mapnode.done .mc{fill:var(--good-bg);stroke:var(--good)}
+.mapnode.done .mg{fill:var(--good)}
+.mapnode.cur .mc{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.5}
+.mapnode.cur .mg{fill:var(--accent)}
+.mapnode.out .mc{stroke-dasharray:5 3}
+.mapnode.clickable:hover .mc{stroke:var(--accent);stroke-width:2.5}
+.mapnode .mring{fill:none;stroke:var(--accent);stroke-width:2.5;opacity:0}
+.mapnode:focus{outline:none}
+.mapnode:focus-visible .mring{opacity:1}
+.mapedge{fill:none;stroke:var(--border-strong);stroke-width:1.6}
+.mapedge.grant{stroke-dasharray:4 3}
+.mapedge.taken{stroke:var(--good);stroke-width:2.6}
+.mapedge.faint{opacity:.3}
+.maplbl{font-size:9.5px;font-weight:600;fill:var(--muted)}
+.maplbl.taken{fill:var(--good)}
+.maplblbg{fill:var(--bg);stroke:var(--border);stroke-width:.8}
+.maplblbg.taken{fill:var(--good-bg);stroke:var(--good)}
+.mappulse{fill:none;stroke:var(--accent);stroke-width:2}
+
+/* =========================================================== PRINT */
+#printOut{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .topbar,.wrap,.rail,.ambient,.mapwrap{display:none!important}
+  #printOut{display:block;font-size:11pt}
+  #printOut h2{font-family:var(--serif);font-size:19pt;margin:0 0 4pt}
+  #printOut h3{font-size:12pt;margin:14pt 0 4pt;border-bottom:1px solid #999;padding-bottom:2pt}
+  #printOut .pc,#printOut .psx{display:inline-block;border:1px solid #999;border-radius:8pt;padding:1pt 6pt;margin:2pt 3pt 2pt 0;font-size:9pt}
+  #printOut .psx{font-family:var(--mono);border-radius:3pt;border-color:#bbb}
+  #printOut ul{margin:4pt 0;padding-left:16pt} #printOut li{margin:3pt 0}
+  #printOut .pd{font-size:8.5pt;color:#444;border-top:1px solid #999;margin-top:14pt;padding-top:6pt}
+}
+</style>
+
+<div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<header class="topbar">
+  <div class="in">
+    <div class="brand">
+      <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V9M12 9L7 4M12 9l5-5M5 22h14"/></svg></span>
+      <span class="tx">
+        <span class="kk">Clean Air Act · Treated as a State</span>
+        <h1>TAS Pathfinder</h1>
+      </span>
+    </div>
+    <div class="tb-actions">
+      <button class="btn" id="btnMap" title="See the whole decision map (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 7L7 11M12 7l5 4M4 11h6v4H4zM14 11h6v4h-6zM9 19h6v3H9z"/></svg>Full map</button>
+      <button class="btn" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>Print</button>
+      <button class="btn" id="btnReset">Start over</button>
+    </div>
+  </div>
+  <div class="rail"><div class="fill" id="railFill"></div></div>
+</header>
+
+<div class="wrap">
+  <section class="hero" id="hero">
+    <p class="eyebrow">A guided pathway</p>
+    <h2>Should our Tribe seek TAS — and for what?</h2>
+    <p>Answer one question at a time. Each answer opens the next set of options, and your pathway builds as you go — ending in the specific Clean Air Act sections that fit your lands and your goals.</p>
+    <div class="facts"><span>4–5 questions</span><span>About 3 minutes</span><span>Printable for Council</span></div>
+    <button class="btn solid" id="btnStart">Begin
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <p class="disc">General information to support your discussion — not legal advice, and not an official EPA product. TAS decisions affect Tribal sovereignty and jurisdiction; coordinate with Tribal leadership, Council and legal counsel before applying.</p>
+  </section>
+
+  <div id="flow"></div>
+</div>
+
+<div class="mapwrap" id="mapWrap" role="dialog" aria-modal="true" aria-label="The full decision map" hidden>
+  <div class="mapbg" data-mapclose="1"></div>
+  <div class="mapcard">
+    <div class="maphead">
+      <div>
+        <span class="mkick">Overview</span>
+        <h3>The full decision map</h3>
+      </div>
+      <span class="grow"></span>
+      <div class="mapacts">
+        <button class="btn sm" id="mapFit">Fit</button>
+        <button class="btn sm" data-mapclose="1">Close &#10005;</button>
+      </div>
+    </div>
+    <div class="mapbody"><svg id="mapSvg" role="img" aria-label="Decision map showing every question, the answers taken, and the pathways unlocked"></svg></div>
+    <div class="mapfoot">
+      <span class="mleg"><i class="d1"></i>Your path</span>
+      <span class="mleg"><i class="d2"></i>Current step</span>
+      <span class="mleg"><i class="d3"></i>Not taken</span>
+      <span class="mtip">Click any step on your path to jump back to it &middot; drag to pan &middot; scroll to zoom</span>
+    </div>
+  </div>
+</div>
+
+<div id="printOut"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   TREE DATA — edit here to change the tool's content.
+   ========================================================================== */
+var NODES={
+  q1:{tag:'Question 1 · Boundaries',
+    q:'Are any of the Tribe’s jurisdictional boundaries disputed?',
+    help:'For a reservation this is the exterior boundary. For off-reservation areas it is the legal basis for your jurisdiction. When you apply, EPA must share your boundary showing with neighbouring state and local air agencies, who may comment on it.',
+    a:[
+      {label:'No — our boundaries are clear',note:'No known dispute over our reservation boundary or jurisdictional basis.',short:'No — clear',to:'q2'},
+      {label:'Yes — some or all are disputed',note:'One or more neighbouring governments contest our boundaries or jurisdiction.',short:'Yes — disputed',to:'q1b'},
+      {label:'We’re not sure yet',note:'Not confirmed with counsel — we’ll treat it cautiously.',short:'Not sure',to:'q1b'}
+    ]},
+  q1b:{tag:'Question 1b · Boundary risk',
+    q:'How would you like to proceed?',
+    risk:'When you apply for TAS, EPA must provide your application and boundary showing to the appropriate governmental entities (state and local air agencies). They may comment and, after approval, challenge the boundaries in court. An adverse ruling could <b>narrow the CAA regulatory jurisdiction EPA recognizes</b> for the Tribe. This does <b>not</b> affect land title or ownership — but it is a real strategic decision. Coordinate closely with Tribal counsel and Council.',
+    a:[
+      {label:'Pursue TAS for undisputed areas only',note:'Apply now over clearly-undisputed lands, and affirm the disputed areas remain claimed but excluded for now.',short:'Undisputed only',to:'q2'},
+      {label:'Pursue TAS for our full claimed area',note:'Accept the litigation risk and proceed with the full jurisdictional showing.',short:'Full area',to:'q2'},
+      {label:'Don’t pursue TAS right now',note:'Use non-TAS pathways instead — we’ll show you what’s available.',short:'Don’t pursue',to:'END_NONTAS'}
+    ]},
+  q2:{tag:'Question 2 · Sources',
+    q:'How many air-pollution sources are within your jurisdiction?',
+    help:'Sources include factories, power plants, large boilers and similar permitted or permittable facilities on your lands.',
+    a:[
+      {label:'Many',note:'Multiple significant sources we may want to permit, inspect and enforce.',short:'Many',to:'q3',grants:'regulatory'},
+      {label:'A few, or a localized issue',note:'A small number of sources — or something like wood smoke we’d address with an ordinance.',short:'A few',to:'q3',grants:'targeted'},
+      {label:'None or very few',note:'Little or no industrial activity on our lands.',short:'None/very few',to:'q3'}
+    ]},
+  q3:{tag:'Question 3 · Good neighbour',
+    q:'Do outside sources affect your air, or do you want a formal voice in nearby permits and plans?',
+    help:'This is the Clean Air Act “good neighbour” role: early review of, and standing to comment on, neighbouring states’ implementation plans and permits that could affect your air quality.',
+    a:[
+      {label:'Yes',note:'Outside sources impact us, or we want early review of others’ plans and permits.',short:'Yes',to:'q4',grants:'participatory'},
+      {label:'No',note:'Not a priority for us right now.',short:'No',to:'q4'}
+    ]},
+  q4:{tag:'Question 4 · Capacity',
+    q:'Do you have the capacity to run an air program?',
+    help:'Staffing and data skills, plus the executive, legislative and judicial mechanisms to administer and enforce a program. Lacking capacity does not disqualify you — you may submit a plan showing how you will build it.',
+    a:[
+      {label:'Yes, we’re ready',note:'We have staff and the governmental mechanisms in place.',short:'Ready',to:'END'},
+      {label:'Not yet — we’d need to build it',note:'We’d grow into it, take delegation, or partner with others.',short:'Building',to:'END',grants:'capacity'},
+      {label:'Unsure',note:'We haven’t assessed this yet.',short:'Unsure',to:'END',grants:'capacity'}
+    ]}
+};
+
+var OUT={
+  regulatory:{name:'Regulatory TAS',title:'Be the primary implementing authority',
+    body:'Develop and run the programs that permit, inspect and enforce on the sources in your jurisdiction. You choose <b>how</b>:',
+    options:[
+      {h:'Develop your own programs → EPA approval',d:'You tailor the rules and are the primary enforcer. Once approved they are federally enforceable.'},
+      {h:'Take delegation of federal rules',d:'No rule-writing — use existing federal rules (40 CFR part 71). You permit and inspect; enforcement is referred to EPA. A good capacity-building first step.'}
+    ],
+    sections:['§110 TIP','O₃ plans §§181–185','PM plans §§188–189','SO₂/NO₂/Pb §§191–192','CO plans §§186–187','Regional haze §169A','PSD §165','NSR §173','§167 enforcement','Title V §§501–507','§111 NSPS','§112 air toxics','§114 records','§129 solid-waste combustion','§303 emergency powers']},
+  targeted:{name:'Targeted Regulatory TAS',title:'Address a specific, localized issue',
+    body:'Even with only a few sources a focused program can help — for example a burning ordinance for wood smoke under a Tribal Implementation Plan.',
+    sections:['§110 TIP','PM NAAQS']},
+  participatory:{name:'Participatory TAS',title:'A formal “good neighbour” voice',
+    body:'Get early review of, and standing to comment on, neighbouring states’ plans and permits — and petition EPA when outside sources affect your air.',
+    sections:['§126(a)/(b)','§110(a)(2)(D)(i)','§505(a)','§105 grants','§319 monitoring','§107(d) designations']},
+  capacity:{name:'Capacity building',title:'You can pursue TAS while you build capacity',
+    body:'Not being “ready” is not a barrier. Options that lower the lift:',
+    checks:[
+      {h:'Submit a capability plan',d:'Show EPA how you will gain the technical expertise over time.'},
+      {h:'Take delegation instead of writing rules',d:'Use federal rules under 40 CFR part 71 to start.'},
+      {h:'Phase your program',d:'Seek TAS for a few sections now, add more later.'},
+      {h:'Partner or form a consortium',d:'Share staff and expertise with neighbouring Tribes.'}
+    ]}
+};
+
+var NONTAS=[
+  {h:'Use your inherent Tribal authority',d:'Develop your own programs without submitting them to EPA for approval.'},
+  {h:'Grants',d:'§103 (investigative) grants need no TAS; §105 (programmatic) grants can flow through a Performance Partnership Grant (PPG). Note §105 without TAS carries the standard 40% match, whereas TAS reduces it to 5% (then up to 10%).'},
+  {h:'Run programs directly',d:'Monitoring, environmental education, indoor-air and radon programs — all without TAS.'}
+];
+var CRITERIA=[
+  {h:'Federal recognition',d:'Listed by the Department of the Interior. § 49.6(a)'},
+  {h:'A governing body carrying out substantial duties',d:'A narrative on your government’s form, functions and source of authority. § 49.6(b)'},
+  {h:'A jurisdictional showing',d:'Reservation: map + legal description of exterior boundaries. Off-reservation: a statement of legal counsel on the basis for jurisdiction. § 49.6(c)'},
+  {h:'Reasonable capability — or a plan to build it',d:'§ 49.6(d). You may reuse documentation from a prior TAS approval per § 49.7(a)(8).'}
+];
+var NEXT=[
+  {h:'Bring this result to Tribal leadership, Council and legal counsel.',d:'The boundary and sovereignty stakes make this a governance decision, not just a technical one.'},
+  {h:'Assemble your jurisdictional showing.',d:'Map and legal description (reservation), or a counsel statement (off-reservation).'},
+  {h:'Document your governing body and capability — or a plan to build it.',d:''},
+  {h:'Contact your EPA Regional Office Tribal air lead (or OAQPS).',d:'They can confirm scope and help streamline the application.'},
+  {h:'Review the detailed CAA-section summary before finalizing which sections to seek.',d:''}
+];
+var LINKS=[
+  {t:'CAA: Summary of content & applicability for TAS (Titles I, III, V)',u:'https://www.epa.gov/tribal-air/clean-air-act-summary-content-applicability-tas-titles-i-iii-and-v'},
+  {t:'Tribal Authority Rule (TAR) under the Clean Air Act',u:'https://www.epa.gov/tribal-air/tribal-authority-rule-tar-under-clean-air-act'}
+];
+var DISC='General information to support your discussion — not legal advice, and not an official EPA product. Confirm all citations against 40 CFR Part 49 and the current Clean Air Act, and consult Tribal legal counsel before applying.';
+
+/* ============================================================================
+   STATE + HELPERS
+   ========================================================================== */
+var flow=document.getElementById('flow'), hero=document.getElementById('hero'),
+    railFill=document.getElementById('railFill');
+var path=[];              // [{node, ai}]
+var collected=[];
+var started=false;
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+var ARROW='<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function raf(fn){ requestAnimationFrame(function(){ requestAnimationFrame(fn); }); }
+
+/* shortest remaining questions from a node, for an honest progress bar */
+function remaining(id){
+  if(!NODES[id]) return 0;
+  var seen={}, q=[[id,0]], best=99;
+  while(q.length){
+    var it=q.shift(), n=it[0], d=it[1];
+    if(!NODES[n]){ best=Math.min(best,d); continue; }
+    if(seen[n]) continue; seen[n]=true;
+    NODES[n].a.forEach(function(a){ q.push([a.to,d+1]); });
+  }
+  return best===99?0:best;
+}
+function updateRail(current){
+  var done=path.length, rem=current?remaining(current):0;
+  var total=Math.max(done+rem,1);
+  railFill.style.width=Math.round((done/total)*100)+'%';
+}
+
+/* ============================================================================
+   STEP RENDERING  (progressive reveal)
+   ========================================================================== */
+function buildStep(nodeId){
+  var n=NODES[nodeId];
+  var step=document.createElement('section');
+  step.className='step on';
+  step.dataset.node=nodeId;
+  step.innerHTML=
+     '<span class="conn"></span>'
+   + '<span class="dot"><i></i></span>'
+   + '<div class="qhead">'
+   +   '<span class="qtag">'+esc(n.tag)+'</span>'
+   +   '<h3>'+esc(n.q)+'</h3>'
+   +   '<div class="answered" hidden></div>'
+   + '</div>'
+   + '<div class="body">'
+   +   (n.risk?'<div class="riskbox"><div class="rh">⚠ Understand the risk first</div><p>'+n.risk+'</p></div>':'')
+   +   (n.help?'<p class="help">'+esc(n.help)+'</p>':'')
+   +   '<div class="opts" role="group" aria-label="'+esc(n.q)+'">'
+   +     n.a.map(function(a,i){
+           return '<button class="opt" style="--i:'+i+'" data-ai="'+i+'">'
+             + '<span class="kb">'+(i+1)+'</span>'
+             + '<span class="tx"><span class="ol">'+esc(a.label)+'</span>'
+             + (a.note?'<span class="on">'+esc(a.note)+'</span>':'')
+             + (a.grants?'<span class="grant">+ '+esc(OUT[a.grants].name)+'</span>':'')
+             + '</span>'+ARROW+'</button>';
+         }).join('')
+   +   '</div>'
+   + '</div>';
+
+  step.querySelector('.opts').addEventListener('click',function(e){
+    var b=e.target.closest('.opt'); if(!b) return;
+    if(step.dataset.locked) return;
+    choose(nodeId,parseInt(b.getAttribute('data-ai'),10),step,b);
+  });
+  return step;
+}
+
+function showStep(nodeId){
+  var step=buildStep(nodeId);
+  flow.appendChild(step);
+  raf(function(){ step.classList.add('in'); });
+  setTimeout(function(){ step.classList.add('in'); },80);
+  updateRail(nodeId);
+  scrollTo_(step);
+  guardSettle(step,1500);
+  /* focus the first option once it has animated in */
+  setTimeout(function(){
+    var f=step.querySelector('.opt'); if(f) f.focus({preventScroll:true});
+  }, reduce?0:520);
+  return step;
+}
+
+function scrollTo_(el){
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var target=window.scrollY+r.top-120;
+    window.scrollTo({top:Math.max(0,target),behavior:reduce?'auto':'smooth'});
+  },60);
+}
+
+function choose(nodeId,ai,step,btn){
+  var n=NODES[nodeId], a=n.a[ai];
+  step.dataset.locked='1';
+
+  /* if re-answering, drop everything after this step */
+  var idx=-1;
+  for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
+  if(idx>=0) path=path.slice(0,idx);
+  path.push({node:nodeId,ai:ai});
+  collected=[];
+  path.forEach(function(p){ var g=NODES[p.node].a[p.ai].grants; if(g&&collected.indexOf(g)<0) collected.push(g); });
+
+  /* animate the non-chosen options out, then collapse the step */
+  var body=step.querySelector('.body');
+  var opts=Array.prototype.slice.call(step.querySelectorAll('.opt'));
+  body.style.maxHeight=body.scrollHeight+'px';
+  opts.forEach(function(o){ if(o!==btn) o.classList.add('leave'); });
+
+  var delay=reduce?0:300;
+  setTimeout(function(){
+    /* stamp the chosen answer into the head */
+    var ans=step.querySelector('.answered');
+    ans.hidden=false;
+    ans.innerHTML='<span class="pick">'+TICK+esc(a.label)+'</span>'
+      + '<button class="btn sm" data-change="1">Change</button>';
+    ans.querySelector('[data-change]').addEventListener('click',function(){ rewindTo(nodeId); });
+
+    step.classList.remove('on'); step.classList.add('done');
+    body.style.maxHeight='0px'; body.style.opacity='0';
+
+    /* an outcome branch blooms off the spine */
+    if(a.grants){
+      var br=document.createElement('div');
+      br.className='branch';
+      br.innerHTML='<span class="badge"><span class="pl">+</span><b>'+esc(OUT[a.grants].name)+'</b> added to your pathway</span>';
+      step.appendChild(br);
+    }
+
+    /* reveal the next set of options */
+    setTimeout(function(){
+      if(NODES[a.to]) showStep(a.to);
+      else showResult(a.to);
+    }, reduce?0:260);
+  }, delay);
+}
+
+function rewindTo(nodeId){
+  /* remove this step and everything after it, then re-show it */
+  var kids=Array.prototype.slice.call(flow.children);
+  var hit=false, doomed=[];
+  kids.forEach(function(k){
+    if(k.dataset && k.dataset.node===nodeId) hit=true;
+    if(hit) doomed.push(k);
+  });
+  doomed.forEach(function(d){
+    d.style.transition='opacity .25s ease,transform .25s ease';
+    d.style.opacity='0'; d.style.transform='translateY(-8px)';
+    setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); },reduce?0:250);
+  });
+  var idx=-1;
+  for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
+  if(idx>=0) path=path.slice(0,idx);
+  collected=[];
+  path.forEach(function(p){ var g=NODES[p.node].a[p.ai].grants; if(g&&collected.indexOf(g)<0) collected.push(g); });
+  setTimeout(function(){ showStep(nodeId); },reduce?0:270);
+}
+
+/* ============================================================================
+   RESULT
+   ========================================================================== */
+function verdict(){
+  var reg=collected.indexOf('regulatory')>=0, tgt=collected.indexOf('targeted')>=0, par=collected.indexOf('participatory')>=0;
+  if(reg&&par) return {t:'Pursue Regulatory + Participatory TAS',s:'You have sources to manage and reasons to influence what happens next door — seek both roles. They are not mutually exclusive.'};
+  if(tgt&&par) return {t:'Pursue Targeted + Participatory TAS',s:'A focused program at home, plus a formal voice in the decisions made around you.'};
+  if(reg) return {t:'Pursue Regulatory TAS',s:'Become the primary implementing authority for the air-pollution sources in your jurisdiction.'};
+  if(tgt) return {t:'Pursue Targeted Regulatory TAS',s:'A focused program can address your specific local air-quality issue.'};
+  if(par) return {t:'Pursue Participatory (good-neighbour) TAS',s:'Get a formal, early voice in the state and local decisions that affect your air quality.'};
+  return {t:'TAS may offer limited near-term benefit',s:'With few sources and no outside concern, non-TAS programs may serve you now — but the option stays open as things change.'};
+}
+function boundaryPick(){
+  var b=null,d=null;
+  path.forEach(function(p){
+    if(p.node==='q1') b=NODES.q1.a[p.ai].short;
+    if(p.node==='q1b') d=NODES.q1b.a[p.ai].short;
+  });
+  return {b:b,d:d};
+}
+function chipsHtml(arr){
+  return '<div class="chips">'+arr.map(function(s,i){return '<span class="sx" style="--i:'+i+'">'+esc(s)+'</span>';}).join('')+'</div>';
+}
+function checksHtml(arr){
+  return '<ul class="check">'+arr.map(function(c){
+    return '<li><span class="cx">'+TICK+'</span><span><b>'+c.h+'</b>'+(c.d?'<span class="d">'+c.d+'</span>':'')+'</span></li>';
+  }).join('')+'</ul>';
+}
+function outcomeCard(key,kind,i){
+  var o=OUT[key];
+  var h='<div class="card '+kind+' reveal" style="--i:'+i+'"><div class="rk">'+esc(o.name)+'</div><h4>'+esc(o.title)+'</h4>';
+  if(o.body) h+='<p class="m">'+o.body+'</p>';
+  if(o.options) h+='<div class="two">'+o.options.map(function(x){return '<div class="mini"><div class="mh">'+x.h+'</div><div class="md">'+x.d+'</div></div>';}).join('')+'</div>';
+  if(o.checks) h+=checksHtml(o.checks);
+  if(o.sections) h+='<p class="m" style="margin:10px 0 0">Sections you may seek:</p>'+chipsHtml(o.sections);
+  return h+'</div>';
+}
+
+function showResult(kind){
+  lastTerminal=kind;
+  var declined=(kind==='END_NONTAS');
+  var v=declined?{t:'A non-TAS pathway fits best right now',s:'You can protect your air and build capacity without TAS, and revisit once the boundary question is resolved.'}:verdict();
+  var f=boundaryPick();
+  var i=0;
+
+  var sec=document.createElement('section');
+  sec.className='result step';
+  var h='<span class="conn"></span><span class="dot"><i></i></span>'
+    + '<span class="rpill">'+TICK+' Your pathway</span>'
+    + '<h2>'+esc(v.t)+'</h2><p class="rsub">'+esc(v.s)+'</p>';
+
+  if(f.b && f.b.indexOf('No')!==0){
+    var extra = f.d==='Undisputed only'
+      ? 'Applying over <b>undisputed areas only</b> is the lower-risk route you chose — be sure to affirm the excluded areas remain claimed.'
+      : (f.d==='Full area'?'You chose to proceed over the <b>full claimed area</b> — have counsel prepare for a possible challenge.':'');
+    h+='<div class="card danger reveal" style="--i:'+(i++)+'"><div class="rk">Keep in view</div><h4>Your boundary showing carries risk</h4>'
+      +'<p>Because a boundary question exists, your application will be shared with the appropriate governmental entities, who may challenge it. An adverse ruling could <b>narrow your recognized CAA regulatory jurisdiction</b> — not your land title. '+extra+'</p></div>';
+  }
+
+  var real=collected.filter(function(x){return x!=='capacity';});
+  if(!declined){
+    h+='<div class="sectitle reveal" style="--i:'+(i++)+'">Recommended pathway'+(real.length>1?'s':'')+'</div>';
+    ['regulatory','targeted','participatory'].forEach(function(k){
+      if(collected.indexOf(k)>=0) h+=outcomeCard(k,'key',i++);
+    });
+    if(!real.length){
+      h+='<div class="card soft reveal" style="--i:'+(i++)+'"><div class="rk">Worth knowing</div><h4>You have strong options without TAS today</h4>'
+        +'<p class="m">With little source activity and no outside concern right now, the non-TAS pathways below may meet your needs. TAS remains available whenever sources appear or priorities shift.</p></div>';
+    }
+    if(collected.indexOf('capacity')>=0) h+=outcomeCard('capacity','warn',i++);
+  }
+
+  h+='<div class="card soft reveal" style="--i:'+(i++)+'"><div class="rk">No TAS required</div><h4>'
+    +(declined?'Your non-TAS pathway':'Also available — with or without TAS')+'</h4>'+checksHtml(NONTAS)+'</div>';
+
+  h+='<div class="sectitle reveal" style="--i:'+(i++)+'">Before you file — the four eligibility criteria</div>'
+    +'<div class="card reveal" style="--i:'+(i++)+'"><p class="m" style="margin-top:0">To be approved, your Tribe must be able to demonstrate all four (40 CFR §§ 49.6 / 49.7):</p>'+checksHtml(CRITERIA)+'</div>';
+
+  h+='<div class="sectitle reveal" style="--i:'+(i++)+'">Next steps</div><div class="card reveal" style="--i:'+(i++)+'"><ol class="steps">'
+    +NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?'<div class="d">'+s.d+'</div>':'')+'</li>';}).join('')+'</ol></div>';
+
+  h+='<div class="card reveal" style="--i:'+(i++)+'"><div class="rk">Reference</div><div class="reflinks">'
+    +LINKS.map(function(l){return '<a href="'+l.u+'" target="_blank" rel="noopener">'+esc(l.t)+' ↗</a>';}).join('')+'</div></div>';
+
+  h+='<div class="ractions reveal" style="--i:'+(i++)+'">'
+    +'<button class="btn solid" data-print="1">Print / Save PDF</button>'
+    +'<button class="btn" data-restart="1">Start over</button></div>';
+  h+='<p class="disc2">'+DISC+'</p>';
+
+  sec.innerHTML=h;
+  flow.appendChild(sec);
+  raf(function(){ sec.classList.add('in'); });
+  setTimeout(function(){ sec.classList.add('in'); },80);
+  railFill.style.width='100%';
+  scrollTo_(sec);
+  guardSettle(sec,2400);
+
+  sec.addEventListener('click',function(e){
+    if(e.target.closest('[data-print]')){ doPrint(); }
+    if(e.target.closest('[data-restart]')){ restart(); }
+  });
+}
+
+/* ============================================================================
+   PRINT / RESET / KEYS
+   ========================================================================== */
+function doPrint(){
+  var v=verdict(), out=document.getElementById('printOut');
+  var declined=path.length&&NODES[path[path.length-1].node].a[path[path.length-1].ai].to==='END_NONTAS';
+  if(declined) v={t:'A non-TAS pathway fits best right now',s:'Revisit TAS once the boundary question is resolved.'};
+  var h='<h2>'+esc(v.t)+'</h2><p>'+esc(v.s)+'</p><h3>Answers chosen</h3><div>';
+  path.forEach(function(p){
+    var n=NODES[p.node], a=n.a[p.ai];
+    h+='<span class="pc">'+esc(n.tag.replace(/^Question\s*/,'Q')+': '+(a.short||a.label))+'</span>';
+  });
+  h+='</div>';
+  if(collected.length){
+    h+='<h3>Recommended pathways</h3>';
+    collected.forEach(function(k){
+      var o=OUT[k];
+      h+='<p><b>'+esc(o.name)+' — '+esc(o.title)+'</b></p>';
+      if(o.options) h+='<ul>'+o.options.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+      if(o.checks) h+='<ul>'+o.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+      if(o.sections) h+='<div>'+o.sections.map(function(s){return '<span class="psx">'+esc(s)+'</span>';}).join('')+'</div>';
+    });
+  }
+  h+='<h3>Non-TAS options</h3><ul>'+NONTAS.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+  h+='<h3>The four eligibility criteria (40 CFR §§ 49.6 / 49.7)</h3><ul>'+CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
+  h+='<h3>Next steps</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
+  h+='<h3>Reference</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+l.u+'</li>';}).join('')+'</ul>';
+  h+='<p class="pd">'+DISC+'</p>';
+  out.innerHTML=h;
+  window.print();
+}
+
+function restart(){
+  path=[]; collected=[]; started=false;
+  Array.prototype.slice.call(flow.children).forEach(function(k){
+    k.style.transition='opacity .25s ease'; k.style.opacity='0';
+  });
+  setTimeout(function(){
+    flow.innerHTML='';
+    railFill.style.width='0%';
+    hero.style.display='';
+    raf(function(){ hero.style.opacity='1'; hero.style.transform='none'; });
+    window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+  },reduce?0:260);
+}
+
+function start(){
+  if(started) return; started=true;
+  hero.style.transition='opacity .35s ease,transform .35s ease';
+  hero.style.opacity='0'; hero.style.transform='translateY(-10px)';
+  setTimeout(function(){ hero.style.display='none'; showStep('q1'); },reduce?0:300);
+}
+
+document.getElementById('btnStart').addEventListener('click',start);
+document.getElementById('btnReset').addEventListener('click',restart);
+document.getElementById('btnPrint').addEventListener('click',doPrint);
+
+/* number keys pick options on the active step */
+document.addEventListener('keydown',function(e){
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(!started && (e.key==='Enter'||e.key===' ')){ return; }
+  var n=parseInt(e.key,10);
+  if(!n) return;
+  var active=flow.querySelector('.step.on:not([data-locked])');
+  if(!active) return;
+  var opt=active.querySelectorAll('.opt')[n-1];
+  if(opt){ e.preventDefault(); opt.click(); }
+});
+
+/* ============================================================================
+   VISIBILITY FAIL-SAFE
+   Entrance animations must never be the only thing that makes content visible.
+   If animations never fire (background tab, throttled renderer, missed
+   animationend), force every staged element into its final visible state.
+   ========================================================================== */
+function forceSettle(scope){
+  var flowEl=document.getElementById('flow');
+  var root=flowEl||scope;
+  if(!root) return;
+  function stuck(e){ return parseFloat(getComputedStyle(e).opacity||'1')<0.9; }
+  /* Jump an element to its final visible state. A frozen animation or
+     transition wins over inline styles in the cascade, so timing has to be
+     switched off before the end state will actually apply. */
+  function land(e){
+    e.style.animation='none';
+    e.style.transition='none';
+    e.style.opacity='1';
+    e.style.transform='none';
+  }
+  Array.prototype.forEach.call(root.querySelectorAll('.step'),function(e){
+    if(!stuck(e)) return;
+    e.classList.add('in'); land(e);
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('.reveal'),function(e){
+    if(!stuck(e)) return;
+    e.classList.remove('reveal'); e.classList.add('settled'); land(e);
+  });
+  Array.prototype.forEach.call(
+    root.querySelectorAll('.sx,.check li,.opt,.branch,.answered .pick,.riskbox,.rpill'),
+    function(e){
+      if(e.classList.contains('leave')||!stuck(e)) return;
+      land(e);
+      if(e.classList.contains('sx')) e.classList.add('settled');
+    });
+  Array.prototype.forEach.call(root.querySelectorAll('.sectitle'),function(e){
+    e.classList.add('ruled');
+  });
+}
+/* schedule a settle just past the longest stagger, and immediately if hidden */
+function guardSettle(scope,ms){
+  if(document.hidden||reduce){ forceSettle(scope); return; }
+  setTimeout(function(){ forceSettle(scope); },ms||2400);
+}
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden) return;
+  forceSettle(document.getElementById('flow'));
+});
+
+/* ============================================================================
+   FULL MAP OVERLAY — the whole tree at a glance, with your path highlighted
+   ========================================================================== */
+var MAP_LABEL={q1:'Boundaries disputed?',q1b:'How to proceed?',q2:'How many sources?',
+               q3:'A voice next door?',q4:'Capacity to run it?'};
+var MAP_TERM={END:{tag:'Result',label:'Your pathway'},
+              END_NONTAS:{tag:'Outcome',label:'Non-TAS pathways'}};
+var MAP_LANE={q1:0,q1b:0,q2:0,q3:0,q4:0,END:0,END_NONTAS:-1.4};
+var OUT_LANE={regulatory:1,targeted:2,participatory:1,capacity:1};
+var MW=172,MLANE=200,MLAYER=108,MP=12,MLH=15;
+var mCtx=document.createElement('canvas').getContext('2d');
+var lastTerminal=null;
+
+function mWrap(t,maxw){
+  mCtx.font='650 12px '+getComputedStyle(document.body).fontFamily;
+  var w=String(t).split(/\s+/),lines=[],cur='';
+  for(var i=0;i<w.length;i++){
+    var test=cur?cur+' '+w[i]:w[i];
+    if(mCtx.measureText(test).width>maxw&&cur){lines.push(cur);cur=w[i];}else cur=test;
+  }
+  if(cur)lines.push(cur);
+  return lines;
+}
+function mapLayers(){
+  var L={q1:0},ids=Object.keys(NODES);
+  for(var p=0;p<10;p++){
+    ids.forEach(function(id){
+      NODES[id].a.forEach(function(a){
+        var c=L[id]||0;
+        if((L[a.to]||0)<c+1) L[a.to]=c+1;
+      });
+    });
+  }
+  return L;
+}
+function mapModel(){
+  var L=mapLayers(),list=[],seen={};
+  function push(n){ if(seen[n.id])return; seen[n.id]=1; list.push(n); }
+  Object.keys(NODES).forEach(function(id){
+    push({id:id,kind:'q',layer:L[id]||0,lane:MAP_LANE[id]||0,
+          tag:NODES[id].tag.split('·')[0].trim(),label:MAP_LABEL[id]||NODES[id].q});
+  });
+  Object.keys(MAP_TERM).forEach(function(id){
+    push({id:id,kind:'term',layer:L[id]||0,lane:MAP_LANE[id]||0,
+          tag:MAP_TERM[id].tag,label:MAP_TERM[id].label});
+  });
+  Object.keys(NODES).forEach(function(id){
+    NODES[id].a.forEach(function(a){
+      if(a.grants) push({id:'o_'+a.grants,kind:'out',okey:a.grants,layer:(L[id]||0)+1,
+                         lane:OUT_LANE[a.grants]||1,tag:'Pathway',label:OUT[a.grants].name});
+    });
+  });
+  var edges=[];
+  Object.keys(NODES).forEach(function(id){
+    NODES[id].a.forEach(function(a,ai){
+      edges.push({from:id,to:a.to,ai:ai,label:a.short,kind:'answer'});
+      if(a.grants) edges.push({from:id,to:'o_'+a.grants,ai:ai,label:'+',kind:'grant'});
+    });
+  });
+  var pos={};
+  list.forEach(function(n){
+    var lines=mWrap(n.label,MW-MP*2);
+    pos[n.id]={x:n.lane*MLANE,y:n.layer*MLAYER,w:MW,h:MP+10+lines.length*MLH+MP-3,lines:lines,n:n};
+  });
+  return {list:list,edges:edges,pos:pos};
+}
+
+var mapWrap=document.getElementById('mapWrap');
+var mapSvg=document.getElementById('mapSvg');
+var mView={tx:0,ty:0,s:1},mG=null,mModel=null,mOpen=false,mPrevFocus=null;
+var SVGNS='http://www.w3.org/2000/svg';
+function mEl(t,a,p){var e=document.createElementNS(SVGNS,t);
+  if(a)for(var k in a)e.setAttribute(k,a[k]); if(p)p.appendChild(e); return e;}
+function mApply(){ if(mG) mG.setAttribute('transform','translate('+mView.tx+','+mView.ty+') scale('+mView.s+')'); }
+
+function activeStepNode(){
+  var on=flow.querySelector('.step.on:not(.result)');
+  if(on) return on.dataset.node;
+  if(flow.querySelector('.result')) return lastTerminal||'END';
+  return started?'q1':null;
+}
+
+function drawMap(){
+  mModel=mapModel();
+  mapSvg.innerHTML='';
+  mG=mEl('g',null,mapSvg);
+  var pos=mModel.pos;
+  var answered={},takenEdge={};
+  path.forEach(function(p){ answered[p.node]=p.ai; takenEdge[p.node+'>'+p.ai]=1; });
+  var active=activeStepNode();
+  var onSet={};
+  Object.keys(answered).forEach(function(k){ onSet[k]=1; });
+  collected.forEach(function(c){ onSet['o_'+c]=1; });
+  if(active) onSet[active]=1;
+  path.forEach(function(p){ onSet[NODES[p.node].a[p.ai].to]=1; });
+
+  /* edges first */
+  mModel.edges.forEach(function(e){
+    var a=pos[e.from],b=pos[e.to]; if(!a||!b) return;
+    var taken=!!takenEdge[e.from+'>'+e.ai];
+    var x1=a.x+a.w/2,y1=a.y+a.h,x2=b.x+b.w/2,y2=b.y;
+    var dy=Math.max(20,(y2-y1)/2);
+    var cls='mapedge '+e.kind+(taken?' taken':' faint');
+    mEl('path',{class:cls,d:'M'+x1+','+y1+' C'+x1+','+(y1+dy)+' '+x2+','+(y2-dy)+' '+x2+','+y2},mG);
+    if(e.kind==='answer'&&e.label){
+      var mx=(x1+x2)/2,my=(y1+y2)/2,tw=e.label.length*5.2+10;
+      var g=mEl('g',{class:taken?'':'mapedge faint',opacity:taken?1:.45},mG);
+      mEl('rect',{class:'maplblbg'+(taken?' taken':''),x:mx-tw/2,y:my-8,width:tw,height:16,rx:4},g);
+      var t=mEl('text',{class:'maplbl'+(taken?' taken':''),x:mx,y:my+3.5,'text-anchor':'middle'},g);
+      t.textContent=e.label;
+    }
+  });
+
+  /* nodes */
+  mModel.list.forEach(function(n,i){
+    var p=pos[n.id];
+    var isAnswered=(n.kind==='q'&&answered.hasOwnProperty(n.id));
+    var isCur=(n.id===active);
+    var isOn=!!onSet[n.id];
+    var cls='mapnode';
+    if(n.kind==='out') cls+=' out';
+    if(isCur) cls+=' cur'; else if(isOn) cls+=' done';
+    if(!isOn) cls+=' dim';
+    var clickable=(n.kind==='q'&&(isAnswered||isCur));
+    if(clickable) cls+=' clickable';
+    var g=mEl('g',{class:cls,transform:'translate('+p.x+','+p.y+')',style:'--i:'+i},mG);
+    g.dataset.id=n.id;
+    if(clickable){
+      g.setAttribute('tabindex','0');
+      g.setAttribute('role','button');
+      g.setAttribute('aria-label','Jump back to '+n.tag+': '+n.label);
+    }
+    mEl('rect',{class:'mc',x:0,y:0,width:p.w,height:p.h,rx:11},g);
+    mEl('rect',{class:'mring',x:-4,y:-4,width:p.w+8,height:p.h+8,rx:14},g);
+    var tg=mEl('text',{class:'mg',x:MP,y:MP+1},g); tg.textContent=n.tag.toUpperCase();
+    p.lines.forEach(function(ln,k){
+      var t=mEl('text',{class:'mt',x:MP,y:MP+14+k*MLH},g); t.textContent=ln;
+    });
+    if(isCur){
+      var c=mEl('circle',{class:'mappulse',cx:p.w/2,cy:p.h+3,r:5},mG?g:g);
+      c.style.animation='ping 2.2s ease-out infinite';
+    }
+    if(clickable){
+      g.addEventListener('click',function(){ jumpFromMap(n.id,isCur); });
+      g.addEventListener('keydown',function(ev){
+        if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); jumpFromMap(n.id,isCur); }
+      });
+    }
+  });
+  mFit();
+}
+
+function jumpFromMap(id,isCur){
+  closeMap();
+  setTimeout(function(){
+    if(isCur){
+      var el=flow.querySelector('.step[data-node="'+id+'"]');
+      if(el) scrollTo_(el);
+    } else rewindTo(id);
+  },240);
+}
+
+function mBox(){
+  var xs=[],ys=[],xe=[],ye=[];
+  mModel.list.forEach(function(n){var p=mModel.pos[n.id];
+    xs.push(p.x);ys.push(p.y);xe.push(p.x+p.w);ye.push(p.y+p.h);});
+  var x=Math.min.apply(null,xs),y=Math.min.apply(null,ys);
+  return {x:x,y:y,w:Math.max.apply(null,xe)-x,h:Math.max.apply(null,ye)-y};
+}
+function mFit(){
+  if(!mModel) return;
+  var r=mapSvg.getBoundingClientRect(),b=mBox(),pad=34;
+  if(!r.width||!r.height||!b.w){ mView={s:.6,tx:-b.x*.6+30,ty:20}; mApply(); return; }
+  var s=Math.min((r.width-pad*2)/b.w,(r.height-pad*2)/b.h,1.1);
+  s=Math.max(.2,s);
+  mView.s=s;
+  mView.tx=(r.width-b.w*s)/2-b.x*s;
+  mView.ty=(r.height-b.h*s)/2-b.y*s;
+  mApply();
+}
+
+/* map pan / zoom */
+var mDrag=null;
+mapSvg.addEventListener('pointerdown',function(e){
+  if(e.target.closest('.mapnode')) return;
+  mDrag={x:e.clientX,y:e.clientY,tx:mView.tx,ty:mView.ty};
+  mapSvg.classList.add('grabbing');
+  try{ mapSvg.setPointerCapture(e.pointerId); }catch(err){}
+});
+mapSvg.addEventListener('pointermove',function(e){
+  if(!mDrag) return;
+  mView.tx=mDrag.tx+(e.clientX-mDrag.x);
+  mView.ty=mDrag.ty+(e.clientY-mDrag.y);
+  mApply();
+});
+mapSvg.addEventListener('pointerup',function(e){
+  mDrag=null; mapSvg.classList.remove('grabbing');
+  try{ mapSvg.releasePointerCapture(e.pointerId); }catch(err){}
+});
+mapSvg.addEventListener('wheel',function(e){
+  e.preventDefault();
+  var r=mapSvg.getBoundingClientRect();
+  var cx=e.clientX-r.left, cy=e.clientY-r.top;
+  var k=e.deltaY<0?1.12:1/1.12;
+  var ns=Math.min(2.2,Math.max(.18,mView.s*k));
+  var wx=(cx-mView.tx)/mView.s, wy=(cy-mView.ty)/mView.s;
+  mView.s=ns; mView.tx=cx-wx*ns; mView.ty=cy-wy*ns;
+  mApply();
+},{passive:false});
+
+function openMap(){
+  mPrevFocus=document.activeElement;
+  mapWrap.hidden=false; mOpen=true;
+  document.body.style.overflow='hidden';
+  drawMap();
+  requestAnimationFrame(function(){ requestAnimationFrame(mFit); });
+  var f=mapWrap.querySelector('#mapFit'); if(f) f.focus({preventScroll:true});
+}
+function closeMap(){
+  if(!mOpen) return;
+  mOpen=false;
+  var card=mapWrap.querySelector('.mapcard');
+  card.style.animation='none';
+  card.style.transition='opacity .22s ease,transform .22s ease';
+  card.style.opacity='0'; card.style.transform='translateY(10px) scale(.99)';
+  setTimeout(function(){
+    mapWrap.hidden=true;
+    card.style.transition=''; card.style.opacity=''; card.style.transform=''; card.style.animation='';
+    document.body.style.overflow='';
+    if(mPrevFocus&&mPrevFocus.focus) try{ mPrevFocus.focus({preventScroll:true}); }catch(e){}
+  },reduce?0:220);
+}
+document.getElementById('btnMap').addEventListener('click',openMap);
+document.getElementById('mapFit').addEventListener('click',mFit);
+mapWrap.addEventListener('click',function(e){ if(e.target.closest('[data-mapclose]')) closeMap(); });
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&mOpen){ e.preventDefault(); closeMap(); }
+  if((e.key==='m'||e.key==='M')&&!mOpen&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
+    var t=e.target.tagName;
+    if(t!=='INPUT'&&t!=='TEXTAREA'){ e.preventDefault(); openMap(); }
+  }
+});
+window.addEventListener('resize',function(){ if(mOpen) mFit(); });
+
+/* hand finished entrance animations over to hover transitions */
+document.addEventListener('animationend',function(e){
+  var t=e.target;
+  if(!t.classList) return;
+  if(t.classList.contains('reveal')){ t.classList.remove('reveal'); t.classList.add('settled'); }
+  else if(t.classList.contains('sx')&&!t.classList.contains('settled')){ t.classList.add('settled'); }
+},true);
+
+</script>
