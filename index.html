@@ -151,16 +151,23 @@ a{color:var(--accent-ink)}
   background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .7s var(--ease)}
 
 /* stage */
-.stage{flex:1;position:relative;min-height:0;overflow:hidden;cursor:grab}
+.stage{flex:1;position:relative;min-height:0;overflow:hidden;cursor:grab;perspective:1500px;perspective-origin:50% 42%}
 .stage.grabbing{cursor:grabbing}
-.viewport{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.viewport{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;transform-style:preserve-3d}
 .edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
-.nodes{position:absolute;left:0;top:0}
+.nodes{position:absolute;left:0;top:0;transform-style:preserve-3d}
 
 /* ---------- tree nodes ---------- */
-.tnode{position:absolute;background:var(--surface);border:1.5px solid var(--border-strong);
+/* Depth encodes relevance: what you must act on comes forward, what you
+   ruled out recedes and softens. Every transform is composed from these
+   custom properties so a hover lift can never clobber a state's depth. */
+.tnode{--z:0px; --lift:0px; --rx:0deg; --ry:0deg; --sc:1;
+  position:absolute;background:var(--surface);border:1.5px solid var(--border-strong);
   border-radius:13px;box-shadow:var(--sh1);padding:12px 14px;
-  transition:opacity .4s var(--ease),border-color .22s,box-shadow .22s,transform .18s var(--ease),filter .35s}
+  transform:translate3d(0,var(--lift),var(--z)) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--sc));
+  transform-style:preserve-3d;backface-visibility:hidden;
+  transition:opacity .4s var(--ease),border-color .22s,box-shadow .22s,
+             transform .26s var(--ease),filter .35s}
 .tnode .tag{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;
   color:var(--accent);display:block;margin-bottom:4px}
 .tnode .ttl{font-weight:650;font-size:14.5px;line-height:1.3;display:block}
@@ -171,6 +178,11 @@ a{color:var(--accent-ink)}
 .tnode.q .ttl{font-family:var(--serif);font-weight:600;font-size:17px;line-height:1.22}
 .tnode.q.risky{border-color:var(--risk-line);background:var(--risk-bg)}
 .tnode.q.risky .tag{color:var(--risk)}
+.tnode.q{box-shadow:var(--sh1)}
+/* The question awaiting an answer is the nearest thing to the reader. It earns
+   that through elevation, not translateZ: anything carrying text the reader
+   must READ stays at Z:0 so the glyphs are never resampled by perspective. */
+.tnode.q.active{box-shadow:0 0 0 4px var(--accent-soft),var(--sh2)}
 
 /* option node */
 .tnode.opt{cursor:pointer;overflow:hidden}
@@ -178,7 +190,7 @@ a{color:var(--accent-ink)}
 .tnode.opt::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(100deg,transparent,var(--accent-soft),transparent);
   transform:translateX(-110%);transition:transform .55s var(--ease);opacity:.75}
-.tnode.opt:hover{border-color:var(--accent);box-shadow:var(--sh2);transform:translateY(-2px)}
+.tnode.opt:hover{--lift:-3px;border-color:var(--accent);box-shadow:var(--sh2)}
 .tnode.opt:hover::before{transform:translateX(110%)}
 .tnode.opt:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
 .tnode.opt .kb{position:absolute;top:8px;right:9px;width:18px;height:18px;border-radius:5px;
@@ -191,8 +203,12 @@ a{color:var(--accent-ink)}
 .tnode.chosen .tag{color:var(--good)}
 .tnode.chosen .kb{display:none}
 .tnode.chosen::after{content:'✓';position:absolute;top:7px;right:10px;color:var(--good);font-weight:700;font-size:13px}
-.tnode.notaken{opacity:.42;filter:saturate(.3);cursor:pointer}
-.tnode.notaken:hover{opacity:1;filter:none;border-color:var(--accent);box-shadow:var(--sh2);transform:translateY(-2px)}
+/* the road not taken: pushed back behind the live path and thrown slightly
+   out of focus, so relevance reads before you even parse the label */
+.tnode.notaken{--z:-38px;opacity:.5;filter:saturate(.28) blur(.7px);cursor:pointer}
+/* on hover a discarded branch comes back to the front and to full focus —
+   the one place a node crosses between depth planes, and it lands at Z:0 */
+.tnode.notaken:hover{--lift:-3px;--z:0px;opacity:1;filter:none;border-color:var(--accent);box-shadow:var(--sh2)}
 .tnode.notaken .kb{display:none}
 .tnode.notaken::after{content:'switch';position:absolute;bottom:6px;right:9px;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);opacity:0;transition:opacity .2s}
@@ -209,13 +225,14 @@ a{color:var(--accent-ink)}
   font-weight:700;color:var(--good);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
 /* an unsized inline SVG defaults to 300x150 and blows the node open */
 .tnode svg,.check .cx svg{width:13px;height:13px;flex:none}
-.tnode.result:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.tnode.result{box-shadow:0 0 0 4px var(--good-bg),var(--sh2)}
+.tnode.result:hover{--lift:-3px;box-shadow:0 0 0 5px var(--good-bg),var(--sh2)}
 
 /* active pulse */
 .tnode.active{box-shadow:0 0 0 4px var(--accent-soft),var(--sh2)}
 
 /* entrance */
-.tnode.pre{opacity:0;transform:translateY(14px) scale(.97)}
+.tnode.pre{opacity:0;--lift:14px;--sc:.97;--z:-30px}
 
 /* edges */
 .edge{fill:none;stroke:var(--border-strong);stroke-width:2}
@@ -251,7 +268,7 @@ body.running .legend,body.running .hint{opacity:1}
    session rather than on a card the reader dismisses once. */
 .notice{flex:none;display:flex;align-items:baseline;gap:9px;z-index:5;
   padding:6px clamp(12px,2.5vw,20px);background:var(--surface-2);
-  border-bottom:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--faint)}
+  border-bottom:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--muted)}
 .notice b{flex:none;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;
   text-transform:uppercase;color:var(--accent)}
 @media (max-width:560px){ .notice b{display:none} }
@@ -272,6 +289,20 @@ body.running .legend,body.running .hint{opacity:1}
 .sheet .head h3{font-family:var(--serif);font-weight:600;font-size:19px;margin:1px 0 0;line-height:1.16}
 .sheet .head .grow{flex:1}
 .sheet .body{flex:1;overflow-y:auto;padding:18px}
+/* ---------- bento result ----------
+   The result is a set of independent answers, not a narrative, so it reads
+   better as a board of tiles than as a scroll. Tiles that carry a list get
+   the full width; short ones pair up. */
+.sheet .body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;align-content:start}
+.sheet .body>*{grid-column:1 / -1;margin:0}
+.sheet .body .card{margin:0;height:100%}
+.sheet .body .tile-half{grid-column:span 1}
+@media (max-width:560px){ .sheet .body .tile-half{grid-column:1 / -1} }
+.sheet .body .sectitle{margin:10px 0 0;align-self:end}
+.sheet .body .card.stat{display:flex;flex-direction:column;justify-content:space-between}
+.sheet .body .card.stat .big{font-family:var(--serif);font-size:26px;font-weight:600;line-height:1;
+  color:var(--accent);font-variant-numeric:tabular-nums;margin-top:6px}
+.sheet .body .card.stat .lbl{font-size:12.5px;color:var(--muted);margin-top:4px}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:15px 16px;margin:0 0 12px;box-shadow:var(--sh1)}
 .card.key{border-left:4px solid var(--accent)}
@@ -308,7 +339,11 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   .tnode{opacity:1!important;transform:none!important}
-  .tnode.notaken{opacity:.42!important}
+  .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
+  /* flatten the depth model but keep the meaning legible */
+  .tnode{--z:0px!important;--rx:0deg!important;--ry:0deg!important}
+  .stage{perspective:none!important}
+  .env .ridges{transform:none!important}
   /* keep the scene, just stop it moving */
   .env .clouds span,.env .motes span{animation:none!important}
   .env .motes span{opacity:.5!important}
@@ -860,7 +895,18 @@ function outCard(k,kind){
 }
 function resultHtml(){
   var declined=terminal==='END_NONTAS', v=verdict(terminal), f=boundaryPick();
-  var h='<p style="margin:0 0 18px;color:var(--muted)">'+esc(v.s)+'</p>';
+  var h='<p style="margin:0 0 4px;color:var(--muted)">'+esc(v.s)+'</p>';
+  /* two short tiles give the bento its rhythm and answer the first two
+     questions a reader actually has: how many sections, and how far in am I */
+  var secCount=0;
+  collected.forEach(function(k){ if(OUT[k].sections) secCount+=OUT[k].sections.length; });
+  var realPaths=collected.filter(function(x){return x!=='capacity';}).length;
+  h+='<div class="card stat tile-half"><div class="rk">CAA sections</div>'
+   + '<div><div class="big">'+secCount+'</div><div class="lbl">'
+   + (secCount?'to consider seeking':'none required for this route')+'</div></div></div>';
+  h+='<div class="card stat tile-half"><div class="rk">Pathways</div>'
+   + '<div><div class="big">'+realPaths+'</div><div class="lbl">'
+   + (realPaths===1?'recommended route':(realPaths?'complementary routes':'non-TAS route'))+'</div></div></div>';
   if(f.b&&f.b.indexOf('No')!==0){
     var ex=f.d==='Undisputed only'
       ?'Applying over <b>undisputed areas only</b> is the lower-risk route you chose — be sure to affirm the excluded areas remain claimed.'
@@ -958,6 +1004,31 @@ function reset(){
   view.s=1; focusFrontier();
 }
 document.getElementById('btnReset').addEventListener('click',reset);
+
+/* ===========================================================================
+   DEPTH INTERACTIONS
+   Parallax on the ridge layers, and a slight tilt of interactive nodes toward
+   the pointer. Both are pure transform writes on rAF-free paths so they stay
+   cheap, and both are inert when the reader prefers reduced motion.
+   ========================================================================= */
+var ridgeEl=document.querySelector('.env .ridges');
+var ridgePaths=ridgeEl?ridgeEl.querySelectorAll('path'):[];
+/* far ridges shift least — the standard parallax reading of distance */
+var PARALLAX=[0.018,0.038,0.066];
+function paintParallax(){
+  if(reduce||!ridgePaths.length) return;
+  for(var i=0;i<ridgePaths.length;i++){
+    var k=PARALLAX[i]||0.03;
+    ridgePaths[i].setAttribute('transform','translate('+(view.tx*k).toFixed(2)+','+(view.ty*k*0.35).toFixed(2)+')');
+  }
+}
+var _applyView=applyView;
+applyView=function(){ _applyView(); paintParallax(); };
+
+/* Deliberately NO pointer tilt on the cards. Rotating a node rotates the
+   label the reader is in the middle of reading, and this audience cannot be
+   handed soft type. Depth here comes from the receding not-taken plane and
+   from backdrop parallax — neither of which touches text the reader needs. */
 
 /* The tree runs the moment the page loads. This script is the last thing in
    the document, so the stage is already laid out and focusFrontier() can
