@@ -2,3 +2,8 @@
 .DS_Store
 node_modules
 *.log
+
+# internal source document - do not publish
+*.docx
+*.doc
+decision-tree-prompt.md

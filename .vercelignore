@@ -1,0 +1,6 @@
+# never publish the internal source document or working notes
+*.docx
+*.doc
+decision-tree-prompt.md
+.claude
+README.md
