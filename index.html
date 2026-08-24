@@ -16,7 +16,6 @@
   --cloud:rgba(255,255,255,.72); --haze:rgba(255,255,255,.5);
   --ridge-3:#dde9e4; --ridge-2:#ccdcd6; --ridge-1:#bad0c8;
   --mote:rgba(44,107,100,.4);
-  --veil:rgba(243,247,244,.74); --veil-solid:#f2f6f3;
   --serif:Georgia,"Iowan Old Style","Palatino Linotype",serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
@@ -39,7 +38,6 @@
     --cloud:rgba(140,190,195,.09); --haze:rgba(120,175,180,.055);
     --ridge-3:#142125; --ridge-2:#192a2e; --ridge-1:#1f3236;
     --mote:rgba(95,180,169,.42);
-    --veil:rgba(11,18,21,.76); --veil-solid:#0c1417;
     --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
     --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
   }
@@ -58,7 +56,6 @@
   --cloud:rgba(140,190,195,.09); --haze:rgba(120,175,180,.055);
   --ridge-3:#142125; --ridge-2:#192a2e; --ridge-1:#1f3236;
   --mote:rgba(95,180,169,.42);
-  --veil:rgba(11,18,21,.76); --veil-solid:#0c1417;
   --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
   --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
 }
@@ -248,20 +245,16 @@ body.running .legend,body.running .hint{opacity:1}
   color:var(--faint);font-size:10.5px;display:block}
 @media (max-width:700px){ .legend{display:none} }
 
-/* ---------- intro ---------- */
-.intro{position:absolute;inset:0;z-index:6;display:grid;place-items:center;padding:20px;
-  background:var(--veil);backdrop-filter:blur(3px);transition:opacity .4s ease}
-@supports not (backdrop-filter:blur(3px)){ .intro{background:var(--veil-solid)} }
-.intro.gone{opacity:0;pointer-events:none}
-.introcard{max-width:560px;text-align:left}
-.introcard .kk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
-.introcard h2{font-family:var(--serif);font-weight:600;font-size:clamp(26px,5vw,38px);line-height:1.08;
-  letter-spacing:-.015em;margin:0 0 12px;text-wrap:balance}
-.introcard p{color:var(--muted);margin:0 0 16px}
-.introcard .f{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
-.introcard .f span{font-size:12.5px;color:var(--muted);background:var(--surface);border:1px solid var(--border);
-  border-radius:999px;padding:4px 11px}
-.introcard .d{font-size:12.5px;color:var(--faint);border-left:3px solid var(--border-strong);padding-left:12px;margin:16px 0 0}
+/* ---------- standing disclaimer ----------
+   The tree starts on load, so there is no intro screen left to carry the
+   "not legal advice" framing. It lives here instead — in view for the whole
+   session rather than on a card the reader dismisses once. */
+.notice{flex:none;display:flex;align-items:baseline;gap:9px;z-index:5;
+  padding:6px clamp(12px,2.5vw,20px);background:var(--surface-2);
+  border-bottom:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--faint)}
+.notice b{flex:none;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--accent)}
+@media (max-width:560px){ .notice b{display:none} }
 
 /* ---------- result sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:40}
@@ -363,6 +356,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     </div>
   </header>
   <div class="rail"><i id="railFill"></i></div>
+  <p class="notice"><b>Note</b><span>General information to support your discussion — not legal
+    advice, and not an official EPA product. Coordinate with Tribal leadership, Council and legal
+    counsel before applying.</span></p>
 
   <div class="stage" id="stage">
     <div class="viewport" id="viewport">
@@ -384,19 +380,6 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       <span class="navnote">Scroll to pan · ctrl+scroll to zoom</span>
     </div>
     <div class="hint" id="hint">Click a branch to grow the tree</div>
-
-    <div class="intro" id="intro">
-      <div class="introcard">
-        <p class="kk">A decision tree that grows</p>
-        <h2>Should our Tribe seek TAS — and for what?</h2>
-        <p>Answer one question and the tree branches. Every choice you make grows a new limb; the branches you don’t take stay visible, greyed out, so the whole decision is on one canvas.</p>
-        <div class="f"><span>4–5 questions</span><span>About 3 minutes</span><span>Printable for Council</span></div>
-        <button class="btn solid" id="btnStart">Plant the tree
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-        <p class="d">General information to support your discussion — not legal advice, and not an official EPA product. Coordinate with Tribal leadership, Council and legal counsel before applying.</p>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -784,7 +767,7 @@ function zoomBy(k,cx,cy){
 }
 var drag=null;
 stage.addEventListener('pointerdown',function(e){
-  if(e.target.closest('.tnode')||e.target.closest('.btn')||e.target.closest('.intro')) return;
+  if(e.target.closest('.tnode')||e.target.closest('.btn')) return;
   drag={x:e.clientX,y:e.clientY,tx:view.tx,ty:view.ty};
   stage.classList.add('grabbing');
   try{ stage.setPointerCapture(e.pointerId); }catch(err){}
@@ -960,27 +943,29 @@ function start(){
   if(started) return;
   started=true;
   document.body.classList.add('running');
-  var intro=document.getElementById('intro');
-  intro.classList.add('gone');
-  setTimeout(function(){ intro.style.display='none'; },reduce?0:400);
   build();
   view.s=1; focusFrontier();
-  setTimeout(function(){
-    var f=nodesEl.querySelector('.tnode.opt');
-    if(f) f.focus({preventScroll:true});
-  },reduce?0:260);
 }
+/* Start over drops straight back to question 1 — there is no gate to return
+   to, so `started` stays true and the canvas is just rebuilt empty. */
 function reset(){
-  path=[]; collected=[]; terminal=null; started=false;
-  document.body.classList.remove('running');
+  path=[]; collected=[]; terminal=null;
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   railFill.style.width='0%';
   document.getElementById('btnResult').hidden=true;
   closeSheet();
-  var intro=document.getElementById('intro');
-  intro.style.display=''; void intro.offsetWidth; intro.classList.remove('gone');
-  updateHint();
+  build();
+  view.s=1; focusFrontier();
 }
-document.getElementById('btnStart').addEventListener('click',start);
 document.getElementById('btnReset').addEventListener('click',reset);
+
+/* The tree runs the moment the page loads. This script is the last thing in
+   the document, so the stage is already laid out and focusFrontier() can
+   measure it synchronously — deliberately NOT via requestAnimationFrame,
+   which never fires in a background tab and would leave the page blank
+   until the reader switched to it. */
+start();
+/* If the first measurement landed before the browser had sized the stage
+   (webfont swap, restored window), re-centre once everything settles. */
+window.addEventListener('load',function(){ if(started) focusFrontier(); });
 </script>

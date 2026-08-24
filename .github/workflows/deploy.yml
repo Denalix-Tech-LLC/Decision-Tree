@@ -1,0 +1,54 @@
+# Deploys the site to Vercel production on every push to the default branch.
+#
+# Requires three repository secrets (Settings -> Secrets and variables -> Actions):
+#   VERCEL_TOKEN       an access token from https://vercel.com/account/tokens
+#   VERCEL_ORG_ID      from .vercel/project.json after `npx vercel link`
+#   VERCEL_PROJECT_ID  from the same file
+#
+# If you instead connect this repo through the Vercel dashboard's Git
+# integration, delete this workflow — otherwise every push deploys twice.
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight one; production only ever reflects the tip.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull production settings
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"

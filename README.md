@@ -20,6 +20,11 @@ status under the Tribal Authority Rule (40 CFR Part 49).
 
 Every version shares the same corrected logic and citations.
 
+`/` and `/pathfinder` start on load — question 1 is on screen the moment the page
+opens, with no splash screen to click through. The "not legal advice" disclaimer that
+used to live on that splash is now permanent: a standing strip under the progress rail
+on `/`, and the page heading on `/pathfinder`.
+
 ## Stack
 
 Pure static HTML. No build step, no dependencies, no framework, no external requests —
@@ -27,12 +32,38 @@ each page is a single self-contained file with inlined CSS and JS.
 
 ## Deploy
 
+Every push to `master` deploys to production by itself, via
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+**One-time setup — do this before the first push, or the workflow run will fail.**
+Link the project locally:
+
+```bash
+npx vercel link
+```
+
+That writes `.vercel/project.json` (gitignored). Generate a token at
+<https://vercel.com/account/tokens>, then add three repository secrets under
+**Settings → Secrets and variables → Actions**:
+
+| Secret | Where it comes from |
+|---|---|
+| `VERCEL_TOKEN` | the access token you just generated |
+| `VERCEL_ORG_ID` | `orgId` in `.vercel/project.json` |
+| `VERCEL_PROJECT_ID` | `projectId` in the same file |
+
+There is a simpler alternative: connect the repo through the Vercel dashboard's Git
+integration, which needs no token and no workflow file — delete
+`.github/workflows/deploy.yml` if you go that way. Do not enable both, or every push
+deploys twice.
+
+Manual deploys still work, and need no secrets:
+
 ```bash
 npx vercel --prod
 ```
 
-First run will prompt you to log in and link the project. Zero configuration is needed
-beyond `vercel.json` (clean URLs + security headers).
+Zero build configuration is needed beyond `vercel.json` (clean URLs + security headers).
 
 ## Notes on correctness
 

@@ -423,9 +423,6 @@ ol.steps .d{color:var(--muted);font-size:13px}
     <h2>Should our Tribe seek TAS — and for what?</h2>
     <p>Answer one question at a time. Each answer opens the next set of options, and your pathway builds as you go — ending in the specific Clean Air Act sections that fit your lands and your goals.</p>
     <div class="facts"><span>4–5 questions</span><span>About 3 minutes</span><span>Printable for Council</span></div>
-    <button class="btn solid" id="btnStart">Begin
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-    </button>
     <p class="disc">General information to support your discussion — not legal advice, and not an official EPA product. TAS decisions affect Tribal sovereignty and jurisdiction; coordinate with Tribal leadership, Council and legal counsel before applying.</p>
   </section>
 
@@ -556,7 +553,7 @@ var DISC='General information to support your discussion — not legal advice, a
 /* ============================================================================
    STATE + HELPERS
    ========================================================================== */
-var flow=document.getElementById('flow'), hero=document.getElementById('hero'),
+var flow=document.getElementById('flow'),
     railFill=document.getElementById('railFill');
 var path=[];              // [{node, ai}]
 var collected=[];
@@ -625,7 +622,7 @@ function buildStep(nodeId){
   return step;
 }
 
-function showStep(nodeId){
+function showStep(nodeId,noFocus){
   var step=buildStep(nodeId);
   flow.appendChild(step);
   raf(function(){ step.classList.add('in'); });
@@ -633,8 +630,9 @@ function showStep(nodeId){
   updateRail(nodeId);
   scrollTo_(step);
   guardSettle(step,1500);
-  /* focus the first option once it has animated in */
-  setTimeout(function(){
+  /* focus the first option once it has animated in — but never on the
+     initial auto-run, where the reader has not asked to be moved anywhere */
+  if(!noFocus) setTimeout(function(){
     var f=step.querySelector('.opt'); if(f) f.focus({preventScroll:true});
   }, reduce?0:520);
   return step;
@@ -851,27 +849,29 @@ function doPrint(){
 }
 
 function restart(){
-  path=[]; collected=[]; started=false;
+  path=[]; collected=[];
   Array.prototype.slice.call(flow.children).forEach(function(k){
     k.style.transition='opacity .25s ease'; k.style.opacity='0';
   });
   setTimeout(function(){
     flow.innerHTML='';
     railFill.style.width='0%';
-    hero.style.display='';
-    raf(function(){ hero.style.opacity='1'; hero.style.transform='none'; });
+    showStep('q1');
     window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
   },reduce?0:260);
 }
 
+/* The flow runs on load. The hero stays put above it rather than fading out
+   with the gate — it is the page heading, and it carries the disclaimer.
+   Called straight out, not via raf(): rAF does not fire in a background tab,
+   which would leave a reader opening this in a new tab staring at the hero
+   with no question under it. noFocus keeps the load from stealing focus. */
 function start(){
   if(started) return; started=true;
-  hero.style.transition='opacity .35s ease,transform .35s ease';
-  hero.style.opacity='0'; hero.style.transform='translateY(-10px)';
-  setTimeout(function(){ hero.style.display='none'; showStep('q1'); },reduce?0:300);
+  showStep('q1',true);
 }
 
-document.getElementById('btnStart').addEventListener('click',start);
+start();
 document.getElementById('btnReset').addEventListener('click',restart);
 document.getElementById('btnPrint').addEventListener('click',doPrint);
 

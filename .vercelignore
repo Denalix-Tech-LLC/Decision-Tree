@@ -3,4 +3,5 @@
 *.doc
 decision-tree-prompt.md
 .claude
+.github
 README.md
