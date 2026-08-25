@@ -256,7 +256,11 @@ a{color:var(--accent-ink)}
 .tnode.active{box-shadow:0 0 0 4px var(--accent-soft),var(--sh2)}
 
 /* entrance */
-.tnode.pre{opacity:0;--lift:14px;--sc:.97;--z:-30px}
+.tnode.pre{opacity:0;--lift:18px;--sc:.965;--z:-40px}
+/* A node arriving on the canvas eases in far more slowly than it reacts to a
+   hover, so the branch has time to read as growing rather than appearing.
+   Carried on its own class so hover and state changes stay quick. */
+.tnode.entering{transition:opacity .8s var(--ease),transform .9s var(--ease)}
 
 /* edges */
 .edge{fill:none;stroke:var(--border-strong);stroke-width:2}
@@ -767,18 +771,26 @@ function grow(){
     var fresh=Array.prototype.filter.call(nodesEl.children,function(el){
       return !before[(el.dataset.node||'')+'|'+(el.dataset.ai||'')+'|'+el.className.replace(/ (pre|active)/g,'')];
     });
+    /* Hold before anything new appears so the choice you just made lands
+       first, then bring the question in, then its options one at a time. */
     fresh.forEach(function(el,i){
-      el.classList.add('pre');
-      setTimeout(function(){ el.classList.remove('pre'); },60+i*70);
+      el.classList.add('pre','entering');
+      var at=GROW_HOLD+i*GROW_STAGGER;
+      setTimeout(function(){ el.classList.remove('pre'); },at);
+      setTimeout(function(){ el.classList.remove('entering'); },at+GROW_SETTLE);
     });
+    var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+GROW_SETTLE;
     /* safety: never let a node stay hidden if the timers or transitions stall */
-    setTimeout(function(){ settle(); },1600);
+    setTimeout(function(){ settle(); },last+400);
   }
   focusFrontier();
 }
+/* how the tree grows, in ms — tune these three to taste */
+var GROW_HOLD=420, GROW_STAGGER=190, GROW_SETTLE=950;
 function settle(){
-  Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre'),function(el){
-    el.classList.remove('pre'); el.style.opacity=''; el.style.transform='';
+  Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre, .tnode.entering'),function(el){
+    el.classList.remove('pre'); el.classList.remove('entering');
+    el.style.opacity=''; el.style.transform='';
   });
 }
 document.addEventListener('visibilitychange',function(){ if(document.hidden) settle(); });
