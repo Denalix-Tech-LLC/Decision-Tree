@@ -547,7 +547,25 @@ var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)
 function canAnimate(){ return !reduce && !document.hidden; }
 var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function applyView(){ vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')'; }
+/* Keep the tree on screen. Panning used to be unbounded, so a scroll or drag
+   could carry the canvas into empty space with nothing to navigate back by.
+   The tree is now held so it always overlaps the stage, with a small margin of
+   breathing room; a tree smaller than the stage simply centres on that axis. */
+var PAN_MARGIN=110;
+function clampView(){
+  if(!window.__tree) return;
+  var r=stage.getBoundingClientRect();
+  if(!r.width||!r.height) return;
+  var W=window.__tree.w*view.s, H=window.__tree.h*view.s, m=PAN_MARGIN;
+  var loX=r.width-m-W, hiX=m;
+  view.tx=(loX>hiX)?(r.width-W)/2:Math.min(hiX,Math.max(loX,view.tx));
+  var loY=r.height-m-H, hiY=m;
+  view.ty=(loY>hiY)?(r.height-H)/2:Math.min(hiY,Math.max(loY,view.ty));
+}
+function applyView(){
+  clampView();
+  vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')';
+}
 
 /* remaining questions on the shortest route, for an honest progress bar */
 function remaining(id){
