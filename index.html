@@ -236,6 +236,14 @@ a{color:var(--accent-ink)}
 .tnode.notaken::after{content:'switch';position:absolute;bottom:6px;right:9px;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);opacity:0;transition:opacity .2s}
 .tnode.notaken:hover::after{opacity:1}
+/* an answered question invites you back to it */
+.tnode.q.reopenable{cursor:pointer}
+.tnode.q.reopenable:hover{--lift:-3px;border-color:var(--accent);box-shadow:var(--sh2)}
+.tnode.q.reopenable::after{content:'answer again';position:absolute;bottom:7px;right:12px;
+  font-family:var(--sans);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);opacity:0;transition:opacity .2s}
+.tnode.q.reopenable:hover::after{opacity:1}
+.tnode.q.reopenable{padding-bottom:22px}
 
 /* outcome leaf */
 .tnode.out{border-color:var(--good-line);background:var(--good-bg);border-style:dashed}
@@ -616,9 +624,15 @@ function build(){
 
     /* ---- question node ---- */
     var qEl=document.createElement('div');
-    qEl.className='tnode q'+(n.risky?' risky':'')+(answered===null?' active':'');
+    qEl.className='tnode q'+(n.risky?' risky':'')
+      +(answered===null?' active':' reopenable');
     qEl.style.width=QW+'px';
     qEl.dataset.node=id;
+    if(answered!==null){
+      qEl.setAttribute('tabindex','0');
+      qEl.setAttribute('role','button');
+      qEl.setAttribute('aria-label','Go back to '+n.tag+' — '+n.q+'. Retracts the tree so you can answer it again.');
+    }
     qEl.innerHTML='<span class="tag">'+esc(n.tag)+'</span><span class="ttl">'+esc(n.q)+'</span>'
       +(n.note&&answered===null?'<span class="sub">'+esc(n.note)+'</span>':'');
     nodesEl.appendChild(qEl);
@@ -773,20 +787,75 @@ function grow(){
     });
     /* Hold before anything new appears so the choice you just made lands
        first, then bring the question in, then its options one at a time. */
-    fresh.forEach(function(el,i){
-      el.classList.add('pre','entering');
-      var at=GROW_HOLD+i*GROW_STAGGER;
-      setTimeout(function(){ el.classList.remove('pre'); },at);
-      setTimeout(function(){ el.classList.remove('entering'); },at+GROW_SETTLE);
-    });
-    var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+GROW_SETTLE;
-    /* safety: never let a node stay hidden if the timers or transitions stall */
-    setTimeout(function(){ settle(); },last+400);
+    revealFresh(fresh);
   }
   focusFrontier();
 }
-/* how the tree grows, in ms — tune these three to taste */
-var GROW_HOLD=420, GROW_STAGGER=190, GROW_SETTLE=950;
+/* how the tree grows, in ms — tune these to taste */
+var GROW_HOLD=420, GROW_STAGGER=190, GROW_SETTLE=950, RETRACT_STAGGER=55;
+
+/* ease a set of newly built nodes in, one after another */
+function revealFresh(fresh){
+  fresh.forEach(function(el,i){
+    el.classList.add('pre','entering');
+    var at=GROW_HOLD+i*GROW_STAGGER;
+    setTimeout(function(){ el.classList.remove('pre'); },at);
+    setTimeout(function(){ el.classList.remove('entering'); },at+GROW_SETTLE);
+  });
+  var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+GROW_SETTLE;
+  /* safety: never let a node stay hidden if the timers or transitions stall */
+  setTimeout(function(){ settle(); },last+400);
+}
+
+/* the questions currently on the trunk, root first */
+function chainIds(){
+  var ids=[], q='q1';
+  for(var i=0;i<=path.length;i++){
+    ids.push(q);
+    if(i<path.length){ q=NODES[path[i].node].a[path[i].ai].to; if(!NODES[q]) break; }
+    else break;
+  }
+  return ids;
+}
+
+/* Click a question you already answered (or your own answer on it) and the
+   tree pulls back to it: everything below withers away deepest-first, then the
+   question reopens with all of its options live again. */
+function reopen(nodeId){
+  var idx=-1;
+  for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
+  if(idx<0) return;                       /* not answered yet — nothing to undo */
+  path=path.slice(0,idx);
+  collected=[];
+  path.forEach(function(pp){
+    var g=NODES[pp.node].a[pp.ai].grants;
+    if(g&&collected.indexOf(g)<0) collected.push(g);
+  });
+  closeSheet();
+
+  function rebuild(){
+    build();
+    var fresh=Array.prototype.filter.call(nodesEl.children,function(el){
+      return el.dataset.node===nodeId&&el.classList.contains('opt');
+    });
+    if(canAnimate()) revealFresh(fresh);
+    focusFrontier();
+  }
+  if(!canAnimate()){ rebuild(); return; }
+
+  var keep={}; chainIds().forEach(function(id){ keep[id]=1; });
+  var doomed=Array.prototype.filter.call(nodesEl.children,function(el){
+    var id=el.dataset.node;
+    if(!id) return true;                                  /* result + pathway leaves */
+    if(!keep[id]) return true;                            /* questions below this one */
+    return el.classList.contains('opt')&&id===nodeId;     /* its answers get rebuilt live */
+  });
+  doomed.reverse().forEach(function(el,i){
+    el.classList.add('entering');
+    setTimeout(function(){ el.classList.add('pre'); },i*RETRACT_STAGGER);
+  });
+  setTimeout(rebuild,doomed.length*RETRACT_STAGGER+520);
+}
 function settle(){
   Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre, .tnode.entering'),function(el){
     el.classList.remove('pre'); el.classList.remove('entering');
@@ -799,6 +868,9 @@ nodesEl.addEventListener('click',function(e){
   var t=e.target.closest('.tnode');
   if(!t) return;
   if(t.id==='resultNode'){ openSheet(); return; }
+  if(t.classList.contains('reopenable')||t.classList.contains('chosen')){
+    reopen(t.dataset.node); return;
+  }
   if(t.classList.contains('opt')&&!t.classList.contains('chosen')){
     choose(t.dataset.node,parseInt(t.dataset.ai,10));
   }
@@ -809,6 +881,9 @@ nodesEl.addEventListener('keydown',function(e){
   if(!t) return;
   e.preventDefault();
   if(t.id==='resultNode'){ openSheet(); return; }
+  if(t.classList.contains('reopenable')||t.classList.contains('chosen')){
+    reopen(t.dataset.node); return;
+  }
   if(t.classList.contains('opt')&&!t.classList.contains('chosen')){
     choose(t.dataset.node,parseInt(t.dataset.ai,10));
   }
