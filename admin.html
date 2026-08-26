@@ -794,6 +794,7 @@ function startWire(qid,ai,fromEl){
   WIRE.el.setAttribute('class','edge wire');
   edgesEl.appendChild(WIRE.el);
   document.body.classList.add('wiring');
+  autoPanStart();
   Array.prototype.forEach.call(document.querySelectorAll('.port.in'),function(pt){ pt.classList.add('open'); });
 }
 function moveWire(cx,cy){
@@ -865,6 +866,46 @@ function makeGhost(card){
   document.body.appendChild(g);
   return g;
 }
+/* ---- auto-pan while dragging ----------------------------------------------
+   A drag holds the pointer down, so the wheel is not available and the target
+   may well be off screen. Hold near an edge and the canvas comes to you. The
+   existing clamp still applies, so it stops at the end of the tree.
+   -------------------------------------------------------------------------- */
+var AUTOPAN=null, LASTPT={x:0,y:0};
+function repaintDragFeedback(){
+  if(WIRE){ moveWire(LASTPT.x,LASTPT.y); return; }
+  if(!(PD&&PD.active)) return;
+  clearMarks();
+  var t=targetAt(LASTPT.x,LASTPT.y);
+  if(t&&t.cls) t.card.classList.add(t.cls);
+  else if(t&&t.why==='row') t.card.classList.add('dropno');
+}
+function autoPanStop(){ if(AUTOPAN){ clearInterval(AUTOPAN); AUTOPAN=null; } }
+function autoPanStart(){
+  if(AUTOPAN) return;
+  AUTOPAN=setInterval(function(){
+    if(!WIRE&&!(PD&&PD.active)){ autoPanStop(); return; }
+    var r=stage.getBoundingClientRect(), EDGE=84, MAX=16, dx=0, dy=0;
+    /* speed rises the deeper into the edge band you hold, so it creeps when
+       you are just inside it and moves properly when you are hard against it */
+    function ramp(d){ return MAX*Math.min(1,Math.max(0,(EDGE-d)/EDGE)); }
+    var dTop=LASTPT.y-r.top, dBot=r.bottom-LASTPT.y;
+    var dLeft=LASTPT.x-r.left, dRight=r.right-LASTPT.x;
+    if(dTop<EDGE) dy=ramp(dTop);
+    else if(dBot<EDGE) dy=-ramp(dBot);
+    if(dLeft<EDGE) dx=ramp(dLeft);
+    else if(dRight<EDGE) dx=-ramp(dRight);
+    if(Math.abs(dx)<0.5) dx=0;
+    if(Math.abs(dy)<0.5) dy=0;
+    if(!dx&&!dy) return;
+    var tx0=view.tx, ty0=view.ty;
+    view.tx+=dx; view.ty+=dy;
+    applyView();                       /* clamped, so this stops at the edges */
+    if(view.tx===tx0&&view.ty===ty0) return;
+    repaintDragFeedback();
+  },16);
+}
+
 /* start a drag from `handle`, moving `card`, carrying `payload` */
 function dragFrom(card,payload,handle){
   (handle||card).addEventListener('pointerdown',function(ev){
@@ -875,11 +916,13 @@ function dragFrom(card,payload,handle){
   });
 }
 document.addEventListener('pointermove',function(ev){
-  if(WIRE){ moveWire(ev.clientX,ev.clientY); return; }
+  LASTPT.x=ev.clientX; LASTPT.y=ev.clientY;
+  if(WIRE){ autoPanStart(); moveWire(ev.clientX,ev.clientY); return; }
   if(!PD) return;
   if(!PD.active){
     if(Math.abs(ev.clientX-PD.x0)+Math.abs(ev.clientY-PD.y0)<6) return;
     PD.active=true; DRAG=PD.payload;
+    autoPanStart();
     PD.card.classList.add('dragging');
     PD.ghost=makeGhost(PD.card);
     document.body.style.cursor='grabbing';
@@ -891,6 +934,7 @@ document.addEventListener('pointermove',function(ev){
   else if(t&&t.why==='row') t.card.classList.add('dropno');
 });
 document.addEventListener('pointerup',function(ev){
+  autoPanStop();
   if(WIRE){ endWire(ev.clientX,ev.clientY); swallowClick=true; setTimeout(function(){ swallowClick=false; },0); return; }
   if(!PD) return;
   var wasDrag=PD.active;
@@ -1296,6 +1340,8 @@ stage.addEventListener('wheel',function(e){
   applyView();
 },{passive:false});
 
+window.addEventListener('pointercancel',function(){ autoPanStop(); });
+window.addEventListener('blur',function(){ autoPanStop(); });
 window.addEventListener('beforeunload',function(e){
   if(!dirty) return;
   e.preventDefault(); e.returnValue='';
