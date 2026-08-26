@@ -557,7 +557,7 @@ var DISC='General information to support your discussion — not legal advice, a
 /* ===========================================================================
    STATE
    ========================================================================= */
-var QW=330, OW=196, HGAP=18, VGAP=54, LEAFGAP=26;
+var QW=330, OW=196, HGAP=18, VGAP=54;
 var path=[], collected=[], started=false, terminal=null;
 var stage=document.getElementById('stage'), vp=document.getElementById('viewport');
 var nodesEl=document.getElementById('nodes'), edgesEl=document.getElementById('edges');
@@ -654,7 +654,7 @@ function build(){
     /* ---- option nodes fanned under it ---- */
     var optRow=[], total=n.a.length*OW+(n.a.length-1)*HGAP;
     var startX=anchor-total/2;
-    var chosenEl=null, leafEl=null;
+    var chosenEl=null;
     for(var ai=0;ai<n.a.length;ai++){
       var a=n.a[ai];
       var oEl=document.createElement('div');
@@ -673,18 +673,10 @@ function build(){
       var cx=startX+ai*(OW+HGAP)+OW/2;
       optRow.push({el:oEl,cx:cx});
       edges.push({from:qEl,to:oEl,taken:answered===ai,dimmed:answered!==null&&answered!==ai});
-      if(answered===ai){
-        chosenEl=oEl;
-        if(a.grants){
-          leafEl=document.createElement('div');
-          leafEl.className='tnode out';
-          leafEl.style.width=(OW-16)+'px';
-          leafEl.innerHTML='<span class="tag">Pathway unlocked</span><span class="ttl">'+esc(OUT[a.grants].name)+'</span>';
-          nodesEl.appendChild(leafEl);
-          optRow.push({el:leafEl,cx:startX+total+LEAFGAP+(OW-16)/2,leaf:true});
-          edges.push({from:oEl,to:leafEl,grant:true,taken:true,side:true});
-        }
-      }
+      /* No pathway leaf node here. What an answer unlocks is already said on
+         the option itself and again in the result; a separate card only widened
+         the tree and pushed the trunk off-centre. */
+      if(answered===ai) chosenEl=oEl;
     }
     rows.push({items:optRow,kind:'opts'});
     if(chosenEl){ anchor=optRow.filter(function(o){return o.el===chosenEl;})[0].cx; prevChosenEl=chosenEl; }
