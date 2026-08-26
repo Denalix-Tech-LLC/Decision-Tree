@@ -166,7 +166,8 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
 .qcard.orphan{border-style:dashed;opacity:.75}
 .qcard[draggable="true"],.ocard[draggable="true"]{cursor:grab}
-.qcard.dragging,.ocard.dragging{opacity:.4;cursor:grabbing}
+.qcard.dragging,.ocard.dragging{opacity:.32}
+.ghost{opacity:.9;transform-origin:0 0;box-shadow:var(--sh2);transition:none}
 .qcard.dropok,.ocard.dropok{border-color:var(--good-line);background:var(--good-bg);
   box-shadow:0 0 0 4px var(--good-bg),var(--sh2)}
 .qcard.dropok::after,.ocard.dropok::after{content:'drop to reorder';position:absolute;bottom:6px;right:9px;
@@ -482,13 +483,14 @@ function render(){
       var qEl=document.createElement('div');
       qEl.className='qcard'+(n.risky?' risky':'')+(reach[id]?'':' orphan')+(editingQ?' editing':'');
       qEl.style.width=QW+'px';
+      qEl.dataset.qid=id;
       if(editingQ){
         var grip=document.createElement('div');
         grip.className='grip';
         grip.innerHTML='<span class="dots">⠿</span> Drag onto an option to attach this question';
         grip.title='Drag this onto any option — that option will then lead to this question';
         qEl.appendChild(grip);
-        makeHandle(grip,qEl,{kind:'q',id:id});
+        dragFrom(qEl,{kind:'q',id:id},grip);
         qEl.appendChild(edText('Label above the question',n.tag,function(v){ n.tag=v; }));
         qEl.appendChild(edArea('The question',n.q,3,function(v){ n.q=v; }));
         qEl.appendChild(edText('Short name',n.short,function(v){ n.short=v; }));
@@ -511,23 +513,9 @@ function render(){
       } else {
         qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
           +(reach[id]?'':'<span class="badge">unreachable</span>');
-        qEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'q',id:id}); };
+        qEl.onclick=function(ev){ ev.stopPropagation(); if(swallowClick) return; select({kind:'q',id:id}); };
         qEl.title="Drag onto another question in the same row to reorder it. A row is set by what points at the question — repoint an option to move it up or down.";
-        makeDraggable(qEl,{kind:'q',id:id});
-        makeDropTarget(qEl,function(d){ return d.kind==='q'&&d.id!==id&&L[d.id]===L[id]; },
-          function(d){ reorderQuestions(d.id,id); });
-        /* A question sits on the row its wiring puts it on. Dropping it on a
-           question in another row cannot move it there, so rather than doing
-           nothing silently, say what would. */
-        qEl.addEventListener('dragover',function(ev){
-          if(DRAG&&DRAG.kind==='q'&&DRAG.id!==id&&L[DRAG.id]!==L[id]){
-            ev.preventDefault();
-            try{ ev.dataTransfer.dropEffect='none'; }catch(e){}
-            qEl.classList.add('dropno');
-          }
-        });
-        qEl.addEventListener('dragleave',function(){ qEl.classList.remove('dropno'); });
-        qEl.addEventListener('drop',function(){ qEl.classList.remove('dropno'); });
+        dragFrom(qEl,{kind:'q',id:id});
       }
       nodesEl.appendChild(qEl);
       var qh=qEl.offsetHeight;
@@ -544,6 +532,7 @@ function render(){
         var editingO=!!(sel&&sel.kind==='o'&&sel.id===id&&sel.ai===ai);
         oEl.className='ocard'+(bad?' unlinked':'')+(editingO?' editing':'');
         oEl.style.width=ws[ai]+'px';
+        oEl.dataset.qid=id; oEl.dataset.ai=String(ai);
         if(editingO){
           (function(qid,idx,ans){
             oEl.appendChild(edArea('Option '+(idx+1)+' label',ans.label,2,function(v){ ans.label=v; }));
@@ -569,13 +558,9 @@ function render(){
             +'<span class="ttl">'+esc(a.label||'(no label)')+'</span>'
             +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
             +(bad?'<span class="badge">no target</span>':'');
-          oEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'o',id:id,ai:ai}); };
+          oEl.onclick=function(ev){ ev.stopPropagation(); if(swallowClick) return; select({kind:'o',id:id,ai:ai}); };
           oEl.title='Drag onto a sibling to reorder. Drop a question here to make this option lead to it.';
-          makeDraggable(oEl,{kind:'o',id:id,ai:ai});
-          makeDropTarget(oEl,function(d){ return d.kind==='o'&&d.id===id&&d.ai!==ai; },
-            function(d){ reorderOptions(id,d.ai,ai); });
-          makeDropTarget(oEl,function(d){ return d.kind==='q'&&d.id!==id; },
-            function(d){ attachQuestion(id,ai,d.id); },'dropattach');
+          dragFrom(oEl,{kind:'o',id:id,ai:ai});
         }
         nodesEl.appendChild(oEl);
         oEl.style.left=runX+'px'; oEl.style.top=oy+'px';
@@ -704,36 +689,14 @@ function edBtn(text,fn,cls){
   b.addEventListener('click',function(ev){ ev.stopPropagation(); fn(); });
   return b;
 }
-/* ---- dragging ------------------------------------------------------------
-   A question is dragged as a unit: its options are laid out from it, so they
-   travel with it. Reordering rewrites the order of T.NODES, which sets the
-   left-to-right order within a row. It does NOT change which question follows
-   which — that comes from where each option points, so a question only leaves
-   its row when you repoint an option at it.
-   Options reorder inside their own question, which is the order a reader sees.
+/* ---- dragging -------------------------------------------------------------
+   Built on pointer events rather than HTML5 drag-and-drop. The canvas lives
+   inside a transform: scale() container, which native DnD handles badly — the
+   drag would start and then be refused with nothing to show for it. This does
+   the hit-testing itself, so it behaves the same at any zoom.
    -------------------------------------------------------------------------- */
-var DRAG=null;
-function reorderQuestions(fromId,toId){
-  if(fromId===toId) return;
-  var ids=questionIds(), i=ids.indexOf(fromId), j=ids.indexOf(toId);
-  if(i<0||j<0) return;
-  ids.splice(i,1);
-  ids.splice(ids.indexOf(toId)+(j>i?1:0),0,fromId);
-  var next={};
-  ids.forEach(function(id){ next[id]=T.NODES[id]; });
-  T.NODES=next;
-  markDirty(); render();
-}
-function reorderOptions(qid,from,to){
-  var a=T.NODES[qid]&&T.NODES[qid].a;
-  if(!a||from===to||from<0||to<0||from>=a.length||to>=a.length) return;
-  var moved=a.splice(from,1)[0];
-  a.splice(to,0,moved);
-  markDirty();
-  sel={kind:'o',id:qid,ai:to};
-  render();
-}
-/* can `from` get to `target` by following options? used to catch loops */
+var DRAG=null, PD=null, swallowClick=false;
+
 function canReach(from,target){
   var seen={},stack=[from];
   while(stack.length){
@@ -746,75 +709,110 @@ function canReach(from,target){
   return false;
 }
 function qName(id){ return (T.NODES[id]&&(T.NODES[id].tag||T.NODES[id].short))||id; }
-/* Drop a question on an option and that option now leads to it. This is also
-   how a question changes row: a question sits wherever the thing pointing at
-   it sits. */
+
+function reorderQuestions(fromId,toId){
+  if(fromId===toId) return;
+  var ids=questionIds(), i=ids.indexOf(fromId), j=ids.indexOf(toId);
+  if(i<0||j<0) return;
+  ids.splice(i,1);
+  ids.splice(ids.indexOf(toId)+(j>i?1:0),0,fromId);
+  var next={}; ids.forEach(function(id){ next[id]=T.NODES[id]; });
+  T.NODES=next; markDirty(); render();
+}
+function reorderOptions(qid,from,to){
+  var a=T.NODES[qid]&&T.NODES[qid].a;
+  if(!a||from===to||from<0||to<0||from>=a.length||to>=a.length) return;
+  a.splice(to,0,a.splice(from,1)[0]);
+  markDirty(); sel={kind:'o',id:qid,ai:to}; render();
+}
+/* drop a question on an option and that option leads to it */
 function attachQuestion(qid,ai,target){
   var a=T.NODES[qid]&&T.NODES[qid].a&&T.NODES[qid].a[ai];
   if(!a||!T.NODES[target]) return;
   if(target===qid){ alert('That option belongs to this question, so pointing it back at itself would be a loop of one.'); return; }
   if(a.to===target){ select({kind:'o',id:qid,ai:ai}); return; }
-  if(canReach(target,qid)){
-    if(!confirm('"'+qName(target)+'" can already reach "'+qName(qid)+'". Attaching it here makes a loop a reader could go round forever. Attach anyway?')) return;
+  if(canReach(target,qid)&&!confirm('"'+qName(target)+'" can already reach "'+qName(qid)+'". Attaching it here makes a loop a reader could go round forever. Attach anyway?')) return;
+  a.to=target; markDirty(); select({kind:'o',id:qid,ai:ai});
+}
+
+/* what, if anything, will accept what is being dragged */
+function targetAt(x,y){
+  if(PD&&PD.ghost) PD.ghost.style.display='none';
+  var el=document.elementFromPoint(x,y);
+  if(PD&&PD.ghost) PD.ghost.style.display='';
+  if(!el) return null;
+  var card=el.closest?el.closest('.qcard,.ocard'):null;
+  if(!card||!DRAG) return null;
+  var qid=card.dataset.qid, ai=card.dataset.ai;
+  if(card.classList.contains('ocard')){
+    if(DRAG.kind==='q') return (DRAG.id===qid)?{card:card,why:'self'}
+      :{card:card,cls:'dropattach',act:function(){ attachQuestion(qid,+ai,DRAG.id); }};
+    if(DRAG.kind==='o'&&DRAG.id===qid&&+ai!==DRAG.ai)
+      return {card:card,cls:'dropok',act:function(){ reorderOptions(qid,DRAG.ai,+ai); }};
+    return null;
   }
-  a.to=target;
-  markDirty(); select({kind:'o',id:qid,ai:ai});
+  if(DRAG.kind==='q'&&qid!==DRAG.id){
+    var L=layers();
+    if(L[qid]===L[DRAG.id]) return {card:card,cls:'dropok',act:function(){ reorderQuestions(DRAG.id,qid); }};
+    return {card:card,why:'row'};
+  }
+  return null;
 }
-/* Drag the card by a handle. A newly added question opens straight into its
-   form — which is the one you most want to attach somewhere — and a card full
-   of inputs cannot itself be draggable without fighting text selection. So the
-   handle carries the drag and hands over the card as the drag image. */
-function makeHandle(handle,card,payload){
-  handle.draggable=true;
-  handle.addEventListener('dragstart',function(ev){
-    DRAG=payload;
-    card.classList.add('dragging');
-    try{
-      ev.dataTransfer.effectAllowed='move';
-      ev.dataTransfer.setData('text/plain',payload.kind);
-      if(ev.dataTransfer.setDragImage) ev.dataTransfer.setDragImage(card,24,18);
-    }catch(e){}
-  });
-  handle.addEventListener('dragend',function(){
-    DRAG=null; card.classList.remove('dragging');
-    Array.prototype.forEach.call(document.querySelectorAll('.dropok,.dropattach,.dropno'),function(d){
-      d.classList.remove('dropok','dropattach','dropno');
-    });
-  });
-  /* the handle must not start a pan or reach the card's click */
-  ['pointerdown','mousedown','click'].forEach(function(t){
-    handle.addEventListener(t,function(ev){ ev.stopPropagation(); });
+function clearMarks(){
+  Array.prototype.forEach.call(document.querySelectorAll('.dropok,.dropattach,.dropno'),function(d){
+    d.classList.remove('dropok','dropattach','dropno');
   });
 }
-function makeDraggable(el,payload){
-  el.draggable=true;
-  el.addEventListener('dragstart',function(ev){
-    DRAG=payload;
-    el.classList.add('dragging');
-    try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',payload.kind); }catch(e){}
-  });
-  el.addEventListener('dragend',function(){
-    DRAG=null; el.classList.remove('dragging');
-    Array.prototype.forEach.call(document.querySelectorAll('.dropok'),function(d){ d.classList.remove('dropok'); });
+function makeGhost(card){
+  var g=card.cloneNode(true);
+  g.className=card.className.replace(/dragging/g,'')+' ghost';
+  g.style.position='fixed'; g.style.pointerEvents='none'; g.style.zIndex='999';
+  g.style.width=card.offsetWidth*view.s+'px';
+  g.style.left='0px'; g.style.top='0px'; g.style.margin='0';
+  document.body.appendChild(g);
+  return g;
+}
+/* start a drag from `handle`, moving `card`, carrying `payload` */
+function dragFrom(card,payload,handle){
+  (handle||card).addEventListener('pointerdown',function(ev){
+    if(ev.button!==0) return;
+    if(ev.target.closest('input,textarea,select,button')) return;
+    PD={payload:payload,card:card,x0:ev.clientX,y0:ev.clientY,active:false,ghost:null};
+    ev.stopPropagation();
   });
 }
-function makeDropTarget(el,accept,onDrop,cls){
-  cls=cls||'dropok';
-  el.addEventListener('dragover',function(ev){
-    if(!DRAG||!accept(DRAG)) return;
-    ev.preventDefault();
-    try{ ev.dataTransfer.dropEffect='move'; }catch(e){}
-    el.classList.add(cls);
-  });
-  el.addEventListener('dragleave',function(){ el.classList.remove(cls); });
-  el.addEventListener('drop',function(ev){
-    if(!DRAG||!accept(DRAG)) return;
-    ev.preventDefault(); ev.stopPropagation();
-    el.classList.remove(cls);
-    var d=DRAG; DRAG=null;
-    onDrop(d);
-  });
-}
+document.addEventListener('pointermove',function(ev){
+  if(!PD) return;
+  if(!PD.active){
+    if(Math.abs(ev.clientX-PD.x0)+Math.abs(ev.clientY-PD.y0)<6) return;
+    PD.active=true; DRAG=PD.payload;
+    PD.card.classList.add('dragging');
+    PD.ghost=makeGhost(PD.card);
+    document.body.style.cursor='grabbing';
+  }
+  PD.ghost.style.transform='translate('+(ev.clientX-30)+'px,'+(ev.clientY-16)+'px)';
+  clearMarks();
+  var t=targetAt(ev.clientX,ev.clientY);
+  if(t&&t.cls) t.card.classList.add(t.cls);
+  else if(t&&t.why==='row') t.card.classList.add('dropno');
+});
+document.addEventListener('pointerup',function(ev){
+  if(!PD) return;
+  var wasDrag=PD.active;
+  if(wasDrag){
+    var t=targetAt(ev.clientX,ev.clientY);
+    PD.card.classList.remove('dragging');
+    if(PD.ghost&&PD.ghost.parentNode) PD.ghost.parentNode.removeChild(PD.ghost);
+    document.body.style.cursor='';
+    clearMarks();
+    PD=null; 
+    if(t&&t.act) t.act();
+    DRAG=null;
+    swallowClick=true; setTimeout(function(){ swallowClick=false; },0);
+    return;
+  }
+  PD=null; DRAG=null;
+});
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function select(s){ sel=s; render(); }
 stage.onclick=function(){ if(sel){ sel=null; render(); } };
