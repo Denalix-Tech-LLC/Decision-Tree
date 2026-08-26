@@ -1,0 +1,772 @@
+<meta charset="utf-8">
+<title>TAS Tree Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#e5e8eb; --bg-2:#d9dee3;
+  --surface:#f2f4f6; --surface-2:#e5e8eb;
+  --ink:#081b23; --muted:#4a5c66; --faint:#6f8290;
+  --accent:#2b4552; --accent-2:#3d6070; --accent-soft:#b8d0d8; --accent-ink:#2b4552;
+  --border:#c5ced4; --border-strong:#a6b4bd;
+  --risk:#a35f2c; --risk-bg:#f6e6d8; --risk-line:#c98150;
+  --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
+  --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
+  --gold:#dec26a;
+  --on-accent:#e5e8eb;
+  --display:"Morvi","Haettenschweiler","Arial Narrow",Impact,system-ui,sans-serif;
+  --sans:"Gotham Book","Gotham","Montserrat","Century Gothic","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Marion",Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  --track:.025em;
+  --sh1:0 1px 2px rgba(21,35,42,.05),0 6px 18px rgba(21,35,42,.06);
+  --sh2:0 2px 8px rgba(21,35,42,.09),0 18px 40px rgba(21,35,42,.13);
+  --ease:cubic-bezier(.22,.68,0,1);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#081b23; --bg-2:#0c2430;
+    --surface:#11303d; --surface-2:#0d2530;
+    --ink:#e5e8eb; --muted:#a8bac4; --faint:#7d919d;
+    --accent:#b8d0d8; --accent-2:#8fb6c2; --accent-soft:#173a49; --accent-ink:#cfe3e9;
+    --border:#1e4150; --border-strong:#2d5768;
+    --risk:#dda06e; --risk-bg:#3a2716; --risk-line:#c98150;
+    --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
+    --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
+    --on-accent:#081b23;
+    --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
+    --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea,.btn{font-family:var(--sans)}
+
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ---- top bar ---- */
+.bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
+  background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:20;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.brand .mk{flex:none;width:28px;height:28px;border-radius:8px;background:var(--accent);
+  display:grid;place-items:center;color:var(--on-accent)}
+.brand .mk svg{width:16px;height:16px}
+.brand .kk{font-family:var(--sans);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block}
+.brand h1{font-family:var(--display);font-weight:400;font-size:18px;margin:0;line-height:1.15;text-transform:uppercase;letter-spacing:.02em}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:8px;
+  padding:6px 11px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;
+  cursor:pointer;transition:border-color .18s,color .18s,background .18s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.solid:hover{filter:brightness(1.08);color:var(--on-accent)}
+.btn.danger{color:var(--alert);border-color:var(--alert-line)}
+.btn.sm{padding:4px 8px;font-size:11.5px;border-radius:6px}
+.btn svg{width:13px;height:13px;flex:none}
+.dirty{font-family:var(--sans);font-size:11.5px;color:var(--risk);display:none;align-items:center;gap:5px}
+.dirty.on{display:inline-flex}
+.dirty i{width:7px;height:7px;border-radius:50%;background:var(--risk-line);display:block}
+
+/* ---- layout ---- */
+.main{flex:1;display:flex;min-height:0}
+.stage{flex:1;position:relative;min-width:0;overflow:hidden;cursor:grab;background:var(--bg)}
+.stage.grabbing{cursor:grabbing}
+.viewport{position:absolute;left:0;top:0;transform-origin:0 0}
+.edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.nodes{position:absolute;left:0;top:0}
+
+/* ---- tree nodes ---- */
+.qcard,.ocard{position:absolute;background:var(--surface);border:1.5px solid var(--border-strong);
+  border-radius:11px;padding:10px 12px;cursor:pointer;box-shadow:var(--sh1);
+  transition:border-color .16s,box-shadow .16s,transform .14s var(--ease)}
+.qcard{border-color:var(--accent);border-width:2px}
+.qcard.risky{border-color:var(--risk-line);background:var(--risk-bg)}
+.qcard:hover,.ocard:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--accent)}
+.qcard.sel,.ocard.sel{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
+.qcard .tag,.ocard .tag{font-family:var(--sans);font-weight:600;font-size:8.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);display:block;margin-bottom:3px}
+.qcard.risky .tag{color:var(--risk)}
+.qcard .ttl{font-family:var(--serif);font-weight:600;font-size:14.5px;line-height:1.25;display:block}
+.ocard .ttl{font-weight:650;font-size:13px;line-height:1.3;display:block}
+.ocard .meta{font-family:var(--sans);font-size:10px;color:var(--muted);margin-top:4px;display:block}
+.ocard .meta b{color:var(--good);font-weight:600}
+.ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
+.qcard.orphan{border-style:dashed;opacity:.75}
+.qcard .badge,.ocard .badge{position:absolute;top:-8px;right:8px;font-family:var(--sans);font-size:9px;
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;
+  background:var(--alert-line);color:#fff}
+.termcard{position:absolute;background:var(--good-bg);border:1.5px dashed var(--good-line);border-radius:11px;
+  padding:9px 12px;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--good);text-align:center}
+
+.addopt{position:absolute;width:26px;height:26px;border-radius:50%;border:1.5px dashed var(--border-strong);
+  background:var(--surface);color:var(--accent);font-size:16px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;transition:.16s}
+.addopt:hover{border-color:var(--accent);border-style:solid;background:var(--accent);color:var(--on-accent);transform:scale(1.1)}
+
+.edge{fill:none;stroke:var(--border-strong);stroke-width:1.8}
+.edge.term{stroke:var(--good-line);stroke-dasharray:5 4}
+.edge.bad{stroke:var(--alert-line);stroke-width:2.4}
+.edge.hot{stroke:var(--accent);stroke-width:3}
+
+/* ---- inspector ---- */
+.side{flex:none;width:min(400px,42vw);border-left:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;min-height:0}
+@media (max-width:900px){ .main{flex-direction:column} .side{width:auto;flex:1;border-left:none;border-top:1px solid var(--border)} .stage{flex:none;height:48vh} }
+.tabs{flex:none;display:flex;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.tabs button{flex:1;border:none;background:transparent;padding:9px 6px;font-size:12px;font-weight:600;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--accent-ink);border-bottom-color:var(--accent);background:var(--surface)}
+.pane{flex:1;overflow-y:auto;padding:16px}
+.pane h2{font-family:var(--display);font-weight:400;font-size:19px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 4px}
+.pane .sub{font-family:var(--sans);font-size:11.5px;color:var(--muted);margin:0 0 16px}
+.empty{font-family:var(--sans);color:var(--faint);font-size:13px;text-align:center;padding:40px 12px}
+
+.f{margin:0 0 13px}
+.f label{display:block;font-family:var(--sans);font-weight:600;font-size:10.5px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.f .hint{font-family:var(--sans);font-size:11px;color:var(--faint);margin-top:3px}
+input[type=text],textarea,select{width:100%;background:var(--bg);color:var(--ink);
+  border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:var(--serif)}
+select,input[type=text]{font-family:var(--sans)}
+textarea{font-family:var(--serif);line-height:1.45;resize:vertical;min-height:64px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.row .btn{flex:none}
+.chk{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px}
+.chk input{width:auto;flex:none}
+
+.olist{display:grid;gap:8px;margin-top:6px}
+.oitem{border:1px solid var(--border);border-radius:9px;padding:9px 10px;background:var(--bg)}
+.oitem .top{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.oitem .n{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--accent);
+  background:var(--accent-soft);border-radius:5px;padding:2px 6px;flex:none}
+.oitem .lbl{flex:1;font-weight:650;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.sec{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:var(--track);text-transform:uppercase;
+  color:var(--risk-line);margin:22px 0 9px;padding-top:14px;border-top:1px solid var(--border)}
+.sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
+
+.issues{display:grid;gap:7px}
+.issue{border-left:3px solid var(--alert-line);background:var(--alert-bg);border-radius:7px;padding:8px 10px;
+  font-family:var(--sans);font-size:12px;cursor:pointer}
+.issue.warn{border-left-color:var(--risk-line);background:var(--risk-bg)}
+.issue b{display:block;font-size:12.5px;margin-bottom:2px}
+.ok{font-family:var(--sans);font-size:12.5px;color:var(--good);background:var(--good-bg);
+  border-radius:8px;padding:10px 12px;text-align:center}
+
+.zoom{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
+.zoom .btn{background:var(--surface);box-shadow:var(--sh1);padding:6px 8px}
+.tip{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:5;background:var(--surface);
+  border:1px solid var(--border);border-radius:999px;padding:5px 13px;font-family:var(--sans);font-size:11.5px;
+  color:var(--muted);box-shadow:var(--sh1);pointer-events:none;white-space:nowrap}
+
+dialog{border:none;border-radius:14px;padding:0;background:var(--surface);color:var(--ink);
+  box-shadow:var(--sh2);max-width:min(560px,92vw);width:100%}
+dialog::backdrop{background:rgba(8,27,35,.55)}
+dialog .dh{padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--display);
+  font-size:19px;text-transform:uppercase;letter-spacing:.02em}
+dialog .db{padding:16px 18px}
+dialog .df{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+</style>
+
+<div class="shell">
+  <header class="bar">
+    <div class="brand">
+      <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
+      <span><span class="kk">Clean Air Act · TAS</span><h1>Tree Editor</h1></span>
+    </div>
+    <span class="dirty" id="dirty"><i></i>Unsaved changes</span>
+    <div class="acts">
+      <button class="btn" id="bAddQ">+ Question</button>
+      <button class="btn" id="bImport">Import</button>
+      <button class="btn" id="bExport">Export</button>
+      <button class="btn danger" id="bReset">Revert</button>
+      <button class="btn" id="bOpen">Open tree ↗</button>
+      <button class="btn solid" id="bSave">Save draft</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <div class="viewport" id="viewport">
+        <svg class="edges" id="edges"></svg>
+        <div class="nodes" id="nodes"></div>
+      </div>
+      <div class="zoom">
+        <button class="btn" id="zIn" aria-label="Zoom in">+</button>
+        <button class="btn" id="zOut" aria-label="Zoom out">−</button>
+        <button class="btn" id="zFit" aria-label="Fit">⤢</button>
+      </div>
+      <div class="tip" id="tip">Click any card to edit it · drag to pan · ctrl+scroll to zoom</div>
+    </div>
+
+    <aside class="side">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabInspect" aria-selected="true">Inspector</button>
+        <button role="tab" id="tabPaths" aria-selected="false">Pathways</button>
+        <button role="tab" id="tabContent" aria-selected="false">Content</button>
+        <button role="tab" id="tabCheck" aria-selected="false">Checks</button>
+      </div>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="dh" id="dlgTitle">Export</div>
+  <div class="db"><textarea id="dlgText" spellcheck="false"></textarea>
+    <p class="hint" id="dlgHint" style="font-family:var(--sans);font-size:11.5px;color:var(--faint);margin:8px 0 0"></p></div>
+  <div class="df">
+    <button class="btn" id="dlgClose">Close</button>
+    <button class="btn solid" id="dlgOk" hidden>Load this</button>
+  </div>
+</dialog>
+
+<script src="tree-data.js"></script>
+<script>
+"use strict";
+/* ===========================================================================
+   THE WORKING COPY
+   Edits happen on T, never on the loaded defaults, so Revert is always honest.
+   ========================================================================= */
+var DRAFT_KEY='tas-tree-draft';
+var BASE=(window.TAS_TREE||{NODES:{},OUT:{},NONTAS:[],CRITERIA:[],NEXT:[],LINKS:[],DISC:''});
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */
+try{ var raw=localStorage.getItem(DRAFT_KEY); if(raw) T=JSON.parse(raw); }catch(e){}
+
+var TERMINALS={END:'Result',END_NONTAS:'Non-TAS pathways'};
+function isTerminal(id){ return TERMINALS.hasOwnProperty(id); }
+function questionIds(){ return Object.keys(T.NODES); }
+function markDirty(v){ dirty=v!==false; document.getElementById('dirty').classList.toggle('on',dirty); }
+
+function nextQid(){
+  var n=2;
+  while(T.NODES['q'+n]) n++;
+  return 'q'+n;
+}
+
+/* ===========================================================================
+   LAYOUT — layered, longest path from the root, options fanned under each
+   question. Any option may point at any question, so edges can cross; this is
+   an editor, and seeing the real wiring matters more than a tidy picture.
+   ========================================================================= */
+var QW=286, OW=178, OGAP=10, VGAP=44, UNITGAP=54, ROOT='q1';
+var nodesEl=document.getElementById('nodes'), edgesEl=document.getElementById('edges');
+var stage=document.getElementById('stage'), vp=document.getElementById('viewport');
+var view={tx:40,ty:30,s:.85};
+function applyView(){ vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')'; }
+
+function layers(){
+  var L={}, ids=questionIds();
+  if(!ids.length) return L;
+  ids.forEach(function(id){ L[id]=0; });
+  for(var pass=0;pass<ids.length+2;pass++){
+    var moved=false;
+    ids.forEach(function(id){
+      (T.NODES[id].a||[]).forEach(function(a){
+        if(a.to&&T.NODES[a.to]&&L[a.to]<L[id]+1){ L[a.to]=L[id]+1; moved=true; }
+      });
+    });
+    if(!moved) break;
+  }
+  return L;
+}
+function reachable(){
+  var seen={}, stack=[ROOT];
+  if(!T.NODES[ROOT]) return seen;
+  while(stack.length){
+    var id=stack.pop();
+    if(!T.NODES[id]||seen[id]) continue;
+    seen[id]=1;
+    (T.NODES[id].a||[]).forEach(function(a){ if(a.to&&T.NODES[a.to]) stack.push(a.to); });
+  }
+  return seen;
+}
+
+function render(){
+  nodesEl.innerHTML=''; edgesEl.innerHTML='';
+  var L=layers(), reach=reachable(), ids=questionIds();
+  var byLayer={};
+  ids.forEach(function(id){ (byLayer[L[id]]=byLayer[L[id]]||[]).push(id); });
+  var layerKeys=Object.keys(byLayer).map(Number).sort(function(a,b){return a-b;});
+
+  var pos={}, y=0, maxRight=0;
+  layerKeys.forEach(function(li){
+    var units=byLayer[li], widths=units.map(function(id){
+      var n=T.NODES[id], count=Math.max(1,(n.a||[]).length);
+      return Math.max(QW, count*OW+(count-1)*OGAP+40);
+    });
+    var totalW=widths.reduce(function(a,b){return a+b;},0)+UNITGAP*(units.length-1);
+    var x=-totalW/2;
+    var rowH=0;
+    units.forEach(function(id,i){
+      var n=T.NODES[id], opts=n.a||[];
+      var cx=x+widths[i]/2;
+      var qEl=document.createElement('div');
+      qEl.className='qcard'+(n.risky?' risky':'')+(reach[id]?'':' orphan')
+        +(sel&&sel.kind==='q'&&sel.id===id?' sel':'');
+      qEl.style.width=QW+'px';
+      qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
+        +(reach[id]?'':'<span class="badge">unreachable</span>');
+      qEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'q',id:id}); };
+      nodesEl.appendChild(qEl);
+      var qh=qEl.offsetHeight;
+      qEl.style.left=(cx-QW/2)+'px'; qEl.style.top=y+'px';
+      pos[id]={x:cx,y:y,h:qh,w:QW};
+
+      /* options fan */
+      var oTotal=opts.length*OW+(opts.length-1)*OGAP;
+      var ox=cx-oTotal/2, oy=y+qh+VGAP, oh=0;
+      opts.forEach(function(a,ai){
+        var oEl=document.createElement('div');
+        var bad=!a.to||(!T.NODES[a.to]&&!isTerminal(a.to));
+        oEl.className='ocard'+(bad?' unlinked':'')+(sel&&sel.kind==='o'&&sel.id===id&&sel.ai===ai?' sel':'');
+        oEl.style.width=OW+'px';
+        var dest=!a.to?'nowhere':(isTerminal(a.to)?TERMINALS[a.to]:(T.NODES[a.to]?(T.NODES[a.to].short||a.to):a.to+' (missing)'));
+        oEl.innerHTML='<span class="tag">Option '+(ai+1)+'</span>'
+          +'<span class="ttl">'+esc(a.label||'(no label)')+'</span>'
+          +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
+          +(bad?'<span class="badge">no target</span>':'');
+        oEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'o',id:id,ai:ai}); };
+        nodesEl.appendChild(oEl);
+        oEl.style.left=(ox+ai*(OW+OGAP))+'px'; oEl.style.top=oy+'px';
+        oh=Math.max(oh,oEl.offsetHeight);
+        pos[id+'#'+ai]={x:ox+ai*(OW+OGAP)+OW/2,y:oy,h:oEl.offsetHeight,w:OW,el:oEl};
+      });
+      /* add-option affordance */
+      var add=document.createElement('button');
+      add.className='addopt'; add.textContent='+'; add.title='Add an option to this question';
+      add.onclick=function(ev){ ev.stopPropagation(); addOption(id); };
+      nodesEl.appendChild(add);
+      add.style.left=(ox+oTotal+14)+'px';
+      add.style.top=(oy+Math.max(oh,30)/2-13)+'px';
+
+      rowH=Math.max(rowH,qh+VGAP+oh);
+      maxRight=Math.max(maxRight,ox+oTotal+50);
+      x+=widths[i]+UNITGAP;
+    });
+    y+=rowH+UNITGAP+18;
+  });
+
+  /* terminals sit under everything */
+  var termY=y, tpos={};
+  Object.keys(TERMINALS).forEach(function(t,i){
+    var el=document.createElement('div');
+    el.className='termcard'; el.textContent=TERMINALS[t];
+    nodesEl.appendChild(el);
+    el.style.left=(-140+i*220)+'px'; el.style.top=termY+'px';
+    tpos[t]={x:-140+i*220+el.offsetWidth/2,y:termY,h:el.offsetHeight};
+  });
+
+  /* normalise to positive space */
+  var all=Array.prototype.slice.call(nodesEl.children);
+  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  all.forEach(function(el){
+    var l=parseFloat(el.style.left),t=parseFloat(el.style.top);
+    minX=Math.min(minX,l); minY=Math.min(minY,t);
+    maxX=Math.max(maxX,l+el.offsetWidth); maxY=Math.max(maxY,t+el.offsetHeight);
+  });
+  var padX=60,padY=40,dx=padX-minX,dy=padY-minY;
+  all.forEach(function(el){
+    el.style.left=(parseFloat(el.style.left)+dx)+'px';
+    el.style.top=(parseFloat(el.style.top)+dy)+'px';
+  });
+  Object.keys(pos).forEach(function(k){ pos[k].x+=dx; pos[k].y+=dy; });
+  Object.keys(tpos).forEach(function(k){ tpos[k].x+=dx; tpos[k].y+=dy; });
+  var W=maxX-minX+padX*2, H=maxY-minY+padY*2;
+  edgesEl.setAttribute('width',W); edgesEl.setAttribute('height',H);
+  edgesEl.setAttribute('viewBox','0 0 '+W+' '+H);
+  window.__box={w:W,h:H};
+
+  /* edges: option -> its destination */
+  ids.forEach(function(id){
+    (T.NODES[id].a||[]).forEach(function(a,ai){
+      var from=pos[id+'#'+ai]; if(!from) return;
+      var to=a.to&&T.NODES[a.to]?pos[a.to]:(isTerminal(a.to)?tpos[a.to]:null);
+      if(!to) return;
+      var x1=from.x,y1=from.y+from.h,x2=to.x,y2=to.y;
+      var dyy=Math.max(22,Math.abs(y2-y1)/2);
+      var d='M'+x1+','+y1+' C'+x1+','+(y1+dyy)+' '+x2+','+(y2-dyy)+' '+x2+','+y2;
+      var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      var hot=sel&&((sel.kind==='o'&&sel.id===id&&sel.ai===ai)||(sel.kind==='q'&&sel.id===id));
+      p.setAttribute('class','edge'+(isTerminal(a.to)?' term':'')+(hot?' hot':''));
+      p.setAttribute('d',d);
+      edgesEl.appendChild(p);
+    });
+  });
+  /* question -> its own options */
+  ids.forEach(function(id){
+    var q=pos[id]; if(!q) return;
+    (T.NODES[id].a||[]).forEach(function(a,ai){
+      var o=pos[id+'#'+ai]; if(!o) return;
+      var x1=q.x,y1=q.y+q.h,x2=o.x,y2=o.y;
+      var dyy=Math.max(14,(y2-y1)/2);
+      var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('class','edge'+(sel&&sel.kind==='q'&&sel.id===id?' hot':''));
+      p.setAttribute('d','M'+x1+','+y1+' C'+x1+','+(y1+dyy)+' '+x2+','+(y2-dyy)+' '+x2+','+y2);
+      edgesEl.insertBefore(p,edgesEl.firstChild);
+    });
+  });
+  applyView();
+  renderPane();
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function select(s){ sel=s; render(); }
+stage.onclick=function(){ if(sel){ sel=null; render(); } };
+
+/* ===========================================================================
+   EDITS
+   ========================================================================= */
+function addOption(qid){
+  var q=T.NODES[qid]; if(!q) return;
+  q.a=q.a||[];
+  q.a.push({label:'New option',short:'New',to:'',grants:''});
+  markDirty(); select({kind:'o',id:qid,ai:q.a.length-1});
+}
+function removeOption(qid,ai){
+  var q=T.NODES[qid]; if(!q||!q.a) return;
+  if(q.a.length<=1){ alert('A question needs at least one option. Delete the question instead.'); return; }
+  q.a.splice(ai,1); markDirty(); select({kind:'q',id:qid});
+}
+function addQuestion(afterOpt){
+  var id=nextQid();
+  var n=questionIds().length+1;
+  T.NODES[id]={tag:'Question '+n,short:'New question',q:'A new question',
+               a:[{label:'Option 1',short:'Option 1',to:'END',grants:''}]};
+  if(afterOpt){
+    var q=T.NODES[afterOpt.id];
+    if(q&&q.a[afterOpt.ai]) q.a[afterOpt.ai].to=id;
+  }
+  markDirty(); select({kind:'q',id:id});
+  return id;
+}
+function removeQuestion(qid){
+  if(qid===ROOT){ alert('The first question is the root of the tree and cannot be deleted.'); return; }
+  var pointing=[];
+  questionIds().forEach(function(id){
+    (T.NODES[id].a||[]).forEach(function(a,ai){ if(a.to===qid) pointing.push(id+' option '+(ai+1)); });
+  });
+  var msg='Delete "'+(T.NODES[qid].tag||qid)+'"?';
+  if(pointing.length) msg+='\n\n'+pointing.length+' option(s) point here and will be left with no target:\n'+pointing.join('\n');
+  if(!confirm(msg)) return;
+  questionIds().forEach(function(id){
+    (T.NODES[id].a||[]).forEach(function(a){ if(a.to===qid) a.to=''; });
+  });
+  delete T.NODES[qid];
+  markDirty(); sel=null; render();
+}
+
+/* ===========================================================================
+   INSPECTOR
+   ========================================================================= */
+var tab='inspect';
+['Inspect','Paths','Content','Check'].forEach(function(k){
+  document.getElementById('tab'+k).onclick=function(){
+    tab=k.toLowerCase();
+    ['Inspect','Paths','Content','Check'].forEach(function(o){
+      document.getElementById('tab'+o).setAttribute('aria-selected',String(o===k));
+    });
+    renderPane();
+  };
+});
+var pane=document.getElementById('pane');
+
+function field(label,val,oninput,opt){
+  opt=opt||{};
+  var wrap=document.createElement('div'); wrap.className='f';
+  var l=document.createElement('label'); l.textContent=label; wrap.appendChild(l);
+  var el=document.createElement(opt.area?'textarea':'input');
+  if(!opt.area) el.type='text';
+  el.value=val==null?'':val;
+  if(opt.rows) el.rows=opt.rows;
+  el.oninput=function(){ oninput(el.value); markDirty(); };
+  wrap.appendChild(el);
+  if(opt.hint){ var h=document.createElement('div'); h.className='hint'; h.textContent=opt.hint; wrap.appendChild(h); }
+  return wrap;
+}
+function selectField(label,val,options,onchange,hint){
+  var wrap=document.createElement('div'); wrap.className='f';
+  var l=document.createElement('label'); l.textContent=label; wrap.appendChild(l);
+  var s=document.createElement('select');
+  options.forEach(function(o){
+    var op=document.createElement('option'); op.value=o.v; op.textContent=o.t;
+    if(o.v===val) op.selected=true; s.appendChild(op);
+  });
+  s.onchange=function(){ onchange(s.value); markDirty(); };
+  wrap.appendChild(s);
+  if(hint){ var h=document.createElement('div'); h.className='hint'; h.textContent=hint; wrap.appendChild(h); }
+  return wrap;
+}
+function sectionTitle(t){ var d=document.createElement('div'); d.className='sec'; d.textContent=t; return d; }
+function button(text,fn,cls){ var b=document.createElement('button'); b.className='btn '+(cls||''); b.textContent=text; b.onclick=fn; return b; }
+
+function targetOptions(){
+  var out=[{v:'',t:'— choose a destination —'}];
+  questionIds().forEach(function(id){
+    out.push({v:id,t:(T.NODES[id].tag||id)+' — '+(T.NODES[id].q||'').slice(0,40)});
+  });
+  Object.keys(TERMINALS).forEach(function(t){ out.push({v:t,t:'▸ '+TERMINALS[t]}); });
+  out.push({v:'__new__',t:'＋ Create a new question here'});
+  return out;
+}
+function pathwayOptions(){
+  var out=[{v:'',t:'— none —'}];
+  Object.keys(T.OUT).forEach(function(k){ out.push({v:k,t:T.OUT[k].name||k}); });
+  return out;
+}
+
+function renderPane(){
+  pane.innerHTML='';
+  if(tab==='paths') return renderPaths();
+  if(tab==='content') return renderContent();
+  if(tab==='check') return renderChecks();
+  if(!sel){ pane.innerHTML='<div class="empty">Click a question or an option on the tree to edit it.<br><br>The <b>+</b> beside a row of options adds another one.</div>'; return; }
+
+  if(sel.kind==='q'){
+    var q=T.NODES[sel.id]; if(!q){ sel=null; return renderPane(); }
+    var h=document.createElement('div');
+    h.innerHTML='<h2>'+esc(q.tag||sel.id)+'</h2><p class="sub">Question · id <code>'+esc(sel.id)+'</code></p>';
+    pane.appendChild(h);
+    pane.appendChild(field('Label above the question',q.tag,function(v){ q.tag=v; render(); }));
+    pane.appendChild(field('Short name (shown on other cards)',q.short,function(v){ q.short=v; render(); },{hint:'Used where an option says where it leads.'}));
+    pane.appendChild(field('The question',q.q,function(v){ q.q=v; render(); },{area:true,rows:3}));
+    pane.appendChild(field('Note shown under it (optional)',q.note,function(v){ q.note=v; },{area:true,rows:4,hint:'Use for a risk warning or extra context.'}));
+    var chk=document.createElement('label'); chk.className='chk f';
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!q.risky;
+    cb.onchange=function(){ q.risky=cb.checked; markDirty(); render(); };
+    chk.appendChild(cb); chk.appendChild(document.createTextNode('Treat as a risk decision (amber styling)'));
+    pane.appendChild(chk);
+
+    pane.appendChild(sectionTitle('Options ('+(q.a||[]).length+')'));
+    var list=document.createElement('div'); list.className='olist';
+    (q.a||[]).forEach(function(a,ai){
+      var it=document.createElement('div'); it.className='oitem';
+      var top=document.createElement('div'); top.className='top';
+      top.innerHTML='<span class="n">'+(ai+1)+'</span><span class="lbl">'+esc(a.label||'(no label)')+'</span>';
+      top.appendChild(button('Edit',function(){ select({kind:'o',id:sel.id,ai:ai}); },'sm'));
+      it.appendChild(top);
+      list.appendChild(it);
+    });
+    pane.appendChild(list);
+    var row=document.createElement('div'); row.className='row'; row.style.marginTop='10px';
+    row.appendChild(button('+ Add option',function(){ addOption(sel.id); },'solid'));
+    row.appendChild(button('Delete question',function(){ removeQuestion(sel.id); },'danger'));
+    pane.appendChild(row);
+    return;
+  }
+
+  /* option */
+  var q2=T.NODES[sel.id]; if(!q2||!q2.a||!q2.a[sel.ai]){ sel=null; return renderPane(); }
+  var a=q2.a[sel.ai];
+  var hd=document.createElement('div');
+  hd.innerHTML='<h2>Option '+(sel.ai+1)+'</h2><p class="sub">of '+esc(q2.tag||sel.id)+'</p>';
+  pane.appendChild(hd);
+  pane.appendChild(field('Label on the card',a.label,function(v){ a.label=v; render(); }));
+  pane.appendChild(field('Short form',a.short,function(v){ a.short=v; },{hint:'Used in the printed summary of answers.'}));
+  pane.appendChild(field('Note under the label (optional)',a.note,function(v){ a.note=v; },{area:true,rows:3}));
+  pane.appendChild(selectField('Where this leads',a.to,targetOptions(),function(v){
+    if(v==='__new__'){ addQuestion({id:sel.id,ai:sel.ai}); return; }
+    a.to=v; render();
+  },'Pick an existing question, an ending, or create a new question wired to this answer.'));
+  pane.appendChild(selectField('Pathway it unlocks',a.grants||'',pathwayOptions(),function(v){ a.grants=v; render(); },
+    'Adds a recommended pathway to the result when this answer is chosen.'));
+  var r2=document.createElement('div'); r2.className='row'; r2.style.marginTop='10px';
+  r2.appendChild(button('Back to question',function(){ select({kind:'q',id:sel.id}); }));
+  r2.appendChild(button('Delete option',function(){ removeOption(sel.id,sel.ai); },'danger'));
+  pane.appendChild(r2);
+}
+
+function renderPaths(){
+  pane.innerHTML='<h2>Pathways</h2><p class="sub">What an answer can unlock, and what the result then recommends.</p>';
+  Object.keys(T.OUT).forEach(function(k){
+    var o=T.OUT[k];
+    pane.appendChild(sectionTitle(o.name||k));
+    pane.appendChild(field('Name',o.name,function(v){ o.name=v; render(); }));
+    pane.appendChild(field('Headline',o.title,function(v){ o.title=v; }));
+    pane.appendChild(field('Description (HTML allowed)',o.body,function(v){ o.body=v; },{area:true,rows:3}));
+    if(o.sections) pane.appendChild(field('CAA sections (one per line)',o.sections.join('\n'),function(v){
+      o.sections=v.split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    },{area:true,rows:6,hint:o.sections.length+' listed'}));
+    if(o.checks) pane.appendChild(field('Bullet points — "heading :: detail" per line',
+      o.checks.map(function(c){return c.h+' :: '+(c.d||'');}).join('\n'),function(v){
+        o.checks=v.split('\n').filter(Boolean).map(function(line){
+          var bits=line.split('::'); return {h:(bits[0]||'').trim(),d:(bits[1]||'').trim()};
+        });
+      },{area:true,rows:6}));
+  });
+}
+
+function listEditor(title,arr,hint){
+  pane.appendChild(sectionTitle(title));
+  pane.appendChild(field(hint||'One per line — "heading :: detail"',
+    arr.map(function(c){return c.h+' :: '+(c.d||'');}).join('\n'),function(v){
+      var next=v.split('\n').filter(Boolean).map(function(line){
+        var bits=line.split('::'); return {h:(bits[0]||'').trim(),d:(bits[1]||'').trim()};
+      });
+      arr.length=0; next.forEach(function(x){ arr.push(x); });
+    },{area:true,rows:7}));
+}
+function renderContent(){
+  pane.innerHTML='<h2>Result content</h2><p class="sub">The parts of the result that do not depend on the path taken.</p>';
+  listEditor('Non-TAS options',T.NONTAS);
+  listEditor('Eligibility criteria',T.CRITERIA);
+  listEditor('Next steps',T.NEXT);
+  pane.appendChild(sectionTitle('Reference links'));
+  pane.appendChild(field('One per line — "text :: url"',
+    T.LINKS.map(function(l){return l.t+' :: '+l.u;}).join('\n'),function(v){
+      T.LINKS=v.split('\n').filter(Boolean).map(function(line){
+        var i=line.indexOf('::');
+        return {t:line.slice(0,i<0?line.length:i).trim(),u:i<0?'':line.slice(i+2).trim()};
+      });
+    },{area:true,rows:4}));
+  pane.appendChild(sectionTitle('Standing disclaimer'));
+  pane.appendChild(field('Shown on every screen and on the print-out',T.DISC,function(v){ T.DISC=v; },{area:true,rows:5}));
+}
+
+function checks(){
+  var out=[], reach=reachable();
+  if(!T.NODES[ROOT]) out.push({bad:true,t:'No root question',d:'The tree starts at "'+ROOT+'", which does not exist.'});
+  questionIds().forEach(function(id){
+    var q=T.NODES[id];
+    if(!q.q||!q.q.trim()) out.push({bad:true,t:(q.tag||id)+' has no question text',d:'',go:{kind:'q',id:id}});
+    if(!q.a||!q.a.length) out.push({bad:true,t:(q.tag||id)+' has no options',d:'A question with no options is a dead end.',go:{kind:'q',id:id}});
+    (q.a||[]).forEach(function(a,ai){
+      if(!a.label||!a.label.trim()) out.push({bad:true,t:(q.tag||id)+' option '+(ai+1)+' has no label',d:'',go:{kind:'o',id:id,ai:ai}});
+      if(!a.to) out.push({bad:true,t:(q.tag||id)+' option '+(ai+1)+' leads nowhere',d:'Pick a destination.',go:{kind:'o',id:id,ai:ai}});
+      else if(!T.NODES[a.to]&&!isTerminal(a.to)) out.push({bad:true,t:(q.tag||id)+' option '+(ai+1)+' points at a missing question',d:'Target "'+a.to+'" no longer exists.',go:{kind:'o',id:id,ai:ai}});
+      if(a.grants&&!T.OUT[a.grants]) out.push({bad:true,t:(q.tag||id)+' option '+(ai+1)+' unlocks a missing pathway',d:'"'+a.grants+'" is not defined.',go:{kind:'o',id:id,ai:ai}});
+    });
+    if(!reach[id]) out.push({bad:false,t:(q.tag||id)+' is unreachable',d:'No option leads to it, so a reader can never see it.',go:{kind:'q',id:id}});
+  });
+  return out;
+}
+function renderChecks(){
+  pane.innerHTML='<h2>Checks</h2><p class="sub">Run against the working copy as you edit.</p>';
+  var list=checks();
+  if(!list.length){ var ok=document.createElement('div'); ok.className='ok'; ok.textContent='No problems found — the tree is complete and every option leads somewhere.'; pane.appendChild(ok); return; }
+  var wrap=document.createElement('div'); wrap.className='issues';
+  list.forEach(function(i){
+    var d=document.createElement('div'); d.className='issue'+(i.bad?'':' warn');
+    d.innerHTML='<b>'+esc(i.t)+'</b>'+esc(i.d||'');
+    if(i.go) d.onclick=function(){ tab='inspect';
+      document.getElementById('tabInspect').setAttribute('aria-selected','true');
+      document.getElementById('tabCheck').setAttribute('aria-selected','false');
+      select(i.go); };
+    wrap.appendChild(d);
+  });
+  pane.appendChild(wrap);
+}
+
+/* ===========================================================================
+   SAVE / EXPORT / IMPORT
+   ========================================================================= */
+document.getElementById('bSave').onclick=function(){
+  var bad=checks().filter(function(c){return c.bad;});
+  if(bad.length&&!confirm(bad.length+' problem(s) would ship with this draft:\n\n'
+      +bad.slice(0,6).map(function(b){return '• '+b.t;}).join('\n')
+      +(bad.length>6?'\n…':'')+'\n\nSave anyway?')) return;
+  try{
+    localStorage.setItem(DRAFT_KEY,JSON.stringify(T));
+    markDirty(false);
+    alert('Saved. The tree at / will use this draft in this browser.\n\nTo ship it to everyone, use Export and replace tree-data.js in the repo.');
+  }catch(e){ alert('Could not save: '+e.message); }
+};
+document.getElementById('bExport').onclick=function(){
+  var body='/* Generated by /admin — replace the contents of tree-data.js with this. */\n'+
+    '(function(){\n  var DATA='+JSON.stringify(T,null,2)+';\n'+
+    '  if(typeof window!==\'undefined\') window.TAS_TREE=DATA;\n'+
+    '  if(typeof module!==\'undefined\'&&module.exports) module.exports=DATA;\n})();\n';
+  openDlg('Export',body,'Copy this over tree-data.js in the repo, commit, and every reader gets it.',false);
+};
+document.getElementById('bImport').onclick=function(){
+  openDlg('Import','','Paste either the JSON object or a whole tree-data.js file.',true);
+};
+document.getElementById('bReset').onclick=function(){
+  if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  T=clone(BASE); sel=null; markDirty(false); render();
+};
+document.getElementById('bAddQ').onclick=function(){ addQuestion(null); };
+document.getElementById('bOpen').onclick=function(){ window.open('index.html','_blank'); };
+
+var dlg=document.getElementById('dlg');
+function openDlg(title,text,hint,importing){
+  document.getElementById('dlgTitle').textContent=title;
+  document.getElementById('dlgText').value=text;
+  document.getElementById('dlgHint').textContent=hint||'';
+  document.getElementById('dlgOk').hidden=!importing;
+  if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
+}
+document.getElementById('dlgClose').onclick=function(){ dlg.close?dlg.close():dlg.removeAttribute('open'); };
+document.getElementById('dlgOk').onclick=function(){
+  var txt=document.getElementById('dlgText').value.trim();
+  var m=txt.match(/var\s+DATA\s*=\s*([\s\S]*?);\s*\n\s*if\s*\(/);
+  if(m) txt=m[1];
+  try{
+    var d=JSON.parse(txt);
+    if(!d.NODES||typeof d.NODES!=='object') throw new Error('no NODES object found');
+    T=d;
+    ['OUT','NONTAS','CRITERIA','NEXT','LINKS'].forEach(function(k){ if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{}; });
+    if(typeof T.DISC!=='string') T.DISC='';
+    sel=null; markDirty(); render();
+    dlg.close?dlg.close():dlg.removeAttribute('open');
+  }catch(e){ alert('Could not read that: '+e.message); }
+};
+
+/* ---- pan / zoom ---- */
+function fit(){
+  var r=stage.getBoundingClientRect(), b=window.__box;
+  if(!r.width||!b) return;
+  var s=Math.min((r.width-40)/b.w,(r.height-40)/b.h,1);
+  view.s=Math.max(.15,s);
+  view.tx=(r.width-b.w*view.s)/2; view.ty=20;
+  applyView();
+}
+function zoomBy(k){
+  var r=stage.getBoundingClientRect();
+  var cx=r.width/2, cy=r.height/2;
+  var ns=Math.min(2,Math.max(.15,view.s*k));
+  var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
+  view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns; applyView();
+}
+document.getElementById('zIn').onclick=function(){ zoomBy(1.2); };
+document.getElementById('zOut').onclick=function(){ zoomBy(1/1.2); };
+document.getElementById('zFit').onclick=fit;
+var drag=null;
+stage.addEventListener('pointerdown',function(e){
+  if(e.target.closest('.qcard,.ocard,.addopt,.btn')) return;
+  drag={x:e.clientX,y:e.clientY,tx:view.tx,ty:view.ty};
+  stage.classList.add('grabbing');
+  try{ stage.setPointerCapture(e.pointerId); }catch(err){}
+});
+stage.addEventListener('pointermove',function(e){
+  if(!drag) return;
+  view.tx=drag.tx+(e.clientX-drag.x); view.ty=drag.ty+(e.clientY-drag.y); applyView();
+});
+stage.addEventListener('pointerup',function(e){
+  drag=null; stage.classList.remove('grabbing');
+  try{ stage.releasePointerCapture(e.pointerId); }catch(err){}
+});
+stage.addEventListener('wheel',function(e){
+  e.preventDefault();
+  if(e.ctrlKey||e.metaKey){
+    var r=stage.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
+    var ns=Math.min(2,Math.max(.15,view.s*(e.deltaY<0?1.12:1/1.12)));
+    var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
+    view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns;
+  } else { view.tx-=e.deltaX; view.ty-=e.deltaY; }
+  applyView();
+},{passive:false});
+
+window.addEventListener('beforeunload',function(e){
+  if(!dirty) return;
+  e.preventDefault(); e.returnValue='';
+});
+
+render();
+fit();
+</script>

@@ -491,6 +491,8 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 
 <div id="printOut"></div>
 
+<script src="tree-data.js"></script>
+
 <script>
 "use strict";
 
@@ -626,6 +628,29 @@ var LINKS=[
   {t:'Tribal Authority Rule (TAR) under the Clean Air Act',u:'https://www.epa.gov/tribal-air/tribal-authority-rule-tar-under-clean-air-act'}
 ];
 var DISC='General information to support your discussion — not legal advice, and not an official EPA product. Confirm all citations against 40 CFR Part 49 and the current Clean Air Act, and consult Tribal legal counsel before applying.';
+
+/* ---------------------------------------------------------------------------
+   Content precedence. The definitions above are the bundled fallback so this
+   file still works on its own; tree-data.js is what the repo ships; a draft
+   saved from /admin wins over both, for this browser only.
+   ------------------------------------------------------------------------- */
+(function(){
+  function adopt(d){
+    if(!d) return;
+    if(d.NODES&&Object.keys(d.NODES).length) NODES=d.NODES;
+    if(d.OUT) OUT=d.OUT;
+    if(d.NONTAS) NONTAS=d.NONTAS;
+    if(d.CRITERIA) CRITERIA=d.CRITERIA;
+    if(d.NEXT) NEXT=d.NEXT;
+    if(d.LINKS) LINKS=d.LINKS;
+    if(typeof d.DISC==='string'&&d.DISC) DISC=d.DISC;
+  }
+  try{ adopt(window.TAS_TREE); }catch(e){}
+  try{
+    var raw=localStorage.getItem('tas-tree-draft');
+    if(raw) adopt(JSON.parse(raw));
+  }catch(e){}
+})();
 
 /* ===========================================================================
    STATE

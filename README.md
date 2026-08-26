@@ -81,3 +81,37 @@ carried into every version:
 
 `<meta charset="utf-8">` is declared in every file — without it, servers that don't
 send a charset mangle every em-dash, curly quote and `§`.
+
+## Editing the tree
+
+The questions, options, pathways and result content live in `tree-data.js`.
+Edit it by hand, or visually at **`/admin`**.
+
+The editor draws the whole tree — every question with its options fanned
+beneath it — and you edit by clicking a card. You can retitle anything, add or
+remove options, point an option at any question or ending, create a new
+question wired straight to an answer, and edit the pathways and the result
+boilerplate. A Checks tab flags options that lead nowhere, questions with no
+text, and questions nothing can reach.
+
+**Save draft** keeps the edit in `localStorage`, so the tree at `/` picks it up
+**in that browser only**. To ship a change to everyone, hit **Export** and
+replace `tree-data.js` with what it gives you, then commit.
+
+Content precedence, lowest to highest:
+
+1. the copy bundled inside `index.html` — so the file still works standalone
+2. `tree-data.js` — what the repo ships
+3. a draft saved from `/admin` — that browser only
+
+### Two things to know
+
+`/admin` is not access-controlled. It is a client-side editor: it writes only
+to the visitor's own browser and cannot change what anyone else sees, so the
+exposure is the UI itself, not the content. If that is not acceptable, put
+Vercel Deployment Protection on the project, or drop `admin.html` from the
+deploy via `.vercelignore` and run it locally.
+
+There is no server. Saving means `localStorage`; publishing means committing the
+export. If you later want real multi-user editing, the seam is `tree-data.js` —
+serve that same JSON shape from an API and the viewer needs no other change.
