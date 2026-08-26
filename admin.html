@@ -390,7 +390,25 @@ var QW=286, OW=178, OGAP=10, VGAP=44, UNITGAP=54, ROOT='q1';
 var nodesEl=document.getElementById('nodes'), edgesEl=document.getElementById('edges');
 var stage=document.getElementById('stage'), vp=document.getElementById('viewport');
 var view={tx:40,ty:30,s:.85};
-function applyView(){ vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')'; }
+/* Keep the tree on screen. Panning was unbounded, so a scroll or a drag could
+   carry the canvas off into empty space with no landmark to get back by. The
+   view is held so the tree always overlaps the stage with a margin; on an axis
+   where the tree is smaller than the stage it simply centres. */
+var PAN_MARGIN=120;
+function clampView(){
+  var b=window.__box; if(!b) return;
+  var r=stage.getBoundingClientRect();
+  if(!r.width||!r.height) return;
+  var W=b.w*view.s, H=b.h*view.s, m=PAN_MARGIN;
+  var loX=r.width-m-W, hiX=m;
+  view.tx=(loX>hiX)?(r.width-W)/2:Math.min(hiX,Math.max(loX,view.tx));
+  var loY=r.height-m-H, hiY=m;
+  view.ty=(loY>hiY)?(r.height-H)/2:Math.min(hiY,Math.max(loY,view.ty));
+}
+function applyView(){
+  clampView();
+  vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')';
+}
 
 function layers(){
   var L={}, ids=questionIds();
