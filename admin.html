@@ -13,6 +13,16 @@
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --gold:#dec26a;
   --on-accent:#e5e8eb;
+  --sky-top:#cfdde3;
+  --sky-mid:#dce3e7;
+  --sky-bot:#e5e8eb;
+  --cloud:rgba(242,244,246,.8);
+  --haze:rgba(229,232,235,.62);
+  --ridge-3:#cbd8de;
+  --ridge-2:#b3c6cf;
+  --ridge-1:#93aeba;
+  --mote:rgba(43,69,82,.42);
+  --amb:.5;
   --display:"Morvi","Haettenschweiler","Arial Narrow",Impact,system-ui,sans-serif;
   --sans:"Gotham Book","Gotham","Montserrat","Century Gothic","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
   --serif:"Marion",Georgia,"Iowan Old Style","Palatino Linotype",serif;
@@ -32,6 +42,16 @@
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --on-accent:#081b23;
+    --sky-top:#050f14;
+    --sky-mid:#07161d;
+    --sky-bot:#081b23;
+    --cloud:rgba(184,208,216,.07);
+    --haze:rgba(184,208,216,.05);
+    --ridge-3:#0c222c;
+    --ridge-2:#11303d;
+    --ridge-1:#173d4d;
+    --mote:rgba(184,208,216,.4);
+    --amb:.3;
     --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
     --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
   }
@@ -42,7 +62,72 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,select,textarea,.btn{font-family:var(--sans)}
 
-.shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative;z-index:1}
+
+/* ===========================================================================
+   ENVIRONMENTAL BACKDROP
+   Layered ridgelines receding into haze — atmospheric perspective is the
+   Clean Air Act's own subject (regional haze, §169A visibility). Sky wash,
+   slow cloud banks, and drifting air motes sit behind everything at low
+   contrast so card text stays fully legible.
+   ========================================================================= */
+.env{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:paint}
+
+/* sky wash */
+.env .sky{position:absolute;inset:0;
+  background:linear-gradient(to bottom,var(--sky-top) 0%,var(--sky-mid) 46%,var(--sky-bot) 100%)}
+
+/* slow cloud banks */
+.env .clouds span{position:absolute;display:block;border-radius:50%;
+  background:radial-gradient(ellipse 58% 46% at 50% 50%,var(--cloud) 0%,transparent 74%);
+  opacity:calc(var(--amb) * .78);will-change:transform}
+.env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
+.env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
+.env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
+@keyframes cloud1{0%{transform:translateX(-14vw)}50%{transform:translateX(118vw)}50.01%{transform:translateX(-70vw)}100%{transform:translateX(-14vw)}}
+@keyframes cloud2{0%{transform:translateX(-60vw)}100%{transform:translateX(108vw)}}
+@keyframes cloud3{0%{transform:translateX(-82vw)}100%{transform:translateX(100vw)}}
+
+/* the haze band the Act exists to clear */
+.env .haze{position:absolute;left:0;right:0;bottom:20%;height:26%;
+  background:linear-gradient(to bottom,transparent,var(--haze) 62%,transparent);
+  opacity:calc(var(--amb) * 1.15)}
+
+/* ridgelines, far to near */
+.env .ridges{position:absolute;left:0;right:0;bottom:0;width:100%;height:46vh;min-height:260px;display:block}
+.env .ridges path{transition:fill .4s}
+.env .ridges .r3{fill:var(--ridge-3)}
+.env .ridges .r2{fill:var(--ridge-2)}
+.env .ridges .r1{fill:var(--ridge-1)}
+
+/* drifting air motes */
+.env .motes span{position:absolute;bottom:2vh;display:block;width:2px;height:2px;border-radius:50%;
+  background:var(--mote);opacity:0;animation:rise linear infinite}
+@keyframes rise{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  18%{opacity:calc(var(--amb) * .45)}
+  78%{opacity:calc(var(--amb) * .3)}
+  100%{transform:translateY(-42vh) translateX(3vw);opacity:0}
+}
+.env .motes span:nth-child(1){left:11%;animation-duration:126s;animation-delay:0s}
+.env .motes span:nth-child(2){left:29%;animation-duration:148s;animation-delay:22s}
+.env .motes span:nth-child(3){left:44%;animation-duration:114s;animation-delay:47s}
+.env .motes span:nth-child(4){left:61%;animation-duration:158s;animation-delay:13s}
+.env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
+.env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}
+
+/* ---- the tree's boundary ----
+   The editor canvas is unbounded, so without this there is nothing to tell you
+   where the tree ends and empty space begins. Drawn from the measured content
+   box, so it always fits what is actually there. */
+.frame{position:absolute;border:1.5px dashed var(--border-strong);border-radius:18px;
+  background:color-mix(in srgb,var(--surface) 38%,transparent);pointer-events:none}
+@supports not (background:color-mix(in srgb,red,blue)){ .frame{background:rgba(255,255,255,.28)} }
+.frame .flabel{position:absolute;top:-10px;left:18px;background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:2px 9px;font-family:var(--sans);font-weight:600;font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.frame .fsize{position:absolute;bottom:-10px;right:18px;background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:2px 9px;font-family:var(--sans);font-size:9.5px;color:var(--faint)}
 
 /* ---- top bar ---- */
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
@@ -70,7 +155,7 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 
 /* ---- layout ---- */
 .main{flex:1;display:flex;min-height:0}
-.stage{flex:1;position:relative;min-width:0;overflow:hidden;cursor:grab;background:var(--bg)}
+.stage{flex:1;position:relative;min-width:0;overflow:hidden;cursor:grab}
 .stage.grabbing{cursor:grabbing}
 .viewport{position:absolute;left:0;top:0;transform-origin:0 0}
 .edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
@@ -93,6 +178,16 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .ocard .meta b{color:var(--good);font-weight:600}
 .ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
 .qcard.orphan{border-style:dashed;opacity:.75}
+.qcard[draggable="true"],.ocard[draggable="true"]{cursor:grab}
+.qcard.dragging,.ocard.dragging{opacity:.4;cursor:grabbing}
+.qcard.dropok,.ocard.dropok{border-color:var(--good-line);background:var(--good-bg);
+  box-shadow:0 0 0 4px var(--good-bg),var(--sh2)}
+.qcard.dropok::after,.ocard.dropok::after{content:'drop to reorder';position:absolute;bottom:6px;right:9px;
+  font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
+/* a drop that cannot do what it looks like it would */
+.qcard.dropno{border-color:var(--risk-line);background:var(--risk-bg)}
+.qcard.dropno::after{content:'different row — repoint an option instead';position:absolute;bottom:6px;left:10px;right:10px;
+  font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--risk)}
 /* ---- a card opened for editing ----
    The card becomes the form. Fields are fixed height so the layout measured
    when the card opened stays true while you type: the tree never reflows
@@ -197,6 +292,18 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap
 dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
 </style>
 
+<div class="env" aria-hidden="true">
+  <div class="sky"></div>
+  <div class="clouds"><span></span><span></span><span></span></div>
+  <div class="haze"></div>
+  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
+    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
+    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
+    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
+  </svg>
+  <div class="motes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+</div>
+
 <div class="shell">
   <header class="bar">
     <div class="brand">
@@ -225,7 +332,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
         <button class="btn" id="zOut" aria-label="Zoom out">−</button>
         <button class="btn" id="zFit" aria-label="Fit">⤢</button>
       </div>
-      <div class="tip" id="tip">Click a card to edit it · <b>Save draft</b> = this browser only · <b>Export</b> = publish to everyone</div>
+      <div class="tip" id="tip">Click a card to edit · drag a card onto another to reorder · <b>Save draft</b> = this browser only · <b>Export</b> = publishes</div>
     </div>
 
     <aside class="side">
@@ -366,6 +473,22 @@ function render(){
         qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
           +(reach[id]?'':'<span class="badge">unreachable</span>');
         qEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'q',id:id}); };
+        qEl.title="Drag onto another question in the same row to reorder it. A row is set by what points at the question — repoint an option to move it up or down.";
+        makeDraggable(qEl,{kind:'q',id:id});
+        makeDropTarget(qEl,function(d){ return d.kind==='q'&&d.id!==id&&L[d.id]===L[id]; },
+          function(d){ reorderQuestions(d.id,id); });
+        /* A question sits on the row its wiring puts it on. Dropping it on a
+           question in another row cannot move it there, so rather than doing
+           nothing silently, say what would. */
+        qEl.addEventListener('dragover',function(ev){
+          if(DRAG&&DRAG.kind==='q'&&DRAG.id!==id&&L[DRAG.id]!==L[id]){
+            ev.preventDefault();
+            try{ ev.dataTransfer.dropEffect='none'; }catch(e){}
+            qEl.classList.add('dropno');
+          }
+        });
+        qEl.addEventListener('dragleave',function(){ qEl.classList.remove('dropno'); });
+        qEl.addEventListener('drop',function(){ qEl.classList.remove('dropno'); });
       }
       nodesEl.appendChild(qEl);
       var qh=qEl.offsetHeight;
@@ -408,6 +531,10 @@ function render(){
             +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
             +(bad?'<span class="badge">no target</span>':'');
           oEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'o',id:id,ai:ai}); };
+          oEl.title='Drag onto another option of this question to reorder them';
+          makeDraggable(oEl,{kind:'o',id:id,ai:ai});
+          makeDropTarget(oEl,function(d){ return d.kind==='o'&&d.id===id&&d.ai!==ai; },
+            function(d){ reorderOptions(id,d.ai,ai); });
         }
         nodesEl.appendChild(oEl);
         oEl.style.left=runX+'px'; oEl.style.top=oy+'px';
@@ -441,7 +568,9 @@ function render(){
   });
 
   /* normalise to positive space */
-  var all=Array.prototype.slice.call(nodesEl.children);
+  var all=Array.prototype.slice.call(nodesEl.children).filter(function(el){
+    return !el.classList.contains('frame');
+  });
   var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   all.forEach(function(el){
     var l=parseFloat(el.style.left),t=parseFloat(el.style.top);
@@ -456,6 +585,15 @@ function render(){
   Object.keys(pos).forEach(function(k){ pos[k].x+=dx; pos[k].y+=dy; });
   Object.keys(tpos).forEach(function(k){ tpos[k].x+=dx; tpos[k].y+=dy; });
   var W=maxX-minX+padX*2, H=maxY-minY+padY*2;
+  /* the boundary, drawn behind everything from the real content box */
+  var frame=document.createElement('div');
+  frame.className='frame';
+  frame.style.left=(padX-22)+'px'; frame.style.top=(padY-22)+'px';
+  frame.style.width=(W-padX*2+44)+'px'; frame.style.height=(H-padY*2+44)+'px';
+  frame.innerHTML='<span class="flabel">Decision tree</span>'
+    +'<span class="fsize">'+questionIds().length+' questions · '
+    +questionIds().reduce(function(n,id){return n+(T.NODES[id].a||[]).length;},0)+' options</span>';
+  nodesEl.insertBefore(frame,nodesEl.firstChild);
   edgesEl.setAttribute('width',W); edgesEl.setAttribute('height',H);
   edgesEl.setAttribute('viewBox','0 0 '+W+' '+H);
   window.__box={w:W,h:H};
@@ -535,6 +673,63 @@ function edBtn(text,fn,cls){
   if(cls) b.className=cls;
   b.addEventListener('click',function(ev){ ev.stopPropagation(); fn(); });
   return b;
+}
+/* ---- dragging ------------------------------------------------------------
+   A question is dragged as a unit: its options are laid out from it, so they
+   travel with it. Reordering rewrites the order of T.NODES, which sets the
+   left-to-right order within a row. It does NOT change which question follows
+   which — that comes from where each option points, so a question only leaves
+   its row when you repoint an option at it.
+   Options reorder inside their own question, which is the order a reader sees.
+   -------------------------------------------------------------------------- */
+var DRAG=null;
+function reorderQuestions(fromId,toId){
+  if(fromId===toId) return;
+  var ids=questionIds(), i=ids.indexOf(fromId), j=ids.indexOf(toId);
+  if(i<0||j<0) return;
+  ids.splice(i,1);
+  ids.splice(ids.indexOf(toId)+(j>i?1:0),0,fromId);
+  var next={};
+  ids.forEach(function(id){ next[id]=T.NODES[id]; });
+  T.NODES=next;
+  markDirty(); render();
+}
+function reorderOptions(qid,from,to){
+  var a=T.NODES[qid]&&T.NODES[qid].a;
+  if(!a||from===to||from<0||to<0||from>=a.length||to>=a.length) return;
+  var moved=a.splice(from,1)[0];
+  a.splice(to,0,moved);
+  markDirty();
+  sel={kind:'o',id:qid,ai:to};
+  render();
+}
+function makeDraggable(el,payload){
+  el.draggable=true;
+  el.addEventListener('dragstart',function(ev){
+    DRAG=payload;
+    el.classList.add('dragging');
+    try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',payload.kind); }catch(e){}
+  });
+  el.addEventListener('dragend',function(){
+    DRAG=null; el.classList.remove('dragging');
+    Array.prototype.forEach.call(document.querySelectorAll('.dropok'),function(d){ d.classList.remove('dropok'); });
+  });
+}
+function makeDropTarget(el,accept,onDrop){
+  el.addEventListener('dragover',function(ev){
+    if(!DRAG||!accept(DRAG)) return;
+    ev.preventDefault();
+    try{ ev.dataTransfer.dropEffect='move'; }catch(e){}
+    el.classList.add('dropok');
+  });
+  el.addEventListener('dragleave',function(){ el.classList.remove('dropok'); });
+  el.addEventListener('drop',function(ev){
+    if(!DRAG||!accept(DRAG)) return;
+    ev.preventDefault(); ev.stopPropagation();
+    el.classList.remove('dropok');
+    var d=DRAG; DRAG=null;
+    onDrop(d);
+  });
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function select(s){ sel=s; render(); }
