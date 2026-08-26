@@ -116,19 +116,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
 .env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}
 
-/* ---- the tree's boundary ----
-   The editor canvas is unbounded, so without this there is nothing to tell you
-   where the tree ends and empty space begins. Drawn from the measured content
-   box, so it always fits what is actually there. */
-.frame{position:absolute;border:1.5px dashed var(--border-strong);border-radius:18px;
-  background:color-mix(in srgb,var(--surface) 38%,transparent);pointer-events:none}
-@supports not (background:color-mix(in srgb,red,blue)){ .frame{background:rgba(255,255,255,.28)} }
-.frame .flabel{position:absolute;top:-10px;left:18px;background:var(--surface);border:1px solid var(--border);
-  border-radius:6px;padding:2px 9px;font-family:var(--sans);font-weight:600;font-size:9.5px;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-.frame .fsize{position:absolute;bottom:-10px;right:18px;background:var(--surface);border:1px solid var(--border);
-  border-radius:6px;padding:2px 9px;font-family:var(--sans);font-size:9.5px;color:var(--faint)}
-
 /* ---- top bar ---- */
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
   background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:20;flex-wrap:wrap}
@@ -232,6 +219,10 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .side{flex:none;width:min(400px,42vw);border-left:1px solid var(--border);background:var(--surface);
   display:flex;flex-direction:column;min-height:0}
 @media (max-width:900px){ .main{flex-direction:column} .side{width:auto;flex:1;border-left:none;border-top:1px solid var(--border)} .stage{flex:none;height:48vh} }
+/* full-width mode: the inspector folds away and the canvas takes the screen.
+   Inline editing on the cards means nothing is out of reach while it is shut. */
+body.wide .side{display:none}
+body.wide #zWide{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .tabs{flex:none;display:flex;border-bottom:1px solid var(--border);background:var(--surface-2)}
 .tabs button{flex:1;border:none;background:transparent;padding:9px 6px;font-size:12px;font-weight:600;
   color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
@@ -330,7 +321,9 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
       <div class="zoom">
         <button class="btn" id="zIn" aria-label="Zoom in">+</button>
         <button class="btn" id="zOut" aria-label="Zoom out">−</button>
-        <button class="btn" id="zFit" aria-label="Fit">⤢</button>
+        <button class="btn" id="zFit" title="Fit the width and start at the top — scroll down to follow the tree">⤢</button>
+        <button class="btn" id="zAll" title="Shrink the whole tree into view">◱</button>
+        <button class="btn" id="zWide" title="Hide the side panel and give the tree the full width">⤡</button>
       </div>
       <div class="tip" id="tip">Click a card to edit · drag a card onto another to reorder · <b>Save draft</b> = this browser only · <b>Export</b> = publishes</div>
     </div>
@@ -586,9 +579,7 @@ function render(){
   });
 
   /* normalise to positive space */
-  var all=Array.prototype.slice.call(nodesEl.children).filter(function(el){
-    return !el.classList.contains('frame');
-  });
+  var all=Array.prototype.slice.call(nodesEl.children);
   var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   all.forEach(function(el){
     var l=parseFloat(el.style.left),t=parseFloat(el.style.top);
@@ -603,15 +594,6 @@ function render(){
   Object.keys(pos).forEach(function(k){ pos[k].x+=dx; pos[k].y+=dy; });
   Object.keys(tpos).forEach(function(k){ tpos[k].x+=dx; tpos[k].y+=dy; });
   var W=maxX-minX+padX*2, H=maxY-minY+padY*2;
-  /* the boundary, drawn behind everything from the real content box */
-  var frame=document.createElement('div');
-  frame.className='frame';
-  frame.style.left=(padX-22)+'px'; frame.style.top=(padY-22)+'px';
-  frame.style.width=(W-padX*2+44)+'px'; frame.style.height=(H-padY*2+44)+'px';
-  frame.innerHTML='<span class="flabel">Decision tree</span>'
-    +'<span class="fsize">'+questionIds().length+' questions · '
-    +questionIds().reduce(function(n,id){return n+(T.NODES[id].a||[]).length;},0)+' options</span>';
-  nodesEl.insertBefore(frame,nodesEl.firstChild);
   edgesEl.setAttribute('width',W); edgesEl.setAttribute('height',H);
   edgesEl.setAttribute('viewBox','0 0 '+W+' '+H);
   window.__box={w:W,h:H};
@@ -1055,12 +1037,25 @@ document.getElementById('dlgOk').onclick=function(){
 };
 
 /* ---- pan / zoom ---- */
+/* Fit the WIDTH, never the height. Squeezing a tall tree into the viewport
+   shrank the cards to the point of being unreadable; instead it opens at a
+   size you can actually read, anchored at the top, and you scroll down to
+   follow it to the end. Never enlarges past 1:1. */
 function fit(){
   var r=stage.getBoundingClientRect(), b=window.__box;
   if(!r.width||!b) return;
-  var s=Math.min((r.width-40)/b.w,(r.height-40)/b.h,1);
-  view.s=Math.max(.15,s);
-  view.tx=(r.width-b.w*view.s)/2; view.ty=20;
+  view.s=Math.max(.3,Math.min((r.width-48)/b.w,1));
+  view.tx=(r.width-b.w*view.s)/2;
+  view.ty=24;
+  applyView();
+}
+/* the whole thing at a glance, for when you want the shape rather than the words */
+function fitAll(){
+  var r=stage.getBoundingClientRect(), b=window.__box;
+  if(!r.width||!b) return;
+  view.s=Math.max(.12,Math.min((r.width-48)/b.w,(r.height-48)/b.h,1));
+  view.tx=(r.width-b.w*view.s)/2;
+  view.ty=(r.height-b.h*view.s)/2;
   applyView();
 }
 function zoomBy(k){
@@ -1073,6 +1068,12 @@ function zoomBy(k){
 document.getElementById('zIn').onclick=function(){ zoomBy(1.2); };
 document.getElementById('zOut').onclick=function(){ zoomBy(1/1.2); };
 document.getElementById('zFit').onclick=fit;
+document.getElementById('zAll').onclick=fitAll;
+document.getElementById('zWide').onclick=function(){
+  document.body.classList.toggle('wide');
+  /* the stage just changed width, so re-measure before refitting */
+  requestAnimationFrame(function(){ render(); fit(); });
+};
 var drag=null;
 stage.addEventListener('pointerdown',function(e){
   if(e.target.closest('.qcard,.ocard,.addopt,.btn')) return;
@@ -1106,4 +1107,5 @@ window.addEventListener('beforeunload',function(e){
 
 render();
 fit();
+window.addEventListener('resize',function(){ fit(); });
 </script>
