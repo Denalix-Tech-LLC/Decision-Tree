@@ -166,6 +166,12 @@ a{color:var(--accent-ink)}
 .btn.icon{padding:7px 9px}
 .btn svg{width:14px;height:14px;flex:none}
 .btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+/* a state indicator, so it snaps rather than transitions */
+#btnSound .slash{opacity:0}
+#btnSound.muted .slash{opacity:1}
+#btnSound.muted .wave1,#btnSound.muted .wave2{opacity:0}
+#btnSound.muted{color:var(--faint)}
+@media (max-width:700px){ #btnSound .sndLabel{display:none} }
 
 .rail{flex:none;height:3px;background:var(--surface-2);position:relative;overflow:hidden;z-index:5}
 .rail i{position:absolute;inset:0 auto 0 0;width:0%;display:block;
@@ -433,6 +439,12 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     </div>
     <div class="acts">
       <button class="btn" id="btnResult" hidden>Result</button>
+      <button class="btn" id="btnSound" aria-pressed="true" title="Sound on — click to mute">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5 6 9H3v6h3l5 4z"/><path class="wave1" d="M16 9a4 4 0 0 1 0 6"/>
+          <path class="wave2" d="M19 6a8 8 0 0 1 0 12"/><path class="slash" d="M3 3l18 18"/></svg>
+        <span class="sndLabel">Sound</span>
+      </button>
       <button class="btn" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>Print</button>
       <button class="btn" id="btnReset">Start over</button>
     </div>
@@ -481,6 +493,67 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 
 <script>
 "use strict";
+
+/* ===========================================================================
+   SOUND
+   Synthesised, so nothing is fetched. Voices are soft and filtered rather than
+   bright, and the notes are a pentatonic run — successive options can never
+   land on a dissonant interval. Kept quiet, and switchable, because this gets
+   opened in meetings; the choice is remembered.
+   ========================================================================= */
+var AUDIO={ctx:null,master:null,on:true};
+try{ AUDIO.on=localStorage.getItem('tas-sound')!=='off'; }catch(e){}
+
+function audioCtx(){
+  if(AUDIO.ctx) return AUDIO.ctx;
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) return null;
+  try{ AUDIO.ctx=new AC(); }catch(e){ return null; }
+  AUDIO.master=AUDIO.ctx.createGain();
+  AUDIO.master.gain.value=0.14;
+  AUDIO.master.connect(AUDIO.ctx.destination);
+  return AUDIO.ctx;
+}
+/* one soft, filtered voice with a plucked envelope */
+function voice(o){
+  if(!AUDIO.on) return;
+  var ctx=audioCtx(); if(!ctx) return;
+  if(ctx.state==='suspended'){ try{ ctx.resume(); }catch(e){} }
+  var t=ctx.currentTime+(o.delay||0), dur=o.dur||0.3;
+  var osc=ctx.createOscillator(), g=ctx.createGain(), lp=ctx.createBiquadFilter();
+  osc.type=o.type||'sine';
+  osc.frequency.setValueAtTime(o.from,t);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to,t+dur);
+  lp.type='lowpass';
+  lp.frequency.setValueAtTime(o.cut||1800,t);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(o.vol||0.4,t+(o.attack||0.015));
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  osc.connect(lp); lp.connect(g); g.connect(AUDIO.master);
+  osc.start(t); osc.stop(t+dur+0.05);
+}
+/* C D E G A — no semitones, so any order stays consonant */
+var PENTA=[523.25,587.33,659.25,783.99,880.00,1046.50];
+function sndLine(){   voice({from:170,to:430,dur:0.30,type:'triangle',vol:0.16,cut:1100}); }
+function sndNode(i){  voice({from:PENTA[i%PENTA.length],dur:0.42,type:'sine',vol:0.30,cut:2400});
+                      voice({from:PENTA[i%PENTA.length]/2,dur:0.34,type:'sine',vol:0.10,cut:1200}); }
+function sndChoose(){ voice({from:392,dur:0.20,type:'sine',vol:0.26,cut:1600});
+                      voice({from:587.33,dur:0.30,type:'sine',vol:0.20,cut:1900,delay:0.07}); }
+function sndResult(){ [523.25,659.25,783.99,1046.50].forEach(function(f,i){
+                        voice({from:f,dur:0.85,type:'sine',vol:0.22,cut:2600,delay:i*0.10}); }); }
+function sndRetract(){voice({from:520,to:190,dur:0.44,type:'triangle',vol:0.18,cut:1000}); }
+
+function setSound(on){
+  AUDIO.on=on;
+  try{ localStorage.setItem('tas-sound',on?'on':'off'); }catch(e){}
+  var b=document.getElementById('btnSound');
+  if(b){
+    b.setAttribute('aria-pressed',String(on));
+    b.title=on?'Sound on — click to mute':'Sound off — click to unmute';
+    b.querySelector('.sndLabel').textContent=on?'Sound':'Muted';
+    b.classList.toggle('muted',!on);
+  }
+}
 /* ===========================================================================
    DATA — questions, answers, and the pathways answers unlock
    ========================================================================= */
@@ -770,6 +843,7 @@ function layout(rows,edges){
    INTERACTION
    ========================================================================= */
 function choose(nodeId,ai){
+  sndChoose();
   var idx=-1;
   for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
   if(idx>=0) path=path.slice(0,idx);
@@ -848,10 +922,11 @@ function revealFresh(fresh){
   });
   fresh.forEach(function(el,i){
     var pth=el.__inEdge, at=hold+i*step, nodeAt=at+(el.__primed?draw:0);
-    if(el.__primed) setTimeout(function(){ drawEdge(pth,draw); },at);
+    if(el.__primed) setTimeout(function(){ drawEdge(pth,draw); sndLine(); },at);
     setTimeout(function(){
       el.classList.remove('pre');
       clearEdge(pth);
+      if(el.id==='resultNode') sndResult(); else sndNode(i);
     },nodeAt);
     setTimeout(function(){ el.classList.remove('entering'); },nodeAt+settleMs);
   });
@@ -878,6 +953,7 @@ function reopen(nodeId){
   var idx=-1;
   for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
   if(idx<0) return;                       /* not answered yet — nothing to undo */
+  sndRetract();
   path=path.slice(0,idx);
   collected=[];
   path.forEach(function(pp){
@@ -1192,6 +1268,11 @@ function reset(){
   view.s=1; focusFrontier();
 }
 document.getElementById('btnReset').addEventListener('click',reset);
+document.getElementById('btnSound').addEventListener('click',function(){
+  setSound(!AUDIO.on);
+  if(AUDIO.on) sndNode(2);              /* let the reader hear what they turned on */
+});
+setSound(AUDIO.on);
 
 /* ===========================================================================
    DEPTH INTERACTIONS
