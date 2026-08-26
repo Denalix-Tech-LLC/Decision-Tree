@@ -184,7 +184,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
 .zoom .btn{background:var(--surface);box-shadow:var(--sh1);padding:6px 8px}
 .tip{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:5;background:var(--surface);
   border:1px solid var(--border);border-radius:999px;padding:5px 13px;font-family:var(--sans);font-size:11.5px;
-  color:var(--muted);box-shadow:var(--sh1);pointer-events:none;white-space:nowrap}
+  color:var(--muted);box-shadow:var(--sh1);pointer-events:none;white-space:nowrap;max-width:calc(100% - 120px);overflow:hidden;text-overflow:ellipsis}
+.tip b{color:var(--accent-ink);font-weight:700}
 
 dialog{border:none;border-radius:14px;padding:0;background:var(--surface);color:var(--ink);
   box-shadow:var(--sh2);max-width:min(560px,92vw);width:100%}
@@ -204,12 +205,12 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
     </div>
     <span class="dirty" id="dirty"><i></i>Unsaved changes</span>
     <div class="acts">
-      <button class="btn" id="bAddQ">+ Question</button>
-      <button class="btn" id="bImport">Import</button>
-      <button class="btn" id="bExport">Export</button>
-      <button class="btn danger" id="bReset">Revert</button>
-      <button class="btn" id="bOpen">Open tree ↗</button>
-      <button class="btn solid" id="bSave">Save draft</button>
+      <button class="btn" id="bAddQ" title="Add a new question, unattached — then point an option at it">+ Question</button>
+      <button class="btn" id="bImport" title="Paste an exported tree back in, replacing what is here">Import</button>
+      <button class="btn" id="bExport" title="Get the tree as a tree-data.js file — commit it to publish to everyone">Export…</button>
+      <button class="btn danger" id="bReset" title="Throw away your edits and the saved draft, back to what the repo ships">Revert</button>
+      <button class="btn" id="bOpen" title="Open the reader's tree in a new tab to walk your edits">Preview ↗</button>
+      <button class="btn solid" id="bSave" title="Keep these edits in this browser only — Export is what publishes">Save draft</button>
     </div>
   </header>
 
@@ -224,7 +225,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
         <button class="btn" id="zOut" aria-label="Zoom out">−</button>
         <button class="btn" id="zFit" aria-label="Fit">⤢</button>
       </div>
-      <div class="tip" id="tip">Click any card to edit it · drag to pan · ctrl+scroll to zoom</div>
+      <div class="tip" id="tip">Click a card to edit it · <b>Save draft</b> = this browser only · <b>Export</b> = publish to everyone</div>
     </div>
 
     <aside class="side">
@@ -801,10 +802,12 @@ document.getElementById('bExport').onclick=function(){
     '(function(){\n  var DATA='+JSON.stringify(T,null,2)+';\n'+
     '  if(typeof window!==\'undefined\') window.TAS_TREE=DATA;\n'+
     '  if(typeof module!==\'undefined\'&&module.exports) module.exports=DATA;\n})();\n';
-  openDlg('Export',body,'Copy this over tree-data.js in the repo, commit, and every reader gets it.',false);
+  openDlg('Export — publish to everyone',body,
+    'This is the whole tree as a file. Replace tree-data.js in the repo with it and commit: that is what every reader loads. Saving a draft does not do this — a draft lives only in your browser.',false);
 };
 document.getElementById('bImport').onclick=function(){
-  openDlg('Import','','Paste either the JSON object or a whole tree-data.js file.',true);
+  openDlg('Import — replace the tree',''
+    ,'Paste a previously exported tree-data.js, or raw JSON. It replaces everything currently in the editor, so export first if you want to keep this version.',true);
 };
 document.getElementById('bReset').onclick=function(){
   if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
