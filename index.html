@@ -275,9 +275,9 @@ a{color:var(--accent-ink)}
 .edge.taken{stroke:var(--good);stroke-width:3}
 .edge.dimmed{opacity:.3}
 .edge.grant{stroke:var(--good-line);stroke-dasharray:5 4}
-/* a limb draws itself before the node on the end of it arrives */
-.edge.undrawn{stroke-dasharray:1;stroke-dashoffset:1}
-.edge.undrawn.drawing{stroke-dashoffset:0;transition:stroke-dashoffset .34s var(--ease)}
+/* A limb draws itself before the node on the end of it arrives. Driven by
+   inline dash values measured from the real curve, so it cannot be defeated by
+   another rule's stroke-dasharray (the dashed pathway edges have one). */
 
 /* controls */
 .zoom,.legend,.hint{opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}
@@ -379,16 +379,21 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 .disc{font-size:12px;color:var(--faint);border-top:1px solid var(--border);margin-top:20px;padding-top:13px}
 
 @media (prefers-reduced-motion:reduce){
-  *{animation:none!important;transition:none!important}
-  .tnode{opacity:1!important;transform:none!important}
-  .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
-  /* flatten the depth model but keep the meaning legible */
-  .tnode{--z:0px!important;--rx:0deg!important;--ry:0deg!important}
+  /* This setting asks for no large movement — not for no feedback. A blanket
+     transition:none used to switch the whole grow sequence off, so the tree
+     snapped open with every line already in place. Now the depth model
+     flattens, the backdrop stops drifting and nothing slides or scales, but a
+     limb still draws itself and its option still fades in after it: a line and
+     a fade are not the kind of motion this setting protects against. */
+  .tnode{--z:0px!important;--rx:0deg!important;--ry:0deg!important;
+         --lift:0px!important;--sc:1!important}
   .stage{perspective:none!important}
+  .tnode.entering{transition:opacity .4s linear!important}
+  .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
   .env .ridges{transform:none!important}
-  /* keep the scene, just stop it moving */
   .env .clouds span,.env .motes span{animation:none!important}
   .env .motes span{opacity:.5!important}
+  .btn:hover,.tnode:hover{transform:none!important}
 }
 
 #printOut{display:none}
@@ -559,7 +564,11 @@ var nodesEl=document.getElementById('nodes'), edgesEl=document.getElementById('e
 var railFill=document.getElementById('railFill'), hintEl=document.getElementById('hint');
 var view={tx:0,ty:0,s:1};
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-function canAnimate(){ return !reduce && !document.hidden; }
+/* A hidden tab cannot show a sequence, so it gets the finished tree. Reduced
+   motion still gets the sequence, just without the movement — see the media
+   query above. Timings shorten under it. */
+function canAnimate(){ return !document.hidden; }
+function motionScale(){ return reduce?0.6:1; }
 var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 /* Keep the tree on screen. Panning used to be unbounded, so a scroll or drag
@@ -808,27 +817,53 @@ function grow(){
 /* how the tree grows, in ms — tune these to taste */
 var GROW_HOLD=380, GROW_STAGGER=480, GROW_SETTLE=760, RETRACT_STAGGER=55, EDGE_DRAW=340;
 
-/* Grow one limb at a time: the connecting line draws itself, then the node on
-   the end of it fades in, then the next line starts. */
+/* ---- drawing a limb ----------------------------------------------------
+   Measured from the real curve rather than the pathLength attribute, and
+   written as inline styles so nothing else can win the cascade — the dashed
+   pathway edges carry their own stroke-dasharray. Clearing the inline styles
+   afterwards hands each line back to its normal look, dashes included. */
+function primeEdge(pth){
+  if(!pth||!pth.getTotalLength) return 0;
+  var L=0;
+  try{ L=pth.getTotalLength(); }catch(e){ return 0; }
+  if(!L||!isFinite(L)) return 0;
+  pth.style.transition='none';
+  pth.style.strokeDasharray=L+'px';
+  pth.style.strokeDashoffset=L+'px';
+  return L;
+}
+function drawEdge(pth,ms){
+  if(!pth) return;
+  void pth.getBoundingClientRect();          /* flush, so the primed offset sticks */
+  pth.style.transition='stroke-dashoffset '+ms+'ms cubic-bezier(.22,.68,0,1)';
+  pth.style.strokeDashoffset='0px';
+}
+function clearEdge(pth){
+  if(!pth) return;
+  pth.style.transition=''; pth.style.strokeDasharray=''; pth.style.strokeDashoffset='';
+}
+
+/* Grow one limb at a time: the line draws itself, then the node on the end of
+   it fades in, then the next line starts. */
 function revealFresh(fresh){
+  var k=motionScale(), draw=Math.round(EDGE_DRAW*k),
+      hold=Math.round(GROW_HOLD*k), step=Math.round(GROW_STAGGER*k),
+      settleMs=Math.round(GROW_SETTLE*k);
   /* hide node and line together, before the browser paints either */
   fresh.forEach(function(el){
     el.classList.add('pre','entering');
-    if(el.__inEdge) el.__inEdge.classList.add('undrawn');
+    el.__primed=primeEdge(el.__inEdge)>0;
   });
   fresh.forEach(function(el,i){
-    var edge=el.__inEdge, at=GROW_HOLD+i*GROW_STAGGER;
-    if(edge) setTimeout(function(){ edge.classList.add('drawing'); },at);
-    var nodeAt=at+(edge?EDGE_DRAW:0);
+    var pth=el.__inEdge, at=hold+i*step, nodeAt=at+(el.__primed?draw:0);
+    if(el.__primed) setTimeout(function(){ drawEdge(pth,draw); },at);
     setTimeout(function(){
       el.classList.remove('pre');
-      /* hand the line back to its normal styling, so a dashed pathway edge
-         gets its dashes back once it has finished drawing */
-      if(edge) edge.classList.remove('undrawn','drawing');
+      clearEdge(pth);
     },nodeAt);
-    setTimeout(function(){ el.classList.remove('entering'); },nodeAt+GROW_SETTLE);
+    setTimeout(function(){ el.classList.remove('entering'); },nodeAt+settleMs);
   });
-  var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+EDGE_DRAW+GROW_SETTLE;
+  var last=hold+Math.max(0,fresh.length-1)*step+draw+settleMs;
   /* safety: never let a node or line stay hidden if the timers stall */
   setTimeout(function(){ settle(); },last+400);
 }
@@ -887,8 +922,8 @@ function settle(){
     el.classList.remove('pre'); el.classList.remove('entering');
     el.style.opacity=''; el.style.transform='';
   });
-  Array.prototype.forEach.call(edgesEl.querySelectorAll('.edge.undrawn'),function(p){
-    p.classList.remove('undrawn','drawing');
+  Array.prototype.forEach.call(edgesEl.querySelectorAll('.edge'),function(pth){
+    if(pth.style.strokeDashoffset) clearEdge(pth);
   });
 }
 document.addEventListener('visibilitychange',function(){ if(document.hidden) settle(); });
