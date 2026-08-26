@@ -93,6 +93,30 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .ocard .meta b{color:var(--good);font-weight:600}
 .ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
 .qcard.orphan{border-style:dashed;opacity:.75}
+/* ---- a card opened for editing ----
+   The card becomes the form. Fields are fixed height so the layout measured
+   when the card opened stays true while you type: the tree never reflows
+   under the cursor. */
+.qcard.editing,.ocard.editing{cursor:default;box-shadow:var(--sh2);border-color:var(--accent);
+  outline:3px solid var(--accent-soft);outline-offset:2px;transform:none}
+.qcard.editing:hover,.ocard.editing:hover{transform:none}
+.ed{display:block;margin:0 0 7px}
+.ed:last-child{margin-bottom:0}
+.ed>span{display:block;font-family:var(--sans);font-weight:600;font-size:8.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.ed input,.ed textarea,.ed select{width:100%;background:var(--bg);color:var(--ink);
+  border:1px solid var(--border-strong);border-radius:6px;padding:6px 8px;font-size:12.5px;display:block}
+.ed input,.ed select{font-family:var(--sans)}
+.ed textarea{font-family:var(--serif);font-size:13.5px;line-height:1.35;resize:none}
+.ed input:focus,.ed textarea:focus,.ed select:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)}
+.edbar{display:flex;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap}
+.edbar button{font-family:var(--sans);font-size:10.5px;font-weight:600;border-radius:5px;padding:4px 7px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.edbar button:hover{border-color:var(--accent);color:var(--accent-ink)}
+.edbar button.danger{color:var(--alert);border-color:var(--alert-line)}
+.edbar .spacer{flex:1}
+.edbar .done{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .qcard .badge,.ocard .badge{position:absolute;top:-8px;right:8px;font-family:var(--sans);font-size:9px;
   font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;
   background:var(--alert-line);color:#fff}
@@ -287,6 +311,20 @@ function reachable(){
   return seen;
 }
 
+/* An opened option is wider than a closed one. Both the layer packing and the
+   fan itself measure through this, so the siblings move aside to make room
+   instead of being sat on. */
+var OWE=OW+58;
+function optWidths(id){
+  return (T.NODES[id].a||[]).map(function(a,ai){
+    return (sel&&sel.kind==='o'&&sel.id===id&&sel.ai===ai)?OWE:OW;
+  });
+}
+function fanWidth(id){
+  var ws=optWidths(id);
+  if(!ws.length) return QW;
+  return ws.reduce(function(a,b){return a+b;},0)+OGAP*(ws.length-1);
+}
 function render(){
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   var L=layers(), reach=reachable(), ids=questionIds();
@@ -297,8 +335,7 @@ function render(){
   var pos={}, y=0, maxRight=0;
   layerKeys.forEach(function(li){
     var units=byLayer[li], widths=units.map(function(id){
-      var n=T.NODES[id], count=Math.max(1,(n.a||[]).length);
-      return Math.max(QW, count*OW+(count-1)*OGAP+40);
+      return Math.max(QW, fanWidth(id)+40);
     });
     var totalW=widths.reduce(function(a,b){return a+b;},0)+UNITGAP*(units.length-1);
     var x=-totalW/2;
@@ -306,36 +343,76 @@ function render(){
     units.forEach(function(id,i){
       var n=T.NODES[id], opts=n.a||[];
       var cx=x+widths[i]/2;
+      var editingQ=!!(sel&&sel.kind==='q'&&sel.id===id);
       var qEl=document.createElement('div');
-      qEl.className='qcard'+(n.risky?' risky':'')+(reach[id]?'':' orphan')
-        +(sel&&sel.kind==='q'&&sel.id===id?' sel':'');
+      qEl.className='qcard'+(n.risky?' risky':'')+(reach[id]?'':' orphan')+(editingQ?' editing':'');
       qEl.style.width=QW+'px';
-      qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
-        +(reach[id]?'':'<span class="badge">unreachable</span>');
-      qEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'q',id:id}); };
+      if(editingQ){
+        qEl.appendChild(edText('Label above the question',n.tag,function(v){ n.tag=v; }));
+        qEl.appendChild(edArea('The question',n.q,3,function(v){ n.q=v; }));
+        qEl.appendChild(edText('Short name',n.short,function(v){ n.short=v; }));
+        qEl.appendChild(edArea('Note under it (optional)',n.note,2,function(v){ n.note=v; }));
+        var qbar=document.createElement('div'); qbar.className='edbar';
+        qbar.appendChild(edBtn('+ option',function(){ addOption(id); }));
+        qbar.appendChild(edBtn(n.risky?'Risk styling: on':'Risk styling: off',function(){
+          n.risky=!n.risky; markDirty(); render(); }));
+        qbar.appendChild(edBtn('Delete',function(){ removeQuestion(id); },'danger'));
+        var qsp=document.createElement('span'); qsp.className='spacer'; qbar.appendChild(qsp);
+        qbar.appendChild(edBtn('Done',function(){ sel=null; render(); },'done'));
+        qEl.appendChild(qbar);
+        stopBubble(qEl);
+      } else {
+        qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
+          +(reach[id]?'':'<span class="badge">unreachable</span>');
+        qEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'q',id:id}); };
+      }
       nodesEl.appendChild(qEl);
       var qh=qEl.offsetHeight;
       qEl.style.left=(cx-QW/2)+'px'; qEl.style.top=y+'px';
       pos[id]={x:cx,y:y,h:qh,w:QW};
 
       /* options fan */
-      var oTotal=opts.length*OW+(opts.length-1)*OGAP;
-      var ox=cx-oTotal/2, oy=y+qh+VGAP, oh=0;
+      var ws=optWidths(id);
+      var oTotal=fanWidth(id);
+      var ox=cx-oTotal/2, oy=y+qh+VGAP, oh=0, runX=ox;
       opts.forEach(function(a,ai){
         var oEl=document.createElement('div');
         var bad=!a.to||(!T.NODES[a.to]&&!isTerminal(a.to));
-        oEl.className='ocard'+(bad?' unlinked':'')+(sel&&sel.kind==='o'&&sel.id===id&&sel.ai===ai?' sel':'');
-        oEl.style.width=OW+'px';
-        var dest=!a.to?'nowhere':(isTerminal(a.to)?TERMINALS[a.to]:(T.NODES[a.to]?(T.NODES[a.to].short||a.to):a.to+' (missing)'));
-        oEl.innerHTML='<span class="tag">Option '+(ai+1)+'</span>'
-          +'<span class="ttl">'+esc(a.label||'(no label)')+'</span>'
-          +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
-          +(bad?'<span class="badge">no target</span>':'');
-        oEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'o',id:id,ai:ai}); };
+        var editingO=!!(sel&&sel.kind==='o'&&sel.id===id&&sel.ai===ai);
+        oEl.className='ocard'+(bad?' unlinked':'')+(editingO?' editing':'');
+        oEl.style.width=ws[ai]+'px';
+        if(editingO){
+          (function(qid,idx,ans){
+            oEl.appendChild(edArea('Option '+(idx+1)+' label',ans.label,2,function(v){ ans.label=v; }));
+            oEl.appendChild(edText('Short form',ans.short,function(v){ ans.short=v; }));
+            oEl.appendChild(edArea('Note (optional)',ans.note,2,function(v){ ans.note=v; }));
+            oEl.appendChild(edSelect('Leads to',ans.to,targetOptions(),function(v){
+              if(v==='__new__'){ addQuestion({id:qid,ai:idx}); return; }
+              ans.to=v; markDirty(); render();
+            }));
+            oEl.appendChild(edSelect('Unlocks pathway',ans.grants||'',pathwayOptions(),function(v){
+              ans.grants=v; markDirty(); render();
+            }));
+            var ob=document.createElement('div'); ob.className='edbar';
+            ob.appendChild(edBtn('Delete',function(){ removeOption(qid,idx); },'danger'));
+            var osp=document.createElement('span'); osp.className='spacer'; ob.appendChild(osp);
+            ob.appendChild(edBtn('Done',function(){ sel=null; render(); },'done'));
+            oEl.appendChild(ob);
+          })(id,ai,a);
+          stopBubble(oEl);
+        } else {
+          var dest=!a.to?'nowhere':(isTerminal(a.to)?TERMINALS[a.to]:(T.NODES[a.to]?(T.NODES[a.to].short||a.to):a.to+' (missing)'));
+          oEl.innerHTML='<span class="tag">Option '+(ai+1)+'</span>'
+            +'<span class="ttl">'+esc(a.label||'(no label)')+'</span>'
+            +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
+            +(bad?'<span class="badge">no target</span>':'');
+          oEl.onclick=function(ev){ ev.stopPropagation(); select({kind:'o',id:id,ai:ai}); };
+        }
         nodesEl.appendChild(oEl);
-        oEl.style.left=(ox+ai*(OW+OGAP))+'px'; oEl.style.top=oy+'px';
+        oEl.style.left=runX+'px'; oEl.style.top=oy+'px';
         oh=Math.max(oh,oEl.offsetHeight);
-        pos[id+'#'+ai]={x:ox+ai*(OW+OGAP)+OW/2,y:oy,h:oEl.offsetHeight,w:OW,el:oEl};
+        pos[id+'#'+ai]={x:runX+ws[ai]/2,y:oy,h:oEl.offsetHeight,w:ws[ai],el:oEl};
+        runX+=ws[ai]+OGAP;
       });
       /* add-option affordance */
       var add=document.createElement('button');
@@ -413,6 +490,50 @@ function render(){
   });
   applyView();
   renderPane();
+}
+/* ---- inline field builders -------------------------------------------------
+   These write straight to the model on each keystroke and deliberately do NOT
+   re-render: rebuilding the DOM mid-word would take the caret with it. A blur
+   triggers one render so the rest of the page catches up. */
+function stopBubble(el){
+  ['click','pointerdown','mousedown','dblclick','wheel'].forEach(function(t){
+    el.addEventListener(t,function(ev){ ev.stopPropagation(); });
+  });
+}
+function edWrap(label,ctrl){
+  var w=document.createElement('label'); w.className='ed';
+  var s=document.createElement('span'); s.textContent=label;
+  w.appendChild(s); w.appendChild(ctrl); return w;
+}
+function edCommit(ctrl,set){
+  ctrl.addEventListener('input',function(){ set(ctrl.value); markDirty(); });
+  ctrl.addEventListener('change',function(){ set(ctrl.value); markDirty(); render(); });
+  ctrl.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape'){ ev.preventDefault(); ctrl.blur(); sel=null; render(); }
+  });
+}
+function edText(label,val,set){
+  var i=document.createElement('input'); i.type='text'; i.value=val==null?'':val;
+  edCommit(i,set); return edWrap(label,i);
+}
+function edArea(label,val,rows,set){
+  var t=document.createElement('textarea'); t.rows=rows||2; t.value=val==null?'':val;
+  edCommit(t,set); return edWrap(label,t);
+}
+function edSelect(label,val,opts,onchange){
+  var sl=document.createElement('select');
+  opts.forEach(function(o){
+    var op=document.createElement('option'); op.value=o.v; op.textContent=o.t;
+    if(o.v===val) op.selected=true; sl.appendChild(op);
+  });
+  sl.addEventListener('change',function(){ onchange(sl.value); });
+  return edWrap(label,sl);
+}
+function edBtn(text,fn,cls){
+  var b=document.createElement('button'); b.type='button'; b.textContent=text;
+  if(cls) b.className=cls;
+  b.addEventListener('click',function(ev){ ev.stopPropagation(); fn(); });
+  return b;
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function select(s){ sel=s; render(); }
