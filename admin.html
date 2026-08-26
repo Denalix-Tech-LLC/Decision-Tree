@@ -143,6 +143,13 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .dirty.saved i{background:var(--good-line)}
 .dirty.failed{color:var(--alert)}
 .dirty.failed i{background:var(--alert-line)}
+.warnbtn{font-family:var(--sans);font-size:11.5px;font-weight:700;cursor:pointer;
+  border:1px solid var(--alert-line);background:var(--alert-bg);color:var(--alert);
+  border-radius:999px;padding:4px 11px}
+.warnbtn:hover{filter:brightness(1.04)}
+.detached b{display:block;margin-bottom:3px}
+.detached .ed{margin-top:7px}
+.detached .ed>span{color:var(--risk)}
 
 /* ---- layout ---- */
 .main{flex:1;display:flex;min-height:0}
@@ -345,6 +352,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
       <span><span class="kk">Clean Air Act · TAS</span><h1>Tree Editor</h1></span>
     </div>
     <span class="dirty" id="dirty"><i></i>Unsaved changes</span>
+    <button class="warnbtn" id="warnBtn" hidden></button>
     <div class="acts">
       <button class="btn" id="bAddQ" title="Add a new question, unattached — then point an option at it">+ Question</button>
       <button class="btn" id="bImport" title="Paste an exported tree back in, replacing what is here">Import</button>
@@ -553,7 +561,23 @@ function render(){
         if(!reach[id]){
           var warn=document.createElement('div');
           warn.className='detached';
-          warn.textContent='Nothing leads here yet — drag the handle above onto an option.';
+          warn.innerHTML='<b>No way in.</b> A reader can never reach this question, '
+            +'because no option leads to it. Pointing this question at an ending is not '
+            +'enough — something has to point AT it.';
+          /* fix it from here, rather than making the reader go hunting */
+          var opts=[{v:'',t:'— pick an option to lead here —'}];
+          questionIds().forEach(function(oq){
+            if(oq===id) return;
+            (T.NODES[oq].a||[]).forEach(function(oa,oi){
+              opts.push({v:oq+':'+oi,t:(T.NODES[oq].tag||oq)+' → '+(oa.label||('option '+(oi+1)))});
+            });
+          });
+          var pick=edSelect('Wire it in',' ',opts,function(v){
+            if(!v) return;
+            var bits=v.split(':');
+            setTarget(bits[0],+bits[1],id);
+          });
+          warn.appendChild(pick);
           qEl.appendChild(warn);
         }
         qbar.appendChild(edBtn('+ option',function(){ addOption(id); }));
@@ -704,6 +728,20 @@ function render(){
   });
   applyView();
   renderPane();
+  refreshWarning();
+}
+/* unreachable questions are the one mistake that looks like nothing is wrong,
+   so it gets said in the toolbar rather than only inside a tab */
+function refreshWarning(){
+  var btn=document.getElementById('warnBtn');
+  if(!btn) return;
+  var reach=reachable();
+  var lost=questionIds().filter(function(id){ return !reach[id]; });
+  btn.hidden=!lost.length;
+  if(lost.length){
+    btn.textContent='⚠ '+lost.length+' question'+(lost.length>1?'s':'')+' no reader can reach';
+    btn.onclick=function(){ select({kind:'q',id:lost[0]}); };
+  }
 }
 /* ---- inline field builders -------------------------------------------------
    These write straight to the model on each keystroke and deliberately do NOT
@@ -1267,6 +1305,14 @@ document.getElementById('bExport').onclick=function(){
     '(function(){\n  var DATA='+JSON.stringify(T,null,2)+';\n'+
     '  if(typeof window!==\'undefined\') window.TAS_TREE=DATA;\n'+
     '  if(typeof module!==\'undefined\'&&module.exports) module.exports=DATA;\n})();\n';
+  var lost=questionIds().filter(function(id){ return !reachable()[id]; });
+  var lost=questionIds().filter(function(id){ return !reachable()[id]; });
+  if(lost.length){
+    var NL=String.fromCharCode(10);
+    var msg=lost.length+' question(s) cannot be reached by a reader, so they will not appear in the tree:'+NL+NL
+      +lost.map(function(id){ return '  - '+(T.NODES[id].tag||id); }).join(NL)+NL+NL+'Export anyway?';
+    if(!confirm(msg)) return;
+  }
   window.__exportBody=body;
   openDlg('Export — for publishing to everyone',body,
     'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, replace tree-data.js in the repo, and commit.',false);
