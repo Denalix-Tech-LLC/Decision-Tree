@@ -275,6 +275,9 @@ a{color:var(--accent-ink)}
 .edge.taken{stroke:var(--good);stroke-width:3}
 .edge.dimmed{opacity:.3}
 .edge.grant{stroke:var(--good-line);stroke-dasharray:5 4}
+/* a limb draws itself before the node on the end of it arrives */
+.edge.undrawn{stroke-dasharray:1;stroke-dashoffset:1}
+.edge.undrawn.drawing{stroke-dashoffset:0;transition:stroke-dashoffset .34s var(--ease)}
 
 /* controls */
 .zoom,.legend,.hint{opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}
@@ -754,7 +757,11 @@ function layout(rows,edges){
     var p=document.createElementNS('http://www.w3.org/2000/svg','path');
     p.setAttribute('class','edge'+(e.taken?' taken':'')+(e.dimmed?' dimmed':'')+(e.grant?' grant':''));
     p.setAttribute('d',d);
+    /* pathLength normalises every curve to 1 unit, so a line draws in the same
+       time whether it is a short hop or a long sweep across the canvas */
+    p.setAttribute('pathLength','1');
     edgesEl.appendChild(p);
+    b.el.__inEdge=p;               /* the one edge that feeds this node */
   });
 }
 
@@ -775,35 +782,54 @@ function choose(nodeId,ai){
 }
 
 /* rebuild, animating only what is new */
+/* What a node IS, independent of the state it happens to be in. Keyed on the
+   className before, an option that had merely turned green counted as brand
+   new and replayed the whole grow animation. */
+function nodeKey(el){
+  var id=el.dataset.node||'';
+  if(el.id==='resultNode') return 'result';
+  if(el.classList.contains('out')) return 'leaf:'+((el.querySelector('.ttl')||{}).textContent||'');
+  if(el.classList.contains('opt')) return 'opt:'+id+':'+(el.dataset.ai||'');
+  return 'q:'+id;
+}
 function grow(){
   var before={};
-  Array.prototype.forEach.call(nodesEl.children,function(el){
-    before[(el.dataset.node||'')+'|'+(el.dataset.ai||'')+'|'+el.className.replace(/ (pre|active)/g,'')]=1;
-  });
+  Array.prototype.forEach.call(nodesEl.children,function(el){ before[nodeKey(el)]=1; });
   build();
   if(canAnimate()){
+    /* only the limbs that did not exist a moment ago get grown */
     var fresh=Array.prototype.filter.call(nodesEl.children,function(el){
-      return !before[(el.dataset.node||'')+'|'+(el.dataset.ai||'')+'|'+el.className.replace(/ (pre|active)/g,'')];
+      return !before[nodeKey(el)];
     });
-    /* Hold before anything new appears so the choice you just made lands
-       first, then bring the question in, then its options one at a time. */
     revealFresh(fresh);
   }
   focusFrontier();
 }
 /* how the tree grows, in ms — tune these to taste */
-var GROW_HOLD=420, GROW_STAGGER=190, GROW_SETTLE=950, RETRACT_STAGGER=55;
+var GROW_HOLD=380, GROW_STAGGER=480, GROW_SETTLE=760, RETRACT_STAGGER=55, EDGE_DRAW=340;
 
-/* ease a set of newly built nodes in, one after another */
+/* Grow one limb at a time: the connecting line draws itself, then the node on
+   the end of it fades in, then the next line starts. */
 function revealFresh(fresh){
-  fresh.forEach(function(el,i){
+  /* hide node and line together, before the browser paints either */
+  fresh.forEach(function(el){
     el.classList.add('pre','entering');
-    var at=GROW_HOLD+i*GROW_STAGGER;
-    setTimeout(function(){ el.classList.remove('pre'); },at);
-    setTimeout(function(){ el.classList.remove('entering'); },at+GROW_SETTLE);
+    if(el.__inEdge) el.__inEdge.classList.add('undrawn');
   });
-  var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+GROW_SETTLE;
-  /* safety: never let a node stay hidden if the timers or transitions stall */
+  fresh.forEach(function(el,i){
+    var edge=el.__inEdge, at=GROW_HOLD+i*GROW_STAGGER;
+    if(edge) setTimeout(function(){ edge.classList.add('drawing'); },at);
+    var nodeAt=at+(edge?EDGE_DRAW:0);
+    setTimeout(function(){
+      el.classList.remove('pre');
+      /* hand the line back to its normal styling, so a dashed pathway edge
+         gets its dashes back once it has finished drawing */
+      if(edge) edge.classList.remove('undrawn','drawing');
+    },nodeAt);
+    setTimeout(function(){ el.classList.remove('entering'); },nodeAt+GROW_SETTLE);
+  });
+  var last=GROW_HOLD+Math.max(0,fresh.length-1)*GROW_STAGGER+EDGE_DRAW+GROW_SETTLE;
+  /* safety: never let a node or line stay hidden if the timers stall */
   setTimeout(function(){ settle(); },last+400);
 }
 
@@ -860,6 +886,9 @@ function settle(){
   Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre, .tnode.entering'),function(el){
     el.classList.remove('pre'); el.classList.remove('entering');
     el.style.opacity=''; el.style.transform='';
+  });
+  Array.prototype.forEach.call(edgesEl.querySelectorAll('.edge.undrawn'),function(p){
+    p.classList.remove('undrawn','drawing');
   });
 }
 document.addEventListener('visibilitychange',function(){ if(document.hidden) settle(); });
