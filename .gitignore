@@ -7,3 +7,8 @@ node_modules
 *.docx
 *.doc
 decision-tree-prompt.md
+
+# a horizon photo is a local choice, not something the repo ships
+land.jpg
+land.png
+land.webp

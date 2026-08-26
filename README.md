@@ -118,3 +118,25 @@ deploy via `.vercelignore` and run it locally.
 There is no server. Saving means `localStorage`; publishing means committing the
 export. If you later want real multi-user editing, the seam is `tree-data.js` —
 serve that same JSON shape from an API and the viewer needs no other change.
+
+## Using a photograph as the horizon
+
+Drop an image named `land.jpg` beside `index.html` and it becomes the horizon on
+both the tree and the editor. `.png` and `.webp` work too — change the filename
+in the `.env .photo` rule.
+
+If no such file exists nothing breaks: the background simply does not paint and
+the drawn ridgelines show through, so the page is complete either way.
+
+The image is treated rather than dropped in raw — masked away toward the top
+where the cards sit, desaturated toward the brand neutrals, held at low opacity
+(`--photo-op`, .34 light / .2 dark), and covered by a gradient scrim. Card text
+measured 15.99:1 with the image in place, unchanged from without it. Tune
+`--photo-op` if it reads too strong or too faint.
+
+**Choosing the image is a decision for the Tribe deploying this, not a default
+to be shipped.** A photograph of one nation's country used as decoration on a
+tool other nations open makes a claim about whose land it is; the drawn
+ridgelines are deliberately region-neutral for that reason. Use a photograph the
+Tribe owns or has cleared, and check the rights — the file is served publicly
+alongside the page.

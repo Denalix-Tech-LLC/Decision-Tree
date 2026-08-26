@@ -12,6 +12,7 @@
   --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --on-accent:#e5e8eb;
+  --photo-op:.34;
   --sky-top:#cfdde3;
   --sky-mid:#dce3e7;
   --sky-bot:#e5e8eb;
@@ -41,7 +42,8 @@
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --on-accent:#081b23;
-    --sky-top:#050f14;
+    --photo-op:.2;
+  --sky-top:#050f14;
     --sky-mid:#07161d;
     --sky-bot:#081b23;
     --cloud:rgba(184,208,216,.07);
@@ -114,6 +116,25 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .env .motes span:nth-child(4){left:61%;animation-duration:158s;animation-delay:13s}
 .env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
 .env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}
+
+
+/* ---- optional photograph ----
+   Drop a file named land.jpg (or .png / .webp — see README) beside this page
+   and it becomes the horizon. Nothing here 404s loudly: if the file is absent
+   the background simply does not paint and the drawn ridgelines below show
+   through, so the page is complete either way.
+
+   The treatment is deliberate. The image is masked away toward the top, where
+   the cards live, desaturated toward the brand palette and held at low opacity,
+   so it can never compete with 13px text sitting on top of it. */
+.env .photo{position:absolute;inset:0;
+  background-image:url("land.jpg");background-size:cover;background-position:50% 76%;
+  opacity:var(--photo-op);filter:saturate(.5) contrast(.9) brightness(1.02);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%);
+  mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%)}
+/* pulls whatever the photo is toward the brand neutrals */
+.env .photo::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(to top,var(--sky-bot) 0%,transparent 55%)}
 
 /* ---- top bar ---- */
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
@@ -333,6 +354,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 
 <div class="env" aria-hidden="true">
   <div class="sky"></div>
+  <div class="photo"></div>
   <div class="clouds"><span></span><span></span><span></span></div>
   <div class="haze"></div>
   <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
