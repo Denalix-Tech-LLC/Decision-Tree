@@ -178,6 +178,8 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .ocard.dropattach::after{content:'lead to it';position:absolute;bottom:6px;right:9px;
   font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--accent-ink)}
+.detached{margin-top:8px;padding:7px 9px;border-radius:7px;background:var(--risk-bg);
+  border:1px solid var(--risk-line);font-family:var(--sans);font-size:10.5px;color:var(--risk);line-height:1.35}
 .qcard.dropno{border-color:var(--risk-line);background:var(--risk-bg)}
 .qcard.dropno::after{content:'different row — repoint an option instead';position:absolute;bottom:6px;left:10px;right:10px;
   font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--risk)}
@@ -188,6 +190,14 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .qcard.editing,.ocard.editing{cursor:default;box-shadow:var(--sh2);border-color:var(--accent);
   outline:3px solid var(--accent-soft);outline-offset:2px;transform:none}
 .qcard.editing:hover,.ocard.editing:hover{transform:none}
+/* the drag handle on an open card */
+.grip{display:flex;align-items:center;gap:7px;margin:-2px 0 9px;padding:5px 7px;cursor:grab;
+  border:1px dashed var(--border-strong);border-radius:7px;background:var(--bg);
+  font-family:var(--sans);font-size:9.5px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--accent);user-select:none}
+.grip:hover{border-color:var(--accent);border-style:solid;background:var(--accent-soft)}
+.grip:active{cursor:grabbing}
+.grip .dots{font-size:13px;letter-spacing:0;line-height:1}
 .ed{display:block;margin:0 0 7px}
 .ed:last-child{margin-bottom:0}
 .ed>span{display:block;font-family:var(--sans);font-weight:600;font-size:8.5px;letter-spacing:.09em;
@@ -473,11 +483,23 @@ function render(){
       qEl.className='qcard'+(n.risky?' risky':'')+(reach[id]?'':' orphan')+(editingQ?' editing':'');
       qEl.style.width=QW+'px';
       if(editingQ){
+        var grip=document.createElement('div');
+        grip.className='grip';
+        grip.innerHTML='<span class="dots">⠿</span> Drag onto an option to attach this question';
+        grip.title='Drag this onto any option — that option will then lead to this question';
+        qEl.appendChild(grip);
+        makeHandle(grip,qEl,{kind:'q',id:id});
         qEl.appendChild(edText('Label above the question',n.tag,function(v){ n.tag=v; }));
         qEl.appendChild(edArea('The question',n.q,3,function(v){ n.q=v; }));
         qEl.appendChild(edText('Short name',n.short,function(v){ n.short=v; }));
         qEl.appendChild(edArea('Note under it (optional)',n.note,2,function(v){ n.note=v; }));
         var qbar=document.createElement('div'); qbar.className='edbar';
+        if(!reach[id]){
+          var warn=document.createElement('div');
+          warn.className='detached';
+          warn.textContent='Nothing leads here yet — drag the handle above onto an option.';
+          qEl.appendChild(warn);
+        }
         qbar.appendChild(edBtn('+ option',function(){ addOption(id); }));
         qbar.appendChild(edBtn(n.risky?'Risk styling: on':'Risk styling: off',function(){
           n.risky=!n.risky; markDirty(); render(); }));
@@ -737,6 +759,32 @@ function attachQuestion(qid,ai,target){
   }
   a.to=target;
   markDirty(); select({kind:'o',id:qid,ai:ai});
+}
+/* Drag the card by a handle. A newly added question opens straight into its
+   form — which is the one you most want to attach somewhere — and a card full
+   of inputs cannot itself be draggable without fighting text selection. So the
+   handle carries the drag and hands over the card as the drag image. */
+function makeHandle(handle,card,payload){
+  handle.draggable=true;
+  handle.addEventListener('dragstart',function(ev){
+    DRAG=payload;
+    card.classList.add('dragging');
+    try{
+      ev.dataTransfer.effectAllowed='move';
+      ev.dataTransfer.setData('text/plain',payload.kind);
+      if(ev.dataTransfer.setDragImage) ev.dataTransfer.setDragImage(card,24,18);
+    }catch(e){}
+  });
+  handle.addEventListener('dragend',function(){
+    DRAG=null; card.classList.remove('dragging');
+    Array.prototype.forEach.call(document.querySelectorAll('.dropok,.dropattach,.dropno'),function(d){
+      d.classList.remove('dropok','dropattach','dropno');
+    });
+  });
+  /* the handle must not start a pan or reach the card's click */
+  ['pointerdown','mousedown','click'].forEach(function(t){
+    handle.addEventListener(t,function(ev){ ev.stopPropagation(); });
+  });
 }
 function makeDraggable(el,payload){
   el.draggable=true;
