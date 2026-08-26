@@ -168,6 +168,28 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .qcard[draggable="true"],.ocard[draggable="true"]{cursor:grab}
 .qcard.dragging,.ocard.dragging{opacity:.32}
 .ghost{opacity:.9;transform-origin:0 0;box-shadow:var(--sh2);transition:none}
+
+/* ---- connection dots ---- */
+.port{position:absolute;left:50%;width:13px;height:13px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--border-strong);
+  transform:translateX(-50%) scale(var(--pz,1));transform-origin:50% 50%;
+  transition:border-color .15s,background .15s;z-index:4}
+/* a generous invisible target around each dot, so it is grabbable at any zoom */
+.port::before{content:'';position:absolute;inset:-9px;border-radius:50%}
+.port.out{bottom:-8px;cursor:crosshair}
+.port.in{top:-8px}
+.qcard:hover .port,.ocard:hover .port{border-color:var(--accent)}
+.port.out:hover{border-color:var(--accent);background:var(--accent);
+  transform:translateX(-50%) scale(calc(var(--pz,1) * 1.4))}
+/* while a wire is being pulled, every place it could land shows itself */
+.port.in.open{border-color:var(--good-line);background:var(--good-bg);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--good-bg) 70%,transparent)}
+.port.in.hot{border-color:var(--good);background:var(--good);
+  transform:translateX(-50%) scale(calc(var(--pz,1) * 1.55));box-shadow:0 0 0 6px var(--good-bg)}
+body.wiring{cursor:crosshair}
+body.wiring .qcard,body.wiring .ocard{cursor:crosshair}
+.edge.wire{stroke:var(--border-strong);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
+.edge.wire.live{stroke:var(--good);stroke-width:3;stroke-dasharray:none}
 .qcard.dropok,.ocard.dropok{border-color:var(--good-line);background:var(--good-bg);
   box-shadow:0 0 0 4px var(--good-bg),var(--sh2)}
 .qcard.dropok::after,.ocard.dropok::after{content:'drop to reorder';position:absolute;bottom:6px;right:9px;
@@ -418,6 +440,9 @@ function clampView(){
 function applyView(){
   clampView();
   vp.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+view.s+')';
+  /* hold the connection dots at a constant size on screen, capped so they do
+     not balloon when the tree is zoomed right out */
+  vp.style.setProperty('--pz',Math.min(1/view.s,2.6).toFixed(3));
 }
 
 function layers(){
@@ -517,6 +542,9 @@ function render(){
         qEl.title="Drag onto another question in the same row to reorder it. A row is set by what points at the question — repoint an option to move it up or down.";
         dragFrom(qEl,{kind:'q',id:id});
       }
+      /* after the content: the collapsed branch assigns innerHTML, which
+         would wipe a port added before it */
+      addPort(qEl,'in',id);
       nodesEl.appendChild(qEl);
       var qh=qEl.offsetHeight;
       qEl.style.left=(cx-QW/2)+'px'; qEl.style.top=y+'px';
@@ -562,6 +590,7 @@ function render(){
           oEl.title='Drag onto a sibling to reorder. Drop a question here to make this option lead to it.';
           dragFrom(oEl,{kind:'o',id:id,ai:ai});
         }
+        addPort(oEl,'out',id,ai);
         nodesEl.appendChild(oEl);
         oEl.style.left=runX+'px'; oEl.style.top=oy+'px';
         oh=Math.max(oh,oEl.offsetHeight);
@@ -588,7 +617,9 @@ function render(){
   Object.keys(TERMINALS).forEach(function(t,i){
     var el=document.createElement('div');
     el.className='termcard'; el.textContent=TERMINALS[t];
+    el.dataset.qid=t;
     nodesEl.appendChild(el);
+    addPort(el,'in',t);
     el.style.left=(-140+i*220)+'px'; el.style.top=termY+'px';
     tpos[t]={x:-140+i*220+el.offsetWidth/2,y:termY,h:el.offsetHeight};
   });
@@ -735,6 +766,68 @@ function attachQuestion(qid,ai,target){
   a.to=target; markDirty(); select({kind:'o',id:qid,ai:ai});
 }
 
+/* ---- wiring by the dots ---------------------------------------------------
+   Every option carries an output dot and every question and ending an input
+   dot. Drag one to the other and the option is rewired, with a live line
+   following the cursor while you do. Coordinates are converted through the
+   canvas transform, so it lands where you point at any zoom.
+   -------------------------------------------------------------------------- */
+var WIRE=null;
+function toCanvas(cx,cy){
+  var r=stage.getBoundingClientRect();
+  return [(cx-r.left-view.tx)/view.s,(cy-r.top-view.ty)/view.s];
+}
+function portCentre(el){
+  var b=el.getBoundingClientRect();
+  return toCanvas(b.left+b.width/2,b.top+b.height/2);
+}
+/* set an option's destination, question or ending, with the same guards */
+function setTarget(qid,ai,target){
+  var a=T.NODES[qid]&&T.NODES[qid].a&&T.NODES[qid].a[ai];
+  if(!a||!target) return;
+  if(isTerminal(target)){ a.to=target; markDirty(); select({kind:'o',id:qid,ai:ai}); return; }
+  attachQuestion(qid,ai,target);
+}
+function startWire(qid,ai,fromEl){
+  WIRE={qid:qid,ai:+ai,from:portCentre(fromEl),el:null};
+  WIRE.el=document.createElementNS('http://www.w3.org/2000/svg','path');
+  WIRE.el.setAttribute('class','edge wire');
+  edgesEl.appendChild(WIRE.el);
+  document.body.classList.add('wiring');
+  Array.prototype.forEach.call(document.querySelectorAll('.port.in'),function(pt){ pt.classList.add('open'); });
+}
+function moveWire(cx,cy){
+  if(!WIRE) return;
+  var to=toCanvas(cx,cy), x1=WIRE.from[0], y1=WIRE.from[1], x2=to[0], y2=to[1];
+  var dy=Math.max(24,Math.abs(y2-y1)/2);
+  WIRE.el.setAttribute('d','M'+x1+','+y1+' C'+x1+','+(y1+dy)+' '+x2+','+(y2-dy)+' '+x2+','+y2);
+  var hit=portUnder(cx,cy);
+  Array.prototype.forEach.call(document.querySelectorAll('.port.hot'),function(pt){ pt.classList.remove('hot'); });
+  if(hit) hit.classList.add('hot');
+  WIRE.el.classList.toggle('live',!!hit);
+}
+function portUnder(cx,cy){
+  if(WIRE&&WIRE.el) WIRE.el.style.display='none';
+  var el=document.elementFromPoint(cx,cy);
+  if(WIRE&&WIRE.el) WIRE.el.style.display='';
+  var pt=el&&el.closest?el.closest('.port.in'):null;
+  if(!pt) return null;
+  /* an option cannot be wired back into the question it belongs to */
+  if(WIRE&&pt.dataset.qid===WIRE.qid) return null;
+  return pt;
+}
+function endWire(cx,cy){
+  if(!WIRE) return;
+  var hit=portUnder(cx,cy), w=WIRE;
+  if(w.el&&w.el.parentNode) w.el.parentNode.removeChild(w.el);
+  document.body.classList.remove('wiring');
+  Array.prototype.forEach.call(document.querySelectorAll('.port.open,.port.hot'),function(pt){
+    pt.classList.remove('open','hot');
+  });
+  WIRE=null;
+  if(hit) setTarget(w.qid,w.ai,hit.dataset.qid);
+}
+
 /* what, if anything, will accept what is being dragged */
 function targetAt(x,y){
   if(PD&&PD.ghost) PD.ghost.style.display='none';
@@ -782,6 +875,7 @@ function dragFrom(card,payload,handle){
   });
 }
 document.addEventListener('pointermove',function(ev){
+  if(WIRE){ moveWire(ev.clientX,ev.clientY); return; }
   if(!PD) return;
   if(!PD.active){
     if(Math.abs(ev.clientX-PD.x0)+Math.abs(ev.clientY-PD.y0)<6) return;
@@ -797,6 +891,7 @@ document.addEventListener('pointermove',function(ev){
   else if(t&&t.why==='row') t.card.classList.add('dropno');
 });
 document.addEventListener('pointerup',function(ev){
+  if(WIRE){ endWire(ev.clientX,ev.clientY); swallowClick=true; setTimeout(function(){ swallowClick=false; },0); return; }
   if(!PD) return;
   var wasDrag=PD.active;
   if(wasDrag){
@@ -813,6 +908,25 @@ document.addEventListener('pointerup',function(ev){
   }
   PD=null; DRAG=null;
 });
+/* the dots. out on options, in on questions and endings */
+function addPort(card,dir,qid,ai){
+  var pt=document.createElement('span');
+  pt.className='port '+dir;
+  pt.dataset.qid=qid;
+  if(ai!=null) pt.dataset.ai=String(ai);
+  pt.title=(dir==='out')
+    ? 'Drag from here to a question or ending to set where this option leads'
+    : 'Drop a connection here';
+  card.appendChild(pt);
+  if(dir==='out'){
+    pt.addEventListener('pointerdown',function(ev){
+      if(ev.button!==0) return;
+      ev.stopPropagation(); ev.preventDefault();
+      startWire(qid,ai,pt);
+    });
+  }
+  return pt;
+}
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function select(s){ sel=s; render(); }
 stage.onclick=function(){ if(sel){ sel=null; render(); } };
