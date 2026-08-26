@@ -25,8 +25,9 @@ Current stand-ins, in order of preference:
 | Body / questions | Marion Regular | Georgia → Iowan Old Style → Palatino |
 | Accent script | Dongra Script | Segoe Script → Brush Script MT |
 
-`--script` is defined but not yet used anywhere — the guide reserves Dongra for
-pull-quotes, and this page has none. Wire it in if a quote gets added.
+Dongra is not wired in at all. The guide reserves it for pull-quotes and this
+page has none, so the token was removed rather than left sitting unused — add
+`--script` back alongside the `@font-face` if a quote ever appears.
 
 Note: web use of Gotham and Morvi needs a webfont licence. Confirm the licence
 covers this deployment before shipping the real files.

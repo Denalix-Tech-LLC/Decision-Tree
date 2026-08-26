@@ -3,15 +3,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root{
-  --bg:#e5e8eb; --bg-2:#d9dee3;
+  --bg:#e5e8eb;
   --surface:#f2f4f6; --surface-2:#e5e8eb;
   --ink:#081b23; --muted:#4a5c66; --faint:#6f8290;
-  --accent:#2b4552; --accent-2:#3d6070; --accent-soft:#b8d0d8; --accent-ink:#2b4552;
+  --accent:#2b4552; --accent-soft:#b8d0d8; --accent-ink:#2b4552;
   --border:#c5ced4; --border-strong:#a6b4bd;
   --risk:#a35f2c; --risk-bg:#f6e6d8; --risk-line:#c98150;
   --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
-  --gold:#dec26a;
   --on-accent:#e5e8eb;
   --sky-top:#cfdde3;
   --sky-mid:#dce3e7;
@@ -33,10 +32,10 @@
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#081b23; --bg-2:#0c2430;
+    --bg:#081b23;
     --surface:#11303d; --surface-2:#0d2530;
     --ink:#e5e8eb; --muted:#a8bac4; --faint:#7d919d;
-    --accent:#b8d0d8; --accent-2:#8fb6c2; --accent-soft:#173a49; --accent-ink:#cfe3e9;
+    --accent:#b8d0d8; --accent-soft:#173a49; --accent-ink:#cfe3e9;
     --border:#1e4150; --border-strong:#2d5768;
     --risk:#dda06e; --risk-bg:#3a2716; --risk-line:#c98150;
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
@@ -166,7 +165,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .qcard{border-color:var(--accent);border-width:2px}
 .qcard.risky{border-color:var(--risk-line);background:var(--risk-bg)}
 .qcard:hover,.ocard:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--accent)}
-.qcard.sel,.ocard.sel{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
 .qcard .tag,.ocard .tag{font-family:var(--sans);font-weight:600;font-size:8.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--accent);display:block;margin-bottom:3px}
 .qcard.risky .tag{color:var(--risk)}
