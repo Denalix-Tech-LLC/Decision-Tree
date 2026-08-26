@@ -139,6 +139,10 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .dirty{font-family:var(--sans);font-size:11.5px;color:var(--risk);display:none;align-items:center;gap:5px}
 .dirty.on{display:inline-flex}
 .dirty i{width:7px;height:7px;border-radius:50%;background:var(--risk-line);display:block}
+.dirty.saved{color:var(--good)}
+.dirty.saved i{background:var(--good-line)}
+.dirty.failed{color:var(--alert)}
+.dirty.failed i{background:var(--alert-line)}
 
 /* ---- layout ---- */
 .main{flex:1;display:flex;min-height:0}
@@ -344,10 +348,10 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
     <div class="acts">
       <button class="btn" id="bAddQ" title="Add a new question, unattached — then point an option at it">+ Question</button>
       <button class="btn" id="bImport" title="Paste an exported tree back in, replacing what is here">Import</button>
-      <button class="btn" id="bExport" title="Get the tree as a tree-data.js file — commit it to publish to everyone">Export…</button>
+      <button class="btn" id="bExport" title="Download tree-data.js to hand your change to everyone else. Your own preview is already up to date.">Export…</button>
       <button class="btn danger" id="bReset" title="Throw away your edits and the saved draft, back to what the repo ships">Revert</button>
-      <button class="btn" id="bOpen" title="Open the reader's tree in a new tab to walk your edits">Preview ↗</button>
-      <button class="btn solid" id="bSave" title="Keep these edits in this browser only — Export is what publishes">Save draft</button>
+      <button class="btn" id="bOpen" title="Open the reader's tree in a new tab — it reads your saved edits, so it shows exactly what you have now">Preview ↗</button>
+      <button class="btn solid" id="bSave" title="Edits save on their own; this just forces it now and confirms">Save now</button>
     </div>
   </header>
 
@@ -364,7 +368,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
         <button class="btn" id="zAll" title="Shrink the whole tree into view">◱</button>
         <button class="btn" id="zWide" title="Hide the side panel and give the tree the full width">⤡</button>
       </div>
-      <div class="tip" id="tip">Click a card to edit · drop a <b>question on an option</b> to wire it there · drag siblings to reorder</div>
+      <div class="tip" id="tip">Edits save as you go — <b>Preview</b> shows them · <b>Export</b> is only for publishing to others</div>
     </div>
 
     <aside class="side">
@@ -385,6 +389,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
     <p class="hint" id="dlgHint" style="font-family:var(--sans);font-size:11.5px;color:var(--faint);margin:8px 0 0"></p></div>
   <div class="df">
     <button class="btn" id="dlgClose">Close</button>
+    <button class="btn" id="dlgSave" hidden>Download tree-data.js</button>
     <button class="btn solid" id="dlgOk" hidden>Load this</button>
   </div>
 </dialog>
@@ -405,7 +410,31 @@ try{ var raw=localStorage.getItem(DRAFT_KEY); if(raw) T=JSON.parse(raw); }catch(
 var TERMINALS={END:'Result',END_NONTAS:'Non-TAS pathways'};
 function isTerminal(id){ return TERMINALS.hasOwnProperty(id); }
 function questionIds(){ return Object.keys(T.NODES); }
-function markDirty(v){ dirty=v!==false; document.getElementById('dirty').classList.toggle('on',dirty); }
+/* Edits save themselves. Export used to be the only obvious button after a
+   change, and Export writes nothing — it hands you a file — so an edit could
+   look applied while the tree still showed the old content. Nothing about the
+   editor and the tree can disagree now. */
+var saveTimer=null;
+function saveNow(){
+  try{
+    localStorage.setItem(DRAFT_KEY,JSON.stringify(T));
+    setStatus('saved');
+  }catch(e){ setStatus('failed',e.message); }
+}
+function setStatus(state,detail){
+  var el=document.getElementById('dirty');
+  el.className='dirty on '+state;
+  el.innerHTML=state==='saved'
+    ? '<i></i>Saved to this browser'
+    : (state==='failed' ? '<i></i>Could not save: '+esc(detail||'') : '<i></i>Saving…');
+}
+function markDirty(v){
+  dirty=v!==false;
+  if(!dirty){ document.getElementById('dirty').className='dirty'; return; }
+  setStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveNow,400);
+}
 
 function nextQid(){
   var n=2;
@@ -1222,6 +1251,7 @@ function renderChecks(){
    SAVE / EXPORT / IMPORT
    ========================================================================= */
 document.getElementById('bSave').onclick=function(){
+  clearTimeout(saveTimer);
   var bad=checks().filter(function(c){return c.bad;});
   if(bad.length&&!confirm(bad.length+' problem(s) would ship with this draft:\n\n'
       +bad.slice(0,6).map(function(b){return '• '+b.t;}).join('\n')
@@ -1237,8 +1267,10 @@ document.getElementById('bExport').onclick=function(){
     '(function(){\n  var DATA='+JSON.stringify(T,null,2)+';\n'+
     '  if(typeof window!==\'undefined\') window.TAS_TREE=DATA;\n'+
     '  if(typeof module!==\'undefined\'&&module.exports) module.exports=DATA;\n})();\n';
-  openDlg('Export — publish to everyone',body,
-    'This is the whole tree as a file. Replace tree-data.js in the repo with it and commit: that is what every reader loads. Saving a draft does not do this — a draft lives only in your browser.',false);
+  window.__exportBody=body;
+  openDlg('Export — for publishing to everyone',body,
+    'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, replace tree-data.js in the repo, and commit.',false);
+  document.getElementById('dlgSave').hidden=false;
 };
 document.getElementById('bImport').onclick=function(){
   openDlg('Import — replace the tree',''
@@ -1258,9 +1290,22 @@ function openDlg(title,text,hint,importing){
   document.getElementById('dlgText').value=text;
   document.getElementById('dlgHint').textContent=hint||'';
   document.getElementById('dlgOk').hidden=!importing;
+  document.getElementById('dlgSave').hidden=true;
   if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
 }
 document.getElementById('dlgClose').onclick=function(){ dlg.close?dlg.close():dlg.removeAttribute('open'); };
+/* a real download, so Export behaves like an export */
+document.getElementById('dlgSave').onclick=function(){
+  var body=window.__exportBody||document.getElementById('dlgText').value;
+  try{
+    var blob=new Blob([body],{type:'application/javascript'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='tree-data.js';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+  }catch(e){ alert('Download blocked here — copy the text instead.'); }
+};
 document.getElementById('dlgOk').onclick=function(){
   var txt=document.getElementById('dlgText').value.trim();
   var m=txt.match(/var\s+DATA\s*=\s*([\s\S]*?);\s*\n\s*if\s*\(/);
@@ -1342,10 +1387,7 @@ stage.addEventListener('wheel',function(e){
 
 window.addEventListener('pointercancel',function(){ autoPanStop(); });
 window.addEventListener('blur',function(){ autoPanStop(); });
-window.addEventListener('beforeunload',function(e){
-  if(!dirty) return;
-  e.preventDefault(); e.returnValue='';
-});
+/* nothing to warn about: the draft is already written */
 
 render();
 fit();

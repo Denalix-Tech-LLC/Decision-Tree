@@ -94,9 +94,12 @@ question wired straight to an answer, and edit the pathways and the result
 boilerplate. A Checks tab flags options that lead nowhere, questions with no
 text, and questions nothing can reach.
 
-**Save draft** keeps the edit in `localStorage`, so the tree at `/` picks it up
-**in that browser only**. To ship a change to everyone, hit **Export** and
-replace `tree-data.js` with what it gives you, then commit.
+Edits **save themselves** as you make them, into `localStorage`, so the tree at
+`/` always shows what the editor shows — in that browser. The status in the
+toolbar says so.
+
+**Export** does not change anything. It downloads a `tree-data.js` for handing
+the change to everyone else: replace the file in the repo with it and commit.
 
 Content precedence, lowest to highest:
 
