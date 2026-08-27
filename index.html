@@ -162,6 +162,35 @@ a{color:var(--accent-ink)}
 .env .photo::after{content:'';position:absolute;inset:0;
   background:linear-gradient(to top,var(--sky-bot) 0%,transparent 55%)}
 
+/* ---- arriving at a result ----
+   A sunrise rather than confetti. This tool ends a sovereignty decision, so the
+   moment is marked in the language the page already speaks: warm light rising
+   behind the ridgelines, and seed-light carried up on the air. */
+.env .bloom{position:absolute;left:50%;bottom:4%;width:150vw;height:66vh;
+  transform:translateX(-50%);pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse 46% 50% at 50% 100%,
+    var(--gold) 0%,rgba(222,194,106,.42) 26%,rgba(222,194,106,0) 62%);
+  animation:bloomUp 5s cubic-bezier(.22,.68,0,1) forwards}
+@keyframes bloomUp{
+  0%{opacity:0;transform:translateX(-50%) translateY(16%) scale(.92)}
+  22%{opacity:.55}
+  55%{opacity:.36}
+  100%{opacity:0;transform:translateX(-50%) translateY(-4%) scale(1.06)}
+}
+.env .sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.env .sparks span{position:absolute;bottom:7%;display:block;width:4px;height:4px;border-radius:50%;
+  background:var(--gold);opacity:0;
+  animation:sparkUp 4.6s cubic-bezier(.25,.6,.3,1) forwards;
+  animation-delay:calc(var(--i,0) * 90ms)}
+.env .sparks span:nth-child(3n){background:var(--good-line);width:3px;height:3px}
+.env .sparks span:nth-child(4n){background:var(--accent-soft)}
+@keyframes sparkUp{
+  0%{opacity:0;transform:translate3d(0,0,0) scale(.6)}
+  14%{opacity:.9}
+  70%{opacity:.5}
+  100%{opacity:0;transform:translate3d(var(--dx,3vw),-64vh,0) scale(1)}
+}
+
 /* top bar */
 .bar{flex:none;display:flex;align-items:center;gap:12px;padding:10px clamp(12px,2.5vw,20px);
   background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:5}
@@ -407,6 +436,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
   .env .ridges{transform:none!important}
   .env .clouds span,.env .motes span{animation:none!important}
+  .env .bloom,.env .sparks{display:none!important}
   .env .motes span{opacity:.5!important}
   .btn:hover,.tnode:hover{transform:none!important}
 }
@@ -804,8 +834,6 @@ function build(){
 
   layout(rows,edges);
   document.getElementById('btnResult').hidden=!terminal;
-  /* nothing worth printing until the tree has reached a result */
-  document.getElementById('btnPrint').hidden=!terminal;
   updateRail();
   updateHint();
 }
@@ -897,10 +925,44 @@ function nodeKey(el){
   if(el.classList.contains('opt')) return 'opt:'+id+':'+(el.dataset.ai||'');
   return 'q:'+id;
 }
+/* The arrival, drawn once and cleaned up after itself. A sunrise rather than
+   confetti: this tool ends a sovereignty decision, so the moment is marked in
+   the language the page already speaks — warm light rising behind the
+   ridgelines, and seed-light carried up on the air. */
+var partyTimer=null;
+function celebrate(){
+  if(reduce||document.hidden) return;
+  var env=document.querySelector('.env');
+  if(!env||env.querySelector('.bloom')) return;
+  var bloom=document.createElement('div'); bloom.className='bloom';
+  var sparks=document.createElement('div'); sparks.className='sparks';
+  for(var i=0;i<22;i++){
+    var sp=document.createElement('span');
+    sp.style.left=(3+(i*4.4+((i*37)%13))%94)+'%';
+    sp.style.setProperty('--i',i);
+    sp.style.setProperty('--dx',(((i*29)%9)-4)+'vw');
+    sparks.appendChild(sp);
+  }
+  env.appendChild(bloom); env.appendChild(sparks);
+  clearTimeout(partyTimer);
+  partyTimer=setTimeout(function(){
+    if(bloom.parentNode) bloom.parentNode.removeChild(bloom);
+    if(sparks.parentNode) sparks.parentNode.removeChild(sparks);
+  },6200);
+}
+function clearCelebration(){
+  clearTimeout(partyTimer);
+  Array.prototype.forEach.call(document.querySelectorAll('.env .bloom,.env .sparks'),function(el){
+    if(el.parentNode) el.parentNode.removeChild(el);
+  });
+}
 function grow(){
   var before={};
   Array.prototype.forEach.call(nodesEl.children,function(el){ before[nodeKey(el)]=1; });
+  var wasTerminal=terminal;
   build();
+  /* the tree has just arrived at an ending it had not reached before */
+  if(terminal&&!wasTerminal) setTimeout(celebrate,GROW_HOLD+300);
   if(canAnimate()){
     /* only the limbs that did not exist a moment ago get grown */
     var fresh=Array.prototype.filter.call(nodesEl.children,function(el){
@@ -1237,10 +1299,13 @@ function openSheet(){
   document.getElementById('sheetTitle').textContent=verdict(terminal).t;
   document.getElementById('sheetBody').innerHTML=resultHtml();
   sheet.hidden=false;
+  /* the printout is of the result, so it is offered while the result is open */
+  document.getElementById('btnPrint').hidden=false;
   var c=sheet.querySelector('[data-close]'); if(c) c.focus({preventScroll:true});
 }
 function closeSheet(){
   sheet.hidden=true;
+  document.getElementById('btnPrint').hidden=true;
   if(prevFocus&&prevFocus.focus) try{ prevFocus.focus({preventScroll:true}); }catch(e){}
 }
 sheet.addEventListener('click',function(e){
@@ -1328,6 +1393,7 @@ function start(){
    to, so `started` stays true and the canvas is just rebuilt empty. */
 function reset(){
   path=[]; collected=[]; terminal=null;
+  clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   railFill.style.width='0%';
   document.getElementById('btnResult').hidden=true;
