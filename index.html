@@ -595,6 +595,11 @@ function sndChoose(){ voice({from:392,dur:0.20,type:'sine',vol:0.26,cut:1600});
 function sndResult(){ [523.25,659.25,783.99,1046.50].forEach(function(f,i){
                         voice({from:f,dur:0.85,type:'sine',vol:0.22,cut:2600,delay:i*0.10}); }); }
 function sndRetract(){voice({from:520,to:190,dur:0.44,type:'triangle',vol:0.18,cut:1000}); }
+/* the pentatonic run walked backwards, one note per limb as it withdraws */
+function sndUnwind(i){
+  var f=PENTA[(PENTA.length-1-((i>>1)%PENTA.length))];
+  voice({from:f,dur:0.24,type:'sine',vol:0.16,cut:1600});
+}
 
 function setSound(on){
   AUDIO.on=on;
@@ -1016,6 +1021,19 @@ function drawEdge(pth,ms){
   pth.style.transition='stroke-dashoffset '+ms+'ms cubic-bezier(.22,.68,0,1)';
   pth.style.strokeDashoffset='0px';
 }
+/* the reverse of drawEdge: the line retreats back the way it came */
+function undrawEdge(pth,ms){
+  if(!pth||!pth.getTotalLength) return;
+  var L=0;
+  try{ L=pth.getTotalLength(); }catch(e){ return; }
+  if(!L||!isFinite(L)) return;
+  pth.style.transition='none';
+  pth.style.strokeDasharray=L+'px';
+  pth.style.strokeDashoffset='0px';
+  void pth.getBoundingClientRect();
+  pth.style.transition='stroke-dashoffset '+ms+'ms ease-in';
+  pth.style.strokeDashoffset=L+'px';
+}
 function clearEdge(pth){
   if(!pth) return;
   pth.style.transition=''; pth.style.strokeDasharray=''; pth.style.strokeDashoffset='';
@@ -1411,7 +1429,12 @@ function start(){
 }
 /* Start over drops straight back to question 1 — there is no gate to return
    to, so `started` stays true and the canvas is just rebuilt empty. */
-function reset(){
+/* Start over withdraws the tree instead of blinking it away: the deepest limb
+   goes first and the retreat runs back up to the root, each line retracting
+   the way it was drawn with a note to match. */
+var unwindTimers=[];
+function stopUnwind(){ unwindTimers.forEach(clearTimeout); unwindTimers=[]; }
+function freshTree(){
   path=[]; collected=[]; terminal=null;
   clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
@@ -1422,7 +1445,30 @@ function reset(){
   build();
   view.s=1; focusFrontier();
 }
+function reset(){
+  stopUnwind();
+  closeSheet();
+  clearCelebration();
+  var kids=Array.prototype.slice.call(nodesEl.children);
+  if(!canAnimate()||kids.length<2){ freshTree(); return; }
+  /* deepest first, so the tail leaves before the trunk */
+  kids.sort(function(a,b){ return parseFloat(b.style.top||0)-parseFloat(a.style.top||0); });
+  /* the whole withdrawal is held to about a second and a half however big the
+     tree got, so starting over never feels like waiting */
+  var step=Math.max(28,Math.min(85,Math.round(1500/kids.length)));
+  kids.forEach(function(el,i){
+    unwindTimers.push(setTimeout(function(){
+      if(el.__inEdge) undrawEdge(el.__inEdge,step*2.4);
+      el.classList.add('entering','pre');
+      /* every other limb, or a big tree turns into a machine gun */
+      if(i%2===0) sndUnwind(i);
+    },i*step));
+  });
+  unwindTimers.push(setTimeout(freshTree,kids.length*step+380));
+}
 document.getElementById('btnReset').addEventListener('click',reset);
+/* a choice made mid-withdrawal cancels it rather than fighting it */
+nodesEl.addEventListener('pointerdown',stopUnwind,true);
 document.getElementById('btnSound').addEventListener('click',function(){
   setSound(!AUDIO.on);
   if(AUDIO.on) sndNode(2);              /* let the reader hear what they turned on */
