@@ -166,29 +166,46 @@ a{color:var(--accent-ink)}
    A sunrise rather than confetti. This tool ends a sovereignty decision, so the
    moment is marked in the language the page already speaks: warm light rising
    behind the ridgelines, and seed-light carried up on the air. */
-.env .bloom{position:absolute;left:50%;bottom:4%;width:150vw;height:66vh;
+.env .bloom{position:absolute;left:50%;bottom:-6%;width:170vw;height:92vh;
   transform:translateX(-50%);pointer-events:none;opacity:0;
-  background:radial-gradient(ellipse 46% 50% at 50% 100%,
-    var(--gold) 0%,rgba(222,194,106,.42) 26%,rgba(222,194,106,0) 62%);
-  animation:bloomUp 5s cubic-bezier(.22,.68,0,1) forwards}
+  background:radial-gradient(ellipse 44% 54% at 50% 100%,
+    rgba(255,236,176,.95) 0%,var(--gold) 18%,rgba(222,194,106,.55) 40%,rgba(222,194,106,0) 72%);
+  animation:bloomUp 4.4s cubic-bezier(.16,.8,.3,1) forwards}
 @keyframes bloomUp{
-  0%{opacity:0;transform:translateX(-50%) translateY(16%) scale(.92)}
-  22%{opacity:.55}
-  55%{opacity:.36}
-  100%{opacity:0;transform:translateX(-50%) translateY(-4%) scale(1.06)}
+  0%{opacity:0;transform:translateX(-50%) translateY(22%) scale(.86)}
+  12%{opacity:.95}
+  40%{opacity:.8}
+  72%{opacity:.42}
+  100%{opacity:0;transform:translateX(-50%) translateY(-6%) scale(1.1)}
 }
+/* a single wash of warm light over the whole scene, so the moment registers
+   even if the reader is looking at the top of the canvas */
+.env .flash{position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:linear-gradient(to top,rgba(222,194,106,.5) 0%,rgba(222,194,106,.16) 38%,transparent 72%);
+  animation:flashUp 2.6s ease-out forwards}
+@keyframes flashUp{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
 .env .sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.env .sparks span{position:absolute;bottom:7%;display:block;width:4px;height:4px;border-radius:50%;
+.env .sparks span{position:absolute;bottom:4%;display:block;width:7px;height:7px;border-radius:50%;
   background:var(--gold);opacity:0;
-  animation:sparkUp 4.6s cubic-bezier(.25,.6,.3,1) forwards;
-  animation-delay:calc(var(--i,0) * 90ms)}
-.env .sparks span:nth-child(3n){background:var(--good-line);width:3px;height:3px}
-.env .sparks span:nth-child(4n){background:var(--accent-soft)}
+  box-shadow:0 0 10px 3px rgba(222,194,106,.75);
+  animation:sparkUp 3.8s cubic-bezier(.25,.6,.3,1) forwards;
+  animation-delay:calc(var(--i,0) * 55ms)}
+.env .sparks span:nth-child(3n){background:var(--good-line);width:5px;height:5px;
+  box-shadow:0 0 9px 2px rgba(137,145,99,.6)}
+.env .sparks span:nth-child(4n){background:#fff3d0;width:6px;height:6px;
+  box-shadow:0 0 12px 3px rgba(255,243,208,.8)}
 @keyframes sparkUp{
-  0%{opacity:0;transform:translate3d(0,0,0) scale(.6)}
-  14%{opacity:.9}
-  70%{opacity:.5}
-  100%{opacity:0;transform:translate3d(var(--dx,3vw),-64vh,0) scale(1)}
+  0%{opacity:0;transform:translate3d(0,0,0) scale(.4)}
+  10%{opacity:1;transform:translate3d(0,-6vh,0) scale(1.15)}
+  65%{opacity:.85}
+  100%{opacity:0;transform:translate3d(var(--dx,3vw),-88vh,0) scale(.7)}
+}
+/* the card you arrived at catches the light too */
+.tnode.result.arrived{animation:arrivedGlow 2.8s ease-out}
+@keyframes arrivedGlow{
+  0%{box-shadow:0 0 0 0 rgba(222,194,106,0)}
+  18%{box-shadow:0 0 0 14px rgba(222,194,106,.55),0 0 40px 12px rgba(222,194,106,.5)}
+  100%{box-shadow:0 0 0 0 rgba(222,194,106,0)}
 }
 
 /* top bar */
@@ -436,7 +453,8 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
   .env .ridges{transform:none!important}
   .env .clouds span,.env .motes span{animation:none!important}
-  .env .bloom,.env .sparks{display:none!important}
+  .env .bloom,.env .sparks,.env .flash{display:none!important}
+  .tnode.result.arrived{animation:none!important}
   .env .motes span{opacity:.5!important}
   .btn:hover,.tnode:hover{transform:none!important}
 }
@@ -935,24 +953,26 @@ function celebrate(){
   var env=document.querySelector('.env');
   if(!env||env.querySelector('.bloom')) return;
   var bloom=document.createElement('div'); bloom.className='bloom';
+  var flash=document.createElement('div'); flash.className='flash';
   var sparks=document.createElement('div'); sparks.className='sparks';
-  for(var i=0;i<22;i++){
+  var node=document.getElementById('resultNode');
+  if(node){ node.classList.add('arrived'); setTimeout(function(){ node.classList.remove('arrived'); },3000); }
+  for(var i=0;i<40;i++){
     var sp=document.createElement('span');
-    sp.style.left=(3+(i*4.4+((i*37)%13))%94)+'%';
-    sp.style.setProperty('--i',i);
-    sp.style.setProperty('--dx',(((i*29)%9)-4)+'vw');
+    sp.style.left=(2+(i*7.3+((i*41)%17))%96)+'%';
+    sp.style.setProperty('--i',i%18);
+    sp.style.setProperty('--dx',(((i*29)%11)-5)+'vw');
     sparks.appendChild(sp);
   }
-  env.appendChild(bloom); env.appendChild(sparks);
+  env.appendChild(bloom); env.appendChild(flash); env.appendChild(sparks);
   clearTimeout(partyTimer);
   partyTimer=setTimeout(function(){
-    if(bloom.parentNode) bloom.parentNode.removeChild(bloom);
-    if(sparks.parentNode) sparks.parentNode.removeChild(sparks);
-  },6200);
+    [bloom,flash,sparks].forEach(function(el){ if(el.parentNode) el.parentNode.removeChild(el); });
+  },5600);
 }
 function clearCelebration(){
   clearTimeout(partyTimer);
-  Array.prototype.forEach.call(document.querySelectorAll('.env .bloom,.env .sparks'),function(el){
+  Array.prototype.forEach.call(document.querySelectorAll('.env .bloom,.env .sparks,.env .flash'),function(el){
     if(el.parentNode) el.parentNode.removeChild(el);
   });
 }
