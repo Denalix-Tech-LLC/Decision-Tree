@@ -1041,6 +1041,12 @@ function clearEdge(pth){
 
 /* Grow one limb at a time: the line draws itself, then the node on the end of
    it fades in, then the next line starts. */
+/* Every timer the grow animation has in flight. A withdrawal has to be able to
+   cancel these: a limb revealed a moment ago still has a timer due to strip
+   .pre off it, and that fired straight after the retraction set it — which is
+   exactly how the result card ended up stranded off-screen, fully opaque. */
+var revealTimers=[];
+function stopReveal(){ revealTimers.forEach(clearTimeout); revealTimers=[]; }
 function revealFresh(fresh){
   var k=motionScale(), draw=Math.round(EDGE_DRAW*k),
       hold=Math.round(GROW_HOLD*k), step=Math.round(GROW_STAGGER*k),
@@ -1052,17 +1058,17 @@ function revealFresh(fresh){
   });
   fresh.forEach(function(el,i){
     var pth=el.__inEdge, at=hold+i*step, nodeAt=at+(el.__primed?draw:0);
-    if(el.__primed) setTimeout(function(){ drawEdge(pth,draw); sndLine(); },at);
-    setTimeout(function(){
+    if(el.__primed) revealTimers.push(setTimeout(function(){ drawEdge(pth,draw); sndLine(); },at));
+    revealTimers.push(setTimeout(function(){
       el.classList.remove('pre');
       clearEdge(pth);
       if(el.id==='resultNode') sndResult(); else sndNode(i);
-    },nodeAt);
-    setTimeout(function(){ el.classList.remove('entering'); },nodeAt+settleMs);
+    },nodeAt));
+    revealTimers.push(setTimeout(function(){ el.classList.remove('entering'); },nodeAt+settleMs));
   });
   var last=hold+Math.max(0,fresh.length-1)*step+draw+settleMs;
   /* safety: never let a node or line stay hidden if the timers stall */
-  setTimeout(function(){ settle(); },last+400);
+  revealTimers.push(setTimeout(function(){ settle(); },last+400));
 }
 
 /* the questions currently on the trunk, root first */
@@ -1116,6 +1122,11 @@ function reopen(nodeId){
   setTimeout(rebuild,doomed.length*RETRACT_STAGGER+520);
 }
 function settle(){
+  /* The grow animation leaves a repair timer behind. One firing mid-withdrawal
+     strips .pre off limbs that are already retreating, which snaps them back
+     into place — that is what stranded the result card off-screen. A
+     withdrawal owns the canvas until it finishes. */
+  if(unwinding) return;
   Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre, .tnode.entering'),function(el){
     el.classList.remove('pre'); el.classList.remove('entering');
     el.style.opacity=''; el.style.transform='';
@@ -1432,9 +1443,10 @@ function start(){
 /* Start over withdraws the tree instead of blinking it away: the deepest limb
    goes first and the retreat runs back up to the root, each line retracting
    the way it was drawn with a note to match. */
-var unwindTimers=[];
-function stopUnwind(){ unwindTimers.forEach(clearTimeout); unwindTimers=[]; }
+var unwindTimers=[], unwinding=false;
+function stopUnwind(){ unwindTimers.forEach(clearTimeout); unwindTimers=[]; unwinding=false; }
 function freshTree(){
+  unwinding=false;
   path=[]; collected=[]; terminal=null;
   clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
@@ -1447,21 +1459,36 @@ function freshTree(){
 }
 function reset(){
   stopUnwind();
+  stopReveal();
   closeSheet();
   clearCelebration();
   var kids=Array.prototype.slice.call(nodesEl.children);
   if(!canAnimate()||kids.length<2){ freshTree(); return; }
+  unwinding=true;
   /* deepest first, so the tail leaves before the trunk */
   kids.sort(function(a,b){ return parseFloat(b.style.top||0)-parseFloat(a.style.top||0); });
   /* the whole withdrawal is held to about a second and a half however big the
      tree got, so starting over never feels like waiting */
   var step=Math.max(28,Math.min(85,Math.round(1500/kids.length)));
+  /* where the view starts, and where it should be looking when the last limb
+     goes: the root, comfortably in frame */
+  var sr=stage.getBoundingClientRect();
+  var rootTop=Math.min.apply(null,kids.map(function(k){ return parseFloat(k.style.top||0); }));
+  var unwindFrom=view.ty, unwindTo=sr.height*0.34-rootTop*view.s;
   kids.forEach(function(el,i){
     unwindTimers.push(setTimeout(function(){
       if(el.__inEdge) undrawEdge(el.__inEdge,step*2.4);
       el.classList.add('entering','pre');
       /* every other limb, or a big tree turns into a machine gun */
       if(i%2===0) sndUnwind(i);
+      /* ride the retreat back up. Chasing the lowest node still standing made
+         the view lurch, because several limbs leave between frames near the
+         end; easing from where the reader was to where the root sits keeps it
+         continuous and finishes looking at the trunk. */
+      var k2=(i+1)/kids.length;
+      var e=1-Math.pow(1-k2,2);
+      view.ty=unwindFrom+(unwindTo-unwindFrom)*e;
+      applyView();
     },i*step));
   });
   unwindTimers.push(setTimeout(freshTree,kids.length*step+380));
