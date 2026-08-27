@@ -422,6 +422,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   #printOut .psx{font-family:var(--mono);border-radius:3pt;border-color:#bbb}
   #printOut ul{margin:4pt 0;padding-left:16pt} #printOut li{margin:3pt 0}
   #printOut .pd{font-size:8.5pt;color:#444;border-top:1px solid #999;margin-top:14pt;padding-top:6pt}
+  #printOut .ptree{display:block;max-width:520px;margin:6pt 0 10pt;break-inside:avoid;page-break-inside:avoid}
 }
 </style>
 
@@ -455,7 +456,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
           <path class="wave2" d="M19 6a8 8 0 0 1 0 12"/><path class="slash" d="M3 3l18 18"/></svg>
         <span class="sndLabel">Sound</span>
       </button>
-      <button class="btn" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>Print</button>
+      <button class="btn" id="btnPrint" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>Print</button>
       <button class="btn" id="btnReset">Start over</button>
     </div>
   </header>
@@ -803,6 +804,8 @@ function build(){
 
   layout(rows,edges);
   document.getElementById('btnResult').hidden=!terminal;
+  /* nothing worth printing until the tree has reached a result */
+  document.getElementById('btnPrint').hidden=!terminal;
   updateRail();
   updateHint();
 }
@@ -1247,9 +1250,47 @@ sheet.addEventListener('click',function(e){
 document.getElementById('btnResult').addEventListener('click',openSheet);
 
 /* ---------- print ---------- */
+/* A drawing of the route actually taken: each question, the answer chosen
+   under it, and the result at the end. Plain greys and inline geometry so it
+   survives a printer with no CSS variables and no colour. */
+function printTree(){
+  if(!path.length) return '';
+  var W=680, QH=54, AH=38, GAP=20, PAD=14, x=W/2;
+  var rows=[];
+  path.forEach(function(st){
+    var n=NODES[st.node], a=n.a[st.ai];
+    rows.push({kind:'q',top:esc(n.short||n.tag||''),main:esc(n.q||'')});
+    rows.push({kind:'a',top:'',main:esc(a.label||''),grants:a.grants?esc((OUT[a.grants]||{}).name||''):''});
+  });
+  var v=verdict(terminal);
+  rows.push({kind:'r',top:'Result',main:esc(v.t)});
+
+  var y=PAD, parts=[];
+  rows.forEach(function(r,i){
+    var h=(r.kind==='q')?QH:(r.kind==='r'?QH:AH);
+    var w=(r.kind==='a')?360:520;
+    var lx=x-w/2;
+    var stroke=(r.kind==='a')?'#4a4a4a':'#111';
+    var dash=(r.kind==='a')?'':'';
+    var fill=(r.kind==='r')?'#f0f0f0':'#fff';
+    if(i>0) parts.push('<line x1="'+x+'" y1="'+(y-GAP)+'" x2="'+x+'" y2="'+y+'" stroke="#777" stroke-width="1.2"/>');
+    parts.push('<rect x="'+lx+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="7" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(r.kind==='a'?1:1.5)+'"'+dash+'/>');
+    var ty=y+(r.top?17:h/2+4);
+    if(r.top) parts.push('<text x="'+(lx+12)+'" y="'+(y+15)+'" font-size="8.5" letter-spacing="1.1" fill="#666" font-family="sans-serif">'+r.top.toUpperCase()+'</text>');
+    var main=r.main.length>68?r.main.slice(0,66)+'…':r.main;
+    parts.push('<text x="'+(lx+12)+'" y="'+(r.top?y+34:y+h/2+4)+'" font-size="'+(r.kind==='a'?11:12.5)+'" font-family="Georgia,serif" fill="#111">'+main+'</text>');
+    if(r.grants) parts.push('<text x="'+(lx+w-12)+'" y="'+(y+h/2+4)+'" text-anchor="end" font-size="8.5" font-family="sans-serif" fill="#3a5a3a">+ '+r.grants+'</text>');
+    y+=h+GAP;
+  });
+  var H=y-GAP+PAD;
+  return '<h3>The route taken</h3><svg class="ptree" viewBox="0 0 '+W+' '+H+'" width="100%" '
+    +'preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg">'+parts.join('')+'</svg>';
+}
 function doPrint(){
   var v=terminal?verdict(terminal):{t:'TAS decision — in progress',s:'This path is not yet complete.'};
-  var h='<h2>'+esc(v.t)+'</h2><p>'+esc(v.s)+'</p><h3>Answers chosen</h3><div>';
+  var h='<h2>'+esc(v.t)+'</h2><p>'+esc(v.s)+'</p>';
+  h+=printTree();
+  h+='<h3>Answers chosen</h3><div>';
   path.forEach(function(p){
     var n=NODES[p.node],a=n.a[p.ai];
     h+='<span class="pc">'+esc(n.short+': '+(a.short||a.label))+'</span>';
@@ -1290,6 +1331,7 @@ function reset(){
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   railFill.style.width='0%';
   document.getElementById('btnResult').hidden=true;
+  document.getElementById('btnPrint').hidden=true;
   closeSheet();
   build();
   view.s=1; focusFrontier();
