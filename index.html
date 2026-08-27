@@ -85,7 +85,7 @@ html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
 /* Controls and chrome are Gotham; running text is Marion. */
-button,input,select,.btn,.notice,.legend,.hint,.navnote{font-family:var(--sans)}
+button,input,select,.btn,.notice,.hint{font-family:var(--sans)}
 button{font-family:inherit;cursor:pointer}
 a{color:var(--accent-ink)}
 
@@ -307,26 +307,14 @@ a{color:var(--accent-ink)}
    another rule's stroke-dasharray (the dashed pathway edges have one). */
 
 /* controls */
-.zoom,.legend,.hint{opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}
+.zoom,.hint{opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}
 body.running .zoom{opacity:1;pointer-events:auto}
-body.running .legend,body.running .hint{opacity:1}
+body.running .hint{opacity:1}
 .zoom{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:4}
 .zoom .btn{background:var(--surface);box-shadow:var(--sh1)}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:4;background:var(--surface);
   border:1px solid var(--border);border-radius:999px;padding:6px 15px;font-size:12.5px;color:var(--muted);
   box-shadow:var(--sh1);pointer-events:none;max-width:calc(100% - 140px);text-align:center}
-.legend{position:absolute;right:12px;top:12px;z-index:4;background:var(--surface);border:1px solid var(--border);
-  border-radius:11px;padding:9px 12px;box-shadow:var(--sh1);font-size:11.5px;color:var(--muted);
-  display:flex;flex-direction:column;gap:5px}
-.legend b{font-family:var(--sans);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:400}
-.legend span{display:flex;align-items:center;gap:7px}
-.legend i{width:13px;height:10px;border-radius:3px;display:block;border:1.5px solid var(--border-strong);background:var(--surface)}
-.legend i.q{border-color:var(--accent)}
-.legend i.c{border-color:var(--good);background:var(--good-bg)}
-.legend i.n{opacity:.4}
-.legend .navnote{margin-top:3px;padding-top:6px;border-top:1px solid var(--border);
-  color:var(--faint);font-size:10.5px;display:block}
-@media (max-width:700px){ .legend{display:none} }
 
 /* ---------- standing disclaimer ----------
    The tree starts on load, so there is no intro screen left to carry the
@@ -486,14 +474,6 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       <button class="btn icon" id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="btn icon" id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
       <button class="btn icon" id="zFit" aria-label="Fit tree to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg></button>
-    </div>
-
-    <div class="legend" aria-hidden="true">
-      <b>Legend</b>
-      <span><i class="q"></i>Question</span>
-      <span><i class="c"></i>Your choice</span>
-      <span><i class="n"></i>Not taken</span>
-      <span class="navnote">Scroll to pan · ctrl+scroll to zoom</span>
     </div>
     <div class="hint" id="hint">Click a branch to grow the tree</div>
   </div>
