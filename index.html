@@ -266,6 +266,17 @@ a{color:var(--accent-ink)}
   color:var(--accent);display:block;margin-bottom:4px}
 .tnode .ttl{font-weight:650;font-size:14.5px;line-height:1.3;display:block}
 .tnode .sub{color:var(--muted);font-size:12.5px;margin-top:4px;display:block}
+/* a note the reader can put away */
+.bubble{position:relative;display:block;margin-top:9px;padding:9px 30px 9px 11px;
+  border-radius:9px;background:var(--risk-bg);border:1px solid var(--risk-line);
+  color:var(--ink);font-size:12.5px;line-height:1.4}
+.bubble .btxt{display:block}
+.bx{position:absolute;top:5px;right:5px;width:19px;height:19px;border-radius:50%;
+  border:1px solid transparent;background:transparent;color:var(--risk);
+  font-family:var(--sans);font-size:10px;line-height:1;cursor:pointer;padding:0;
+  display:grid;place-items:center;transition:background .15s,color .15s}
+.bx:hover{background:var(--risk-line);color:var(--on-accent)}
+.bx:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 /* question node */
 .tnode.q{border-color:var(--accent);border-width:2px}
@@ -352,8 +363,12 @@ a{color:var(--accent-ink)}
 .tnode.entering{transition:opacity .8s var(--ease),transform .9s var(--ease)}
 
 /* edges */
-.edge{fill:none;stroke:var(--border-strong);stroke-width:3.2;stroke-linecap:round}
-.edge.taken{stroke:var(--good);stroke-width:5}
+.edge{fill:none;stroke:var(--border-strong);stroke-width:4;stroke-linecap:round}
+.edge.taken{stroke:var(--good);stroke-width:6.5}
+/* a hairline of the page colour under each limb, so a line crossing the
+   backdrop or another line still reads as a separate limb */
+.edge.halo{stroke:var(--bg);stroke-width:9;opacity:.85}
+.edge.halo.taken{stroke-width:11}
 .edge.dimmed{opacity:.3}
 .edge.grant{stroke:var(--good-line);stroke-width:3.4;stroke-dasharray:6 5}
 /* A limb draws itself before the node on the end of it arrives. Driven by
@@ -725,6 +740,8 @@ var DISC='General information to support your discussion — not legal advice, a
    ========================================================================= */
 var QW=330, OW=196, HGAP=18, VGAP=54;
 var path=[], collected=[], started=false, terminal=null;
+/* notes the reader has dismissed, so they stay dismissed across re-renders */
+var hushed={};
 var stage=document.getElementById('stage'), vp=document.getElementById('viewport');
 var nodesEl=document.getElementById('nodes'), edgesEl=document.getElementById('edges');
 var railFill=document.getElementById('railFill'), hintEl=document.getElementById('hint');
@@ -812,7 +829,20 @@ function build(){
       qEl.setAttribute('aria-label','Go back to '+n.tag+' — '+n.q+'. Retracts the tree so you can answer it again.');
     }
     qEl.innerHTML='<span class="tag">'+esc(n.tag)+'</span><span class="ttl">'+esc(n.q)+'</span>'
-      +(n.note&&answered===null?'<span class="sub">'+esc(n.note)+'</span>':'');
+      +(n.note&&answered===null&&!hushed[id]
+        ?'<span class="bubble"><span class="btxt">'+esc(n.note)+'</span>'
+         +'<button type="button" class="bx" aria-label="Dismiss this note">&#10005;</button></span>'
+        :'');
+    var bx=qEl.querySelector('.bx');
+    if(bx){
+      bx.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        var card=ev.currentTarget.closest('.tnode');
+        /* this file redraws with build(), not render() */
+        if(card&&card.dataset.node){ hushed[card.dataset.node]=1; build(); }
+      });
+      bx.addEventListener('pointerdown',function(ev){ ev.stopPropagation(); });
+    }
     if(answered!==null){
       /* the card is clickable as a whole, but the way back should be visible
          rather than something the reader has to discover by hovering */
@@ -942,6 +972,11 @@ function layout(rows,edges){
       var dy=Math.max(16,(y2-y1)/2);
       d='M'+x1+','+y1+' C'+x1+','+(y1+dy)+' '+x2+','+(y2-dy)+' '+x2+','+y2;
     }
+    /* the halo goes down first, so every real line sits on top of every halo */
+    var halo=document.createElementNS('http://www.w3.org/2000/svg','path');
+    halo.setAttribute('class','edge halo'+(e.taken?' taken':'')+(e.dimmed?' dimmed':''));
+    halo.setAttribute('d',d);
+    edgesEl.appendChild(halo);
     var p=document.createElementNS('http://www.w3.org/2000/svg','path');
     p.setAttribute('class','edge'+(e.taken?' taken':'')+(e.dimmed?' dimmed':'')+(e.grant?' grant':''));
     p.setAttribute('d',d);
@@ -1477,6 +1512,7 @@ var unwindTimers=[], unwinding=false;
 function stopUnwind(){ unwindTimers.forEach(clearTimeout); unwindTimers=[]; unwinding=false; }
 function freshTree(){
   unwinding=false;
+  hushed={};
   path=[]; collected=[]; terminal=null;
   clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
