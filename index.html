@@ -312,6 +312,14 @@ a{color:var(--accent-ink)}
 /* an answered question invites you back to it */
 .tnode.q.reopenable{cursor:pointer}
 .tnode.q.reopenable:hover{--lift:-3px;border-color:var(--accent);box-shadow:var(--sh2)}
+/* the way back, always shown on a question you have already answered */
+.rewind{position:absolute;top:-11px;right:-11px;width:24px;height:24px;border-radius:50%;
+  border:1.5px solid var(--border-strong);background:var(--surface);color:var(--muted);
+  font-family:var(--sans);font-size:12px;line-height:1;cursor:pointer;padding:0;
+  display:grid;place-items:center;box-shadow:var(--sh1);
+  transition:background .16s,border-color .16s,color .16s,transform .16s var(--ease);z-index:5}
+.rewind:hover{background:var(--alert);border-color:var(--alert);color:var(--on-accent);transform:scale(1.15)}
+.rewind:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
 .tnode.q.reopenable::after{content:'answer again';position:absolute;bottom:7px;right:12px;
   font-family:var(--sans);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--accent);opacity:0;transition:opacity .2s}
@@ -344,10 +352,10 @@ a{color:var(--accent-ink)}
 .tnode.entering{transition:opacity .8s var(--ease),transform .9s var(--ease)}
 
 /* edges */
-.edge{fill:none;stroke:var(--border-strong);stroke-width:2}
-.edge.taken{stroke:var(--good);stroke-width:3}
+.edge{fill:none;stroke:var(--border-strong);stroke-width:3.2;stroke-linecap:round}
+.edge.taken{stroke:var(--good);stroke-width:5}
 .edge.dimmed{opacity:.3}
-.edge.grant{stroke:var(--good-line);stroke-dasharray:5 4}
+.edge.grant{stroke:var(--good-line);stroke-width:3.4;stroke-dasharray:6 5}
 /* A limb draws itself before the node on the end of it arrives. Driven by
    inline dash values measured from the real curve, so it cannot be defeated by
    another rule's stroke-dasharray (the dashed pathway edges have one). */
@@ -805,6 +813,27 @@ function build(){
     }
     qEl.innerHTML='<span class="tag">'+esc(n.tag)+'</span><span class="ttl">'+esc(n.q)+'</span>'
       +(n.note&&answered===null?'<span class="sub">'+esc(n.note)+'</span>':'');
+    if(answered!==null){
+      /* the card is clickable as a whole, but the way back should be visible
+         rather than something the reader has to discover by hovering */
+      var back=document.createElement('button');
+      back.type='button';
+      back.className='rewind';
+      back.innerHTML='&#10005;';
+      back.title='Cut the tree back to this question and answer it again';
+      back.setAttribute('aria-label','Cut the tree back to '+n.tag+' and answer it again');
+      /* Take the card from the event, never from a captured variable. build()
+         declares both `id` and `back` with var, so anything closed over in
+         here is the LAST question in the chain — which made every x cut back
+         to the same place, one step, instead of to its own question. */
+      back.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        var card=ev.currentTarget.closest('.tnode');
+        if(card&&card.dataset.node) reopen(card.dataset.node);
+      });
+      back.addEventListener('pointerdown',function(ev){ ev.stopPropagation(); });
+      qEl.appendChild(back);
+    }
     nodesEl.appendChild(qEl);
     rows.push({items:[{el:qEl,cx:anchor}],kind:'q'});
     if(prevChosenEl) edges.push({from:prevChosenEl,to:qEl,taken:true});
