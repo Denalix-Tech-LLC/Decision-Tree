@@ -20,10 +20,42 @@ status under the Tribal Authority Rule (40 CFR Part 49).
 
 Every version shares the same corrected logic and citations.
 
-`/` and `/pathfinder` start on load — question 1 is on screen the moment the page
-opens, with no splash screen to click through. The "not legal advice" disclaimer that
-used to live on that splash is now permanent: a standing strip under the progress rail
-on `/`, and the page heading on `/pathfinder`.
+On `/`, a first-time reader meets the **guide** before the tree: what the tool does,
+how to move around the canvas, how to answer and change an answer, what the pathways
+mean, what the result and the print-out contain, and how to edit the content. Closing
+it is what starts the tree, and the **Guide** button in the top bar reopens it at any
+point. A returning reader (`tas-guide-seen` in `localStorage`) lands straight on
+question 1. `/pathfinder` still starts on load.
+
+The **Contact** button is available throughout, not only at the end — a reader most
+needs a person mid-tree, at the boundary question. It holds who to ask, a month picker
+and a slot list that compose a meeting request, and an optional scheduling link. The
+request opens in the reader's own mail program with the decision path attached if they
+want it; nothing is posted anywhere from the page.
+
+The five contact fields ship **empty**, and the panel says so plainly rather than
+naming anyone. Fill them in at `/admin` → **Content → Contact** and export before the
+tool is shared. Until an email address is set, the panel offers *Copy email text*
+instead of *Send request*. The scheduling link takes any URL — Calendly, Bookings,
+anything — and reveals a **Book a time** button when it is set.
+
+### Disclaimers
+
+There are seven, because they do different jobs, and all seven are editable at
+`/admin` under **Content → Disclaimers**:
+
+| Key | Where it appears |
+|---|---|
+| `bar` | the standing strip under the progress rail, for the whole session |
+| `guide` | the "what this tool is not" box, high in the guide |
+| `boundary` | the danger card in the result, when a boundary answer came up |
+| `authority` | its own card in the result — eligibility is not authority |
+| `result` | the closing note at the foot of the result panel |
+| `print` | the print-out, written to stand alone months later with none of the tool around it |
+| `cites` | the note about the section numbers, in the result and on the print-out |
+
+The bar and the guide say the same thing on purpose. The guide is passed once; the bar
+is the whole session.
 
 ## Stack
 
@@ -89,10 +121,15 @@ Edit it by hand, or visually at **`/admin`**.
 
 The editor draws the whole tree — every question with its options fanned
 beneath it — and you edit by clicking a card. You can retitle anything, add or
-remove options, point an option at any question or ending, create a new
-question wired straight to an answer, and edit the pathways and the result
-boilerplate. A Checks tab flags options that lead nowhere, questions with no
-text, and questions nothing can reach.
+remove options, point an option at any question or ending, and edit the pathways,
+the result boilerplate, the seven disclaimers and the contact details. A Checks tab
+flags options that lead nowhere, questions with no text, and questions nothing can
+reach.
+
+The guide copy is bundled in `index.html` rather than in `tree-data.js`, because it
+describes how the tool behaves rather than what it recommends — but it does quote the
+four pathway names and the result panel's running order, so renaming a pathway at
+`/admin` puts the guide out of date and the editor cannot warn you.
 
 Edits **save themselves** as you make them, into `localStorage`, so the tree at
 `/` always shows what the editor shows — in that browser. The status in the

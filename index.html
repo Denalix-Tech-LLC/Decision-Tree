@@ -81,6 +81,10 @@
 }
 
 *{box-sizing:border-box}
+/* A .btn carries display:inline-flex, which outranks the user-agent rule for
+   [hidden] — so the Result button sat in the bar before there was a result.
+   Hidden means hidden, whatever else an element is. */
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -239,6 +243,8 @@ a{color:var(--accent-ink)}
 #btnSound.muted .wave1,#btnSound.muted .wave2{opacity:0}
 #btnSound.muted{color:var(--faint)}
 @media (max-width:700px){ #btnSound .sndLabel{display:none} }
+/* five controls will not fit a phone; the two with icons lose their words */
+@media (max-width:820px){ #btnGuide .lb,#btnContact .lb{display:none} }
 
 .rail{flex:none;height:3px;background:var(--surface-2);position:relative;overflow:hidden;z-index:5}
 .rail i{position:absolute;inset:0 auto 0 0;width:0%;display:block;
@@ -386,15 +392,100 @@ body.running .hint{opacity:1}
   box-shadow:var(--sh1);pointer-events:none;max-width:calc(100% - 140px);text-align:center}
 
 /* ---------- standing disclaimer ----------
-   The tree starts on load, so there is no intro screen left to carry the
-   "not legal advice" framing. It lives here instead — in view for the whole
-   session rather than on a card the reader dismisses once. */
+   The guide carries this framing too, but the guide is passed once and the bar
+   is the whole session — so it stays here as well, in view rather than on a
+   card the reader dismisses. Do not drop it on the grounds that the guide
+   already says it. */
 .notice{flex:none;display:flex;align-items:baseline;gap:9px;z-index:5;
   padding:6px clamp(12px,2.5vw,20px);background:var(--surface-2);
   border-bottom:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--muted)}
 .notice b{flex:none;font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--accent)}
 @media (max-width:560px){ .notice b{display:none} }
+
+/* ---------- document overlays: the guide, and contact ----------
+   Both are reading surfaces rather than controls, so they sit centred in a
+   measured column instead of arriving as a side drawer like the result does. */
+.ovl{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  padding:clamp(10px,2.4vw,26px)}
+.ovl[hidden]{display:none}
+.ovl>.bg{position:absolute;inset:0;background:rgba(8,27,35,.6);animation:fade .28s ease both}
+.doc{position:relative;width:min(780px,100%);max-height:100%;background:var(--surface);
+  border:1px solid var(--border);border-radius:18px;box-shadow:var(--sh2);
+  display:flex;flex-direction:column;overflow:hidden;animation:docin .42s var(--ease) both}
+.doc.narrow{width:min(580px,100%)}
+@keyframes docin{from{transform:translateY(18px) scale(.985);opacity:0}to{transform:none;opacity:1}}
+.doc .dhead{flex:none;display:flex;align-items:center;gap:12px;padding:15px clamp(16px,3vw,26px);
+  border-bottom:1px solid var(--border);background:var(--surface)}
+.doc .dhead .kk{font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);display:block}
+.doc .dhead h3{font-family:var(--display);font-weight:400;font-size:23px;margin:1px 0 0;line-height:1.1;
+  text-transform:uppercase;letter-spacing:.015em}
+.doc .dhead .grow{flex:1}
+.doc .dbody{flex:1;overflow-y:auto;padding:20px clamp(16px,3vw,26px) 6px}
+.doc .dfoot{flex:none;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  padding:13px clamp(16px,3vw,26px);border-top:1px solid var(--border);background:var(--surface-2)}
+.doc .dfoot .grow{flex:1}
+.doc .dfoot .fnote{font-size:11.5px;color:var(--muted);line-height:1.4;max-width:340px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:disabled:hover{border-color:var(--border-strong);color:var(--ink);transform:none;box-shadow:none}
+
+/* guide prose */
+.gsec{margin:0 0 22px;scroll-margin-top:6px}
+.gsec>h4{font-family:var(--sans);font-weight:600;font-size:12px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--risk);margin:0 0 9px}
+.gsec p{margin:0 0 10px;font-size:14.5px;line-height:1.62}
+.gsec ul{margin:8px 0 10px;padding-left:20px}
+.gsec li{margin:0 0 6px;font-size:14px;line-height:1.55}
+.gsec b{font-weight:650}
+.gsec code,.gack code{font-family:var(--sans);font-weight:600;font-size:12.5px;background:var(--accent-soft);
+  color:var(--accent-ink);border-radius:5px;padding:1px 5px;white-space:nowrap}
+.gack{border:1px solid var(--border-strong);border-left:4px solid var(--alert);background:var(--alert-bg);
+  border-radius:12px;padding:14px 16px;margin:0 0 22px}
+.gack .rk{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--alert);margin-bottom:6px}
+.gack p{margin:0 0 8px;font-size:13.5px;line-height:1.58} .gack p:last-child{margin:0}
+.gtoc{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 20px}
+.gtoc a{font-family:var(--sans);font-weight:600;font-size:11.5px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);text-decoration:none}
+.gtoc a:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+/* ---------- contact: the calendar and its slots ---------- */
+.cstep{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--accent);margin:16px 0 7px}
+.cstep:first-child{margin-top:0}
+.cal{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface-2)}
+.cnav{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.cnav .mon{flex:1;text-align:center;font-family:var(--serif);font-weight:600;font-size:15px}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cdow{font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);text-align:center;padding:2px 0 4px}
+.cday{border:1px solid transparent;background:var(--surface);border-radius:8px;padding:8px 0;font-size:13px;
+  font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
+  transition:border-color .15s,background .15s,color .15s}
+.cday.pad{background:none;pointer-events:none;visibility:hidden}
+.cday:disabled{color:var(--faint);opacity:.4;background:none;cursor:not-allowed}
+.cday:not(:disabled):hover{border-color:var(--accent)}
+.cday.today{box-shadow:inset 0 0 0 1px var(--border-strong)}
+.cday.sel{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cday:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.slot{border:1px solid var(--border-strong);background:var(--surface);border-radius:8px;padding:7px 4px;
+  font-size:12.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
+  transition:border-color .15s,background .15s,color .15s}
+.slot:hover{border-color:var(--accent);color:var(--accent-ink)}
+.slot.sel{background:var(--good);border-color:var(--good);color:var(--on-accent)}
+.slot:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}
+.cpick{font-size:13px;color:var(--muted);margin:9px 0 0}
+.cpick b{color:var(--ink);font-weight:650}
+.cwho{list-style:none;padding:0;margin:6px 0 8px;display:grid;gap:5px;font-size:13.5px}
+.cwho li{display:flex;gap:9px}
+.cwho .k{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--muted);min-width:54px;padding-top:3px;flex:none}
+.cwho .v{color:var(--ink)} .cwho .v.todo{color:var(--faint);font-style:italic}
+.copt{display:flex;gap:9px;align-items:flex-start;margin:15px 0 0;font-size:13.5px;cursor:pointer}
+.copt input{margin:2px 0 0;width:16px;height:16px;flex:none;accent-color:var(--accent)}
+.copt .d{display:block;color:var(--muted);font-size:12.5px}
 
 /* ---------- result sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:40}
@@ -434,6 +525,7 @@ body.running .hint{opacity:1}
 .card.warn{border-left:4px solid var(--risk);background:var(--risk-bg)}
 .card.danger{border-left:4px solid var(--alert);background:var(--alert-bg)}
 .card.soft{border-left:4px solid var(--good)}
+.card code,.disc code{font-family:var(--sans);font-weight:600;font-size:12.5px;background:var(--accent-soft);color:var(--accent-ink);border-radius:5px;padding:1px 5px;white-space:nowrap}
 .card .rk{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);text-transform:uppercase;color:var(--accent);margin-bottom:6px}
 .card.warn .rk{color:var(--risk)} .card.danger .rk{color:var(--alert)} .card.soft .rk{color:var(--good)}
 .card h4{font-family:var(--serif);font-weight:600;font-size:17px;margin:0 0 7px;line-height:1.24}
@@ -457,11 +549,17 @@ ol.steps li{counter-increment:s;position:relative;padding-left:34px;font-size:13
 ol.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:7px;
   background:var(--accent);color:var(--on-accent);font-family:var(--display);font-weight:400;display:grid;place-items:center;font-size:14px}
 ol.steps .d{color:var(--muted);font-size:12.5px}
-/* the guide's SUB-HEADING: Gotham all-caps, tracking +25, in the orange */
+/* the brand guide's SUB-HEADING: Gotham all-caps, tracking +25, in the orange.
+   --risk rather than --risk-line: the lighter orange measures 2.83:1 on the
+   card face in daylight, which fails AA at this size. --risk is the same
+   orange darkened, already in the palette, and measures 4.50:1. */
 .sectitle{font-family:var(--sans);font-weight:600;font-size:12px;letter-spacing:var(--track);
-  text-transform:uppercase;color:var(--risk-line);margin:22px 0 10px}
+  text-transform:uppercase;color:var(--risk);margin:22px 0 10px}
 .reflinks{display:flex;flex-direction:column;gap:5px;margin-top:5px;font-size:13.5px}
-.disc{font-size:12px;color:var(--faint);border-top:1px solid var(--border);margin-top:20px;padding-top:13px}
+/* --faint measured 3.24:1 here, which is not a contrast to set a legal notice
+   at. --muted at 12.5px measures 6.32:1. */
+.disc{font-size:12.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:20px;padding-top:13px}
+.disc p{margin:0 0 8px;line-height:1.55} .disc p:last-child{margin:0}
 
 @media (prefers-reduced-motion:reduce){
   /* This setting asks for no large movement — not for no feedback. A blanket
@@ -479,6 +577,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   .env .clouds span,.env .motes span{animation:none!important}
   .env .bloom,.env .sparks,.env .flash{display:none!important}
   .tnode.result.arrived{animation:none!important}
+  .doc{animation:none!important}
   .env .motes span{opacity:.5!important}
   .btn:hover,.tnode:hover{transform:none!important}
 }
@@ -493,7 +592,15 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   #printOut .pc,#printOut .psx{display:inline-block;border:1px solid #999;border-radius:8pt;padding:1pt 6pt;margin:2pt 3pt 2pt 0;font-size:9pt}
   #printOut .psx{font-family:var(--mono);border-radius:3pt;border-color:#bbb}
   #printOut ul{margin:4pt 0;padding-left:16pt} #printOut li{margin:3pt 0}
-  #printOut .pd{font-size:8.5pt;color:#444;border-top:1px solid #999;margin-top:14pt;padding-top:6pt}
+  /* citations are set in the running face, not a monospace the printer may
+     not have — they are references, not code */
+  #printOut code{font-family:inherit;font-weight:bold;white-space:nowrap}
+  #printOut .pstamp{font-size:9pt;color:#444;margin:0 0 10pt}
+  /* this block has to stand on its own months later, so it is not set as
+     small print — it is body text with a rule above it */
+  #printOut .pd{font-size:9.5pt;color:#111;border-top:1px solid #999;margin-top:16pt;padding-top:8pt;
+    break-inside:avoid;page-break-inside:avoid}
+  #printOut .pd p{margin:0 0 5pt} #printOut .pd ul{margin:5pt 0}
   #printOut .ptree{display:block;max-width:520px;margin:6pt 0 10pt;break-inside:avoid;page-break-inside:avoid}
 }
 </style>
@@ -521,6 +628,14 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       </span>
     </div>
     <div class="acts">
+      <button class="btn" id="btnGuide" title="How to use this tool">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v18H6.5A2.5 2.5 0 0 1 4 18.5zM12 3h5.5A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5H12"/></svg>
+        <span class="lb">Guide</span>
+      </button>
+      <button class="btn" id="btnContact" title="Talk to a person">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="lb">Contact</span>
+      </button>
       <button class="btn" id="btnResult" hidden>Result</button>
       <button class="btn" id="btnSound" aria-pressed="true" title="Sound on — click to mute">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -532,9 +647,8 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     </div>
   </header>
   <div class="rail"><i id="railFill"></i></div>
-  <p class="notice"><b>Note</b><span>General information to support your discussion — not legal
-    advice, and not an official EPA product. Coordinate with Tribal leadership, Council and legal
-    counsel before applying.</span></p>
+  <p class="notice"><b>Note</b><span id="noticeTxt">General information to support your discussion
+    — not legal advice, and not an official EPA product. Confirm with Tribal legal counsel.</span></p>
 
   <div class="stage" id="stage">
     <div class="viewport" id="viewport">
@@ -564,6 +678,42 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       <button class="btn sm" data-close="1">Close ✕</button>
     </div>
     <div class="body" id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- The guide. Shown before the tree on a first visit, and reopened from the
+     Guide button at any point after that: it is the manual for the whole tool,
+     not a splash screen, so it stays reachable rather than being passed once. -->
+<div class="ovl" id="guide" hidden role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="bg" data-gclose="1"></div>
+  <div class="doc">
+    <div class="dhead">
+      <div><span class="kk">Before you start</span><h3 id="guideTitle">How to use this tool</h3></div>
+      <span class="grow"></span>
+      <button class="btn sm" data-gclose="1" aria-label="Close the guide">Close &#10005;</button>
+    </div>
+    <div class="dbody" id="guideBody"></div>
+    <div class="dfoot">
+      <button class="btn solid" id="guideGo">Start the tree</button>
+      <button class="btn" id="guideContact">Contact</button>
+      <span class="grow"></span>
+      <span class="fnote">The <b>Guide</b> button in the top bar reopens this whenever you have a doubt.</span>
+    </div>
+  </div>
+</div>
+
+<!-- Contact. Always available, unlike Result: a reader most needs a person
+     mid-tree, at the boundary question. -->
+<div class="ovl" id="contact" hidden role="dialog" aria-modal="true" aria-labelledby="contactTitle">
+  <div class="bg" data-cclose="1"></div>
+  <div class="doc narrow">
+    <div class="dhead">
+      <div><span class="kk">Contact</span><h3 id="contactTitle">Talk to a person</h3></div>
+      <span class="grow"></span>
+      <button class="btn sm" data-cclose="1" aria-label="Back to the tree">Close &#10005;</button>
+    </div>
+    <div class="dbody" id="contactBody"></div>
+    <div class="dfoot" id="contactFoot"></div>
   </div>
 </div>
 
@@ -710,7 +860,62 @@ var LINKS=[
   {t:'CAA: Summary of content & applicability for TAS (Titles I, III, V)',u:'https://www.epa.gov/tribal-air/clean-air-act-summary-content-applicability-tas-titles-i-iii-and-v'},
   {t:'Tribal Authority Rule (TAR) under the Clean Air Act',u:'https://www.epa.gov/tribal-air/tribal-authority-rule-tar-under-clean-air-act'}
 ];
-var DISC='General information to support your discussion — not legal advice, and not an official EPA product. Confirm all citations against 40 CFR Part 49 and the current Clean Air Act, and consult Tribal legal counsel before applying.';
+/* ---------------------------------------------------------------------------
+   DISCLAIMERS. Seven placements, because they do different jobs: the standing
+   bar is one line the reader never loses, the printout has to stand alone
+   months later with none of the tool around it. Editable at /admin.
+   ------------------------------------------------------------------------- */
+var DISC={
+  bar:`General information to support your discussion — not legal advice, and not an official EPA product. Confirm with Tribal legal counsel.`,
+  guide:`<p>This is not an official EPA product, carries no EPA endorsement, and is not legal advice. It does not determine eligibility and it sends nothing to EPA. What you get at the end is a written summary of the route you chose — something to open a conversation with Tribal legal counsel, with leadership and Council, and with your EPA Regional Office Tribal air lead.</p><p>Every answer is one you select yourself. The tool cannot verify anything about your boundaries, your sources or your capacity, so a result is only as sound as what was entered. Read it as one input into a governance decision, not as the decision.</p>`,
+  boundary:`<p>A TAS request requires a jurisdictional showing — for a reservation, a map and legal description of the exterior boundaries; for off-reservation areas, a statement of legal counsel on the basis for jurisdiction (<code>40 CFR §49.7</code>). EPA notifies the appropriate governmental entities, including neighbouring state and local air agencies, and gives them a period to comment on the Tribe's jurisdictional assertion (<code>40 CFR §49.9</code>). After an approval, EPA's determination and the jurisdictional basis for it can be challenged in court.</p><p>If such a challenge succeeded, the effect would be to <b>narrow the Clean Air Act regulatory jurisdiction EPA recognizes</b> for the Tribe — a limit on the area over which the Tribe could implement and enforce CAA programs. It does <b>not</b> affect land title or ownership. Nothing in a TAS proceeding changes who holds or owns the land; the two are separate questions and should not be described to Council as one.</p><p>Neither comment nor a court challenge is automatic. But the showing is open to others, so the possibility belongs in the decision before you file. Which areas to request — the full claimed area, or undisputed areas only — is a judgement for Tribal legal counsel and Council.</p>`,
+  authority:`<p>TAS is a threshold status. An approval means EPA recognizes the Tribe as eligible for treatment in the same manner as a state for the Clean Air Act sections named in the request. It does not, by itself, put a program in place or give the Tribe authority to permit, inspect or enforce.</p><p>Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it — a Tribal implementation plan under <code>§110</code>, a title V operating-permit program, delegation of the federal rules at <code>40 CFR Part 71</code>, and so on. Until that second step is complete for a given program, EPA remains the implementing authority. Plan for both stages, and for the time between them.</p>`,
+  result:`<p>This result reflects only the answers selected here. It is general information to support your discussion — not legal advice, not a determination of eligibility, and not an official EPA product. Nothing has been sent to EPA.</p><p>Before anyone relies on it: confirm every section number against the current Clean Air Act and <code>40 CFR Part 49</code>, review the sections with Tribal legal counsel, and speak with your EPA Regional Office Tribal air lead.</p>`,
+  print:`<p>This document was produced by the TAS Decision Tree, an unofficial planning aid. It is not an EPA product, carries no EPA endorsement or approval, and is not legal advice. It records the answers someone selected in the tool on the date it was generated, and the options those answers point to. Nothing in it has been reviewed by, filed with, or decided by EPA, and it is not an application.</p><p>If you are reading it some time later, treat it as a snapshot: the Clean Air Act, <code>40 CFR Part 49</code>, EPA guidance and the Tribe's own circumstances may all have changed. Confirm every section number against the current statute and regulation, and read it with Tribal legal counsel.</p><p>Two points are easy to lose without the rest of the tool in front of you:</p><ul><li>TAS is a threshold eligibility status. Each program must still be submitted to EPA separately and approved before the Tribe can implement or enforce it.</li><li>If the route recorded here involved a disputed or uncertain boundary: a TAS request requires a jurisdictional showing, EPA notifies the appropriate governmental entities, they may comment on the Tribe's jurisdictional assertion, and after an approval EPA's determination and its jurisdictional basis can be challenged in court. An adverse ruling could narrow the Clean Air Act regulatory jurisdiction EPA recognizes for the Tribe. It would <b>not</b> affect land title or ownership.</li></ul><p>Questions about scope or eligibility go to your EPA Regional Office Tribal air lead.</p>`,
+  cites:`<p>The section numbers here — Clean Air Act sections such as <code>§110</code>, <code>§126</code> and <code>§505(a)</code>, the eligibility criteria at <code>40 CFR §49.6</code>, the contents of a request at <code>§49.7</code>, and the provisions Part 49 does not open to Tribes at <code>§49.4</code> — point you to the right part of the law. They are not authority to quote. Statutes, regulations and guidance change, and this tool is not updated automatically.</p><p>Confirm each cite against the current Clean Air Act and <code>40 CFR Part 49</code> before it goes into a request, a Council briefing, or anything else people will act on. Tribal legal counsel and your EPA Regional Office Tribal air lead can confirm which sections apply to what you intend to seek.</p>`
+};
+
+/* Who a reader reaches with a question. All five are blank in the repo: the
+   Tribe deploying this tool fills them in at /admin (or here) before it is
+   shared, and the contact panel says plainly when they are not yet set.
+   `calendly` takes any scheduling URL — Calendly, Bookings, anything. */
+var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
+
+/* ---------------------------------------------------------------------------
+   THE GUIDE. Opens before the tree on a first visit and from the Guide button
+   after that. It describes the tool as built — if the behaviour changes, this
+   changes with it.
+   ------------------------------------------------------------------------- */
+var GUIDE=[
+  {h:`What this tool is for`,
+   html:`<p>This tool helps you think through whether your Tribe should seek <b>treatment in the same manner as a state</b> (TAS, commonly "treated as a state") under the Tribal Authority Rule, <code>40 CFR Part 49</code>, EPA's rule implementing Clean Air Act <code>§301(d)</code> — and if so, for which Clean Air Act sections.</p><p>You answer four questions: whether any jurisdictional boundaries are disputed and how you would proceed; how many emission sources are in your jurisdiction; whether outside sources affect your air; and whether you have the capacity to run a program. The tree grows as you answer and shows the routes that follow.</p><p>The decision itself belongs to Tribal leadership, Council and Tribal legal counsel. The limits of this tool are set out in the notice on this page and in the bar above the tree.</p>`},
+  {h:`Moving around the canvas`,
+   html:`<p>Drag anywhere on the background to move the canvas. A scroll wheel or a two-finger trackpad swipe moves it too — scrolling pans rather than zooms, so the tree does not change size by accident. Hold <code>shift</code> while scrolling to move sideways.</p><p>To zoom, hold <code>ctrl</code> (or <code>cmd</code> on a Mac) while scrolling, pinch on a touchscreen, or use <b>+</b> and <b>−</b> at the bottom right. <b>Fit</b> frames the whole tree at once.</p><p>Panning is held so that part of the tree always stays on screen.</p>`},
+  {h:`Answering, and changing your mind`,
+   html:`<p>One question is active at a time, with its answers fanned beneath it. Click an answer and the tree grows: the line to the next question draws itself, the question fades in, then its options arrive one at a time. You can also press the number of an option on the active question, or move between cards with <code>Tab</code> and choose with <code>Enter</code>.</p><p>Answers you did not take stay on the canvas, greyed and pushed slightly out of focus, so the whole decision stays visible. <b>Click a greyed answer and the tree re-routes down that branch instead</b> — useful for showing Council what the other choice would have led to.</p><p>Every question you have already answered carries a small <b>x</b>. Clicking it cuts the tree back to that question and reopens it with all its options live; everything that grew below it comes away, because it no longer follows from your answers.</p><p><b>Start over</b> in the top bar withdraws the tree, deepest limb first, and returns you to question one. Each choice plays a short tone; the <b>Sound</b> button turns that off.</p>`},
+  {h:`What the pathways mean`,
+   html:`<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. There are four:</p><ul><li><b>Regulatory TAS</b> — the route to running your own permitting, inspection and enforcement program for sources in your jurisdiction, once EPA approves the program itself.</li><li><b>Targeted Regulatory TAS</b> — the same route for a narrower program aimed at one local problem, such as smoke from open burning.</li><li><b>Participatory TAS</b> — a formal role as a neighbouring government: notice of and comment on nearby plans and permits, and a route to ask EPA to act on sources outside your jurisdiction.</li><li><b>Capacity building</b> — ways to move toward TAS while you build staff and expertise, rather than waiting until they are in place.</li></ul><p>Pathways accumulate and are not exclusive. Many sources <i>and</i> a wish for a say in nearby permits finishes with both Regulatory and Participatory. A pathway stays unlocked unless you change the answer that unlocked it.</p><p>A pathway is a direction to consider, not a finding of eligibility. EPA decides eligibility against the four criteria at <code>40 CFR §49.6</code>, which the result panel lists. Part 49 also does not open every Clean Air Act provision to Tribes — <code>§49.4</code> lists the provisions for which Tribes are not treated as states, including implementation-plan submittal deadlines and the sanctions tied to them.</p>`},
+  {h:`What you get at the end`,
+   html:`<p>When you reach an ending, light rises behind the ridgelines and a <b>Result</b> button appears in the top bar. The panel slides over the canvas; the tree stays as you left it behind it. Close it with <b>Back to the tree</b> or <code>escape</code>.</p><p>The panel holds:</p><ul><li>a headline naming the pathway, or combination, your answers point to, and a sentence on why;</li><li>the Clean Air Act sections to consider seeking, and the pathways unlocked;</li><li>a <b>boundary-risk note</b>, when a boundary answer came up — read it in full there;</li><li>one card per unlocked pathway, with the sections to seek under it;</li><li>the options that need no TAS at all — inherent Tribal authority, <code>§103</code> grants, monitoring, education, indoor-air and radon work;</li><li>the four eligibility criteria at <code>40 CFR §49.6</code>, and what a request must contain under <code>§49.7</code>;</li><li>next steps, and links to EPA's pages on the Tribal Authority Rule.</li></ul><p>One point to carry into any discussion: TAS eligibility is a threshold status. Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it.</p>`},
+  {h:`The printed document`,
+   html:`<p><b>Print</b> at the top of the result panel prints the result or saves it as a PDF, depending on what you choose in your browser's print dialog.</p><p>It opens with a drawing of the route you took — each question, the answer chosen, the pathway it unlocked, and the result — then the written sections: the recommended pathways with their sections, the non-TAS options, the eligibility criteria, next steps, references, and the standing notice. Someone who was not at the screen can read it and see both what the tool pointed to and how you got there.</p><p><b>Confirm every section number against the current Clean Air Act and 40 CFR Part 49 before anyone relies on it.</b> Sections are amended and renumbered, and this is not an official EPA product.</p>`},
+  {h:`Changing the content`,
+   html:`<p>The questions, answers, pathways and result text can be changed in the editor at <code>/admin</code>. Edits are held in that browser, so the tree shows them on that machine only. <b>Export</b> downloads a <code>tree-data.js</code> file; publishing that file to the site is what puts the change in front of everyone else.</p>`},
+  {h:`Getting help`,
+   html:`<p><b>Contact</b> in the top bar reaches whoever maintains this tool — use it for a citation that looks wrong, a question that reads badly, or behaviour you did not expect.</p><p>For the decision itself, work with Tribal legal counsel and then your EPA Regional Office Tribal air lead, who can confirm scope and what a request needs. <b>Guide</b> in the top bar reopens this page at any time.</p>`}
+];
+
+/* Contact panel copy. The meeting request is assembled by the picker below, so
+   only the prose around it lives here. */
+var CCOPY={
+  when:`<p>This tool sorts options; it cannot weigh them for your Tribe. It asks four questions, and your situation has more than four.</p><p>Take the question to a person whenever it touches:</p><ul><li><b>Jurisdiction or boundaries</b> — what area a showing would cover, and what it would leave out.</li><li><b>Review and challenge</b> — who will see your jurisdictional showing, who may comment on it, and who may challenge EPA's determination in court afterward.</li><li><b>A Council decision</b> — anything leadership will have to approve, fund, or defend.</li></ul><p>Also reach out if the route the tree drew does not match your situation. That usually means something real sits outside the four questions.</p>`,
+  own:`<p>Tribal legal counsel and Tribal leadership come before EPA, for a practical reason: a TAS request requires a jurisdictional showing, and EPA provides that showing to the appropriate governmental entities, including neighbouring state and local air agencies. Counsel should read what the Tribe is about to assert before anyone outside the Tribe does, and leadership should know it is going.</p><p>EPA Regional Tribal air staff can tell you a great deal about scope and process. Talk with them after counsel has weighed in. Nothing here substitutes for either conversation.</p>`,
+  whoIntro:`Questions about the tool, the answers you gave it, or what to put in front of Council go to:`,
+  whoTodo:`All four are placeholders. The Tribe deploying this tool replaces them with a real person before it is shared.`,
+  meet:`Three steps, and nothing is sent until the last one: pick a day, pick a time slot, then choose whether to include your decision path and send. The request opens in your own email program, already addressed and written, so you can change every word before it goes.`,
+  book:`<p>If your Tribe has configured a scheduling link, a <b>Book a time</b> button appears here and opens that calendar in a new tab, which shows real availability rather than proposing a slot. If no link is configured, this section is hidden and the email request above is the way through.</p>`,
+  after:`<p>The message leaves from your own email program, so a copy sits in your sent folder as your record of when you asked.</p><p>No one is monitoring a queue behind this tool. Air-program staff, counsel and Council calendars all move, so the slot you picked may have to shift and no turnaround is promised. If there is a deadline behind your question — a comment period closing, a Council packet due — put it in the first line and phone as well as email.</p><p>Sending this starts nothing with EPA and puts nothing on any record. It is a conversation inside the Tribe.</p>`
+};
 
 /* ---------------------------------------------------------------------------
    Content precedence. The definitions above are the bundled fallback so this
@@ -726,13 +931,25 @@ var DISC='General information to support your discussion — not legal advice, a
     if(d.CRITERIA) CRITERIA=d.CRITERIA;
     if(d.NEXT) NEXT=d.NEXT;
     if(d.LINKS) LINKS=d.LINKS;
-    if(typeof d.DISC==='string'&&d.DISC) DISC=d.DISC;
+    /* DISC used to be one string. A file that still carries one is read as
+       the standing bar line, so an old export keeps working. */
+    if(typeof d.DISC==='string'&&d.DISC) DISC.bar=d.DISC;
+    else if(d.DISC) for(var k in d.DISC){ if(d.DISC[k]) DISC[k]=d.DISC[k]; }
+    if(d.CONTACT) for(var c in d.CONTACT){ if(typeof d.CONTACT[c]==='string') CONTACT[c]=d.CONTACT[c]; }
+    if(d.GUIDE&&d.GUIDE.length) GUIDE=d.GUIDE;
   }
   try{ adopt(window.TAS_TREE); }catch(e){}
   try{
     var raw=localStorage.getItem('tas-tree-draft');
     if(raw) adopt(JSON.parse(raw));
   }catch(e){}
+})();
+
+/* The standing bar is content, so it comes from the data rather than being
+   frozen into the markup. */
+(function(){
+  var t=document.getElementById('noticeTxt');
+  if(t&&DISC.bar) t.textContent=DISC.bar;
 })();
 
 /* ===========================================================================
@@ -1231,7 +1448,14 @@ nodesEl.addEventListener('keydown',function(e){
 });
 document.addEventListener('keydown',function(e){
   if(e.metaKey||e.ctrlKey||e.altKey) return;
-  if(e.key==='Escape'&&!document.getElementById('sheet').hidden){ closeSheet(); return; }
+  /* topmost surface first */
+  if(e.key==='Escape'){
+    if(!guideEl.hidden){ closeGuide(); return; }
+    if(!contactEl.hidden){ closeContact(); return; }
+    if(!sheet.hidden){ closeSheet(); return; }
+  }
+  /* a number key must not answer a question the reader cannot see */
+  if(!guideEl.hidden||!contactEl.hidden) return;
   var n=parseInt(e.key,10);
   if(!n||!started) return;
   var q=currentQuestion();
@@ -1384,8 +1608,8 @@ function resultHtml(){
     var ex=f.d==='Undisputed only'
       ?'Applying over <b>undisputed areas only</b> is the lower-risk route you chose — be sure to affirm the excluded areas remain claimed.'
       :(f.d==='Full area'?'You chose to proceed over the <b>full claimed area</b> — have counsel prepare for a possible challenge.':'');
-    h+='<div class="card danger"><div class="rk">Keep in view</div><h4>Your boundary showing carries risk</h4>'
-      +'<p>Because a boundary question exists, your application will be shared with the appropriate governmental entities, who may challenge it. An adverse ruling could <b>narrow your recognized CAA regulatory jurisdiction</b> — not your land title. '+ex+'</p></div>';
+    h+='<div class="card danger"><div class="rk">Keep in view</div><h4>Your boundary showing is open to others</h4>'
+      +DISC.boundary+(ex?'<p>'+ex+'</p>':'')+'</div>';
   }
   var real=collected.filter(function(x){return x!=='capacity';});
   if(!declined){
@@ -1394,9 +1618,18 @@ function resultHtml(){
     if(!real.length) h+='<div class="card soft"><div class="rk">Worth knowing</div><h4>You have strong options without TAS today</h4>'
       +'<p class="m">With little source activity and no outside concern right now, the non-TAS pathways below may meet your needs. TAS remains available whenever sources appear or priorities shift.</p></div>';
     if(collected.indexOf('capacity')>=0) h+=outCard('capacity','warn');
+    /* the section chips above are what people paste into briefings, so the
+       warning about them sits with them rather than only at the foot */
+    if(real.length) h+='<p style="margin:0;font-size:12.5px;color:var(--muted)">Section numbers point '
+      +'you to the right part of the law — they are not authority to quote. See the note at the foot '
+      +'of this panel.</p>';
   }
   h+='<div class="card soft"><div class="rk">No TAS required</div><h4>'
     +(declined?'Your non-TAS pathway':'Also available — with or without TAS')+'</h4>'+checksHtml(NONTAS)+'</div>';
+  /* read before the criteria list, because it changes what the list is for:
+     meeting all four makes the Tribe eligible, not yet authorised */
+  h+='<div class="sectitle">Eligibility is not authority</div>'
+    +'<div class="card warn"><div class="rk">Two stages</div>'+DISC.authority+'</div>';
   h+='<div class="sectitle">Before you file — the four eligibility criteria</div>'
     +'<div class="card"><p class="m" style="margin-top:0">To be approved, your Tribe must be able to demonstrate all four (40 CFR §§ 49.6 / 49.7):</p>'+checksHtml(CRITERIA)+'</div>';
   h+='<div class="sectitle">Next steps</div><div class="card"><ol class="steps">'
@@ -1406,7 +1639,7 @@ function resultHtml(){
   h+='<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">'
     +'<button class="btn solid" data-print="1">Print / Save PDF</button>'
     +'<button class="btn" data-close="1">Back to the tree</button></div>';
-  h+='<p class="disc">'+DISC+'</p>';
+  h+='<div class="disc">'+DISC.result+DISC.cites+'</div>';
   return h;
 }
 var sheet=document.getElementById('sheet'), prevFocus=null;
@@ -1468,7 +1701,10 @@ function printTree(){
 }
 function doPrint(){
   var v=terminal?verdict(terminal):{t:'TAS decision — in progress',s:'This path is not yet complete.'};
-  var h='<h2>'+esc(v.t)+'</h2><p>'+esc(v.s)+'</p>';
+  var now=new Date();
+  var h='<h2>'+esc(v.t)+'</h2>'
+   +'<p class="pstamp">Generated '+now.getDate()+' '+MON[now.getMonth()]+' '+now.getFullYear()
+   +' by the TAS Decision Tree</p><p>'+esc(v.s)+'</p>';
   h+=printTree();
   h+='<h3>Answers chosen</h3><div>';
   path.forEach(function(p){
@@ -1490,10 +1726,283 @@ function doPrint(){
   h+='<h3>The four eligibility criteria (40 CFR §§ 49.6 / 49.7)</h3><ul>'+CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
   h+='<h3>Next steps</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
   h+='<h3>Reference</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+l.u+'</li>';}).join('')+'</ul>';
-  h+='<p class="pd">'+DISC+'</p>';
+  h+='<div class="pd">'+DISC.print+'</div>';
   document.getElementById('printOut').innerHTML=h;
   window.print();
 }
+
+/* ===========================================================================
+   THE GUIDE
+   The reader meets this before the tree on a first visit, and can reopen it
+   from the top bar at any point. It is gated on a key of its own so a
+   returning reader lands straight on question 1 — the Guide button ignores
+   that key, because a reader with a doubt should never have to clear storage
+   to read the manual again.
+   ========================================================================= */
+var GUIDE_KEY='tas-guide-seen';
+var guideEl=document.getElementById('guide');
+var guideBody=document.getElementById('guideBody');
+var guideGo=document.getElementById('guideGo');
+var guideFocus=null, guideBuilt=false;
+function buildGuide(){
+  if(guideBuilt) return;
+  var h='<nav class="gtoc" id="gtoc">'+GUIDE.map(function(s,i){
+    return '<a href="#gs'+i+'" data-gs="'+i+'">'+esc(s.h)+'</a>'; }).join('')+'</nav>';
+  GUIDE.forEach(function(s,i){
+    h+='<section class="gsec" id="gs'+i+'"><h4>'+esc(s.h)+'</h4>'+s.html+'</section>';
+    /* the first section says what the tool is for; this says what it is not,
+       and it sits high enough that a reader who reads nothing else meets it.
+       It repeats the standing bar on purpose — see the note by .notice. */
+    if(i===0) h+='<div class="gack"><div class="rk">What this tool is not</div>'+DISC.guide+'</div>';
+  });
+  guideBody.innerHTML=h;
+  guideBody.querySelector('#gtoc').addEventListener('click',function(e){
+    var a=e.target.closest('[data-gs]'); if(!a) return;
+    e.preventDefault();
+    var t=document.getElementById('gs'+a.dataset.gs);
+    if(!t) return;
+    /* scrollIntoView overshoots inside this panel — it scrolls past the
+       header it cannot see behind — so the offset is measured off the two
+       rects instead. */
+    var rb=guideBody.getBoundingClientRect(), rt=t.getBoundingClientRect();
+    guideBody.scrollTo({top:Math.max(0,guideBody.scrollTop+(rt.top-rb.top)-8),
+                        behavior:reduce?'auto':'smooth'});
+  });
+  guideBuilt=true;
+}
+function openGuide(){
+  buildGuide();
+  guideFocus=document.activeElement;
+  guideEl.hidden=false;
+  guideBody.scrollTop=0;
+  guideGo.textContent=started?'Back to the tree':'Start the tree';
+  try{ guideGo.focus({preventScroll:true}); }catch(e){}
+}
+function closeGuide(){
+  guideEl.hidden=true;
+  try{ localStorage.setItem(GUIDE_KEY,'1'); }catch(e){}
+  /* leaving the guide for the first time is what starts the tree */
+  if(!started){ start(); return; }
+  if(guideFocus&&guideFocus.focus) try{ guideFocus.focus({preventScroll:true}); }catch(e){}
+}
+guideEl.addEventListener('click',function(e){ if(e.target.closest('[data-gclose]')) closeGuide(); });
+guideGo.addEventListener('click',closeGuide);
+document.getElementById('btnGuide').addEventListener('click',openGuide);
+
+/* ===========================================================================
+   CONTACT
+   A month picker and a slot list that compose a message the reader sends from
+   their own mail program. Nothing here posts anywhere, and nothing leaves
+   until the reader presses send in their own client — so the panel is safe to
+   open mid-tree, which is when the boundary question makes people want it. A
+   scheduling link, if the Tribe has configured one, is offered alongside
+   rather than instead.
+   ========================================================================= */
+var contactEl=document.getElementById('contact');
+var contactBody=document.getElementById('contactBody');
+var contactFoot=document.getElementById('contactFoot');
+var contactFocus=null;
+var CAL={view:null,day:null,slot:null,path:true};
+var SLOTS=['9:00 am','9:30 am','10:00 am','10:30 am','11:00 am','11:30 am',
+           '1:00 pm','1:30 pm','2:00 pm','2:30 pm','3:00 pm','3:30 pm','4:00 pm'];
+var MON=['January','February','March','April','May','June','July','August',
+         'September','October','November','December'];
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var NLC=String.fromCharCode(10);
+function midnight(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+function dayLabel(d){ return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()].slice(0,3)+' '+d.getFullYear(); }
+function calHtml(){
+  var v=CAL.view, today=midnight(new Date());
+  var first=new Date(v.getFullYear(),v.getMonth(),1);
+  var days=new Date(v.getFullYear(),v.getMonth()+1,0).getDate();
+  var atStart=(v.getFullYear()===today.getFullYear()&&v.getMonth()===today.getMonth());
+  var h='<div class="cal"><div class="cnav">'
+   +'<button class="btn icon sm" data-mon="-1" aria-label="Previous month" title="Previous month"'
+   +(atStart?' disabled':'')+'>&#8249;</button>'
+   +'<span class="mon">'+MON[v.getMonth()]+' '+v.getFullYear()+'</span>'
+   +'<button class="btn icon sm" data-mon="1" aria-label="Next month" title="Next month">&#8250;</button>'
+   +'</div><div class="cgrid">'
+   +DOW.map(function(d){ return '<div class="cdow">'+d.slice(0,2)+'</div>'; }).join('');
+  for(var p=0;p<first.getDay();p++) h+='<span class="cday pad"></span>';
+  for(var n=1;n<=days;n++){
+    var d=new Date(v.getFullYear(),v.getMonth(),n);
+    var wk=(d.getDay()===0||d.getDay()===6);
+    var past=d<today;
+    var sel=CAL.day&&CAL.day.getTime()===d.getTime();
+    h+='<button class="cday'+(sel?' sel':'')+(d.getTime()===today.getTime()?' today':'')+'"'
+     +' data-day="'+n+'"'+(past||wk?' disabled':'')
+     +' title="'+(past?'In the past':(wk?'Weekends are not offered':dayLabel(d)))+'"'
+     +(sel?' aria-pressed="true"':'')+'>'+n+'</button>';
+  }
+  return h+'</div></div>';
+}
+function slotHtml(){
+  if(!CAL.day) return '<p class="cpick">Pick a day above and the times open here.</p>';
+  return '<div class="cstep">Pick a time</div><div class="slots">'
+   +SLOTS.map(function(s){
+      return '<button class="slot'+(CAL.slot===s?' sel':'')+'" data-slot="'+s+'"'
+       +(CAL.slot===s?' aria-pressed="true"':'')+'>'+s+'</button>'; }).join('')
+   +'</div><p class="cpick">The message asks for the slot rather than booking it, '
+   +'so it is a proposal the other person can move.</p>';
+}
+function whoHtml(){
+  function row(k,v,todo){
+    return '<li><span class="k">'+k+'</span><span class="v'+(todo?' todo':'')+'">'+v+'</span></li>'; }
+  var h='<ul class="cwho">'
+   +row('Name',CONTACT.name?esc(CONTACT.name):'not filled in yet',!CONTACT.name)
+   +row('Role',CONTACT.role?esc(CONTACT.role):'not filled in yet',!CONTACT.role)
+   +row('Email',CONTACT.email
+        ?'<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>'
+        :'not filled in yet',!CONTACT.email)
+   +row('Phone',CONTACT.phone?esc(CONTACT.phone):'not filled in yet',!CONTACT.phone)
+   +'</ul>';
+  if(!CONTACT.name||!CONTACT.role||!CONTACT.email||!CONTACT.phone)
+    h+='<p class="cpick">'+CCOPY.whoTodo+'</p>';
+  return h;
+}
+/* The same rows the printout draws, as plain text, so a reader comparing the
+   email against the print-out sees one route described one way. */
+function pathLines(){
+  var out=[];
+  path.forEach(function(st){
+    var n=NODES[st.node], a=n.a[st.ai];
+    var g=(a.grants&&OUT[a.grants])?'  (+ '+OUT[a.grants].name+')':'';
+    out.push((n.short||n.tag||st.node)+' — '+(a.label||'')+g);
+  });
+  /* no ending yet means no Result row — never invent one */
+  if(terminal) out.push('Result: '+verdict(terminal).t);
+  return out;
+}
+function mailText(){
+  var who=CONTACT.name||'[Name]';
+  var d=CAL.day?dayLabel(CAL.day):'[day]', t=CAL.slot||'[time]';
+  var line=CAL.path
+   ?'My answers from the tool are below, so you can see where this comes from.'
+   :'I have not included my answers from the tool — I would rather walk through them with you.';
+  var b='Hello '+who+','+NLC+NLC
+   +'I have worked through the TAS decision tool and would like to talk it over before this goes further.'+NLC+NLC
+   +'Day requested: '+d+NLC
+   +'Time requested: '+t+NLC
+   +'If that slot is taken, any comparable time that week works.'+NLC+NLC
+   +'What I would like to cover:'+NLC+'- [what you want to ask]'+NLC+NLC
+   +line+NLC;
+  if(CAL.path){
+    var ls=pathLines();
+    b+=NLC+(ls.length?ls.join(NLC):'(no answers chosen yet)')+NLC;
+  }
+  b+=NLC+'Thank you,'+NLC+'[Your name], [Your role]'+NLC+'[Your phone]'+NLC;
+  return {subject:'TAS meeting request — '+d+', '+t,body:b};
+}
+function renderContactFoot(){
+  var ready=!!(CAL.day&&CAL.slot), can=ready&&!!CONTACT.email;
+  var h='<button class="btn solid" id="cSend"'+(can?'':' disabled')+' title="'
+   +(!ready?'Pick a day and a time first'
+     :(CONTACT.email?'Opens this in your own email program'
+                    :'No email address is filled in yet — copy the text instead'))
+   +'">Send request</button>'
+   +'<button class="btn" id="cCopy"'+(ready?'':' disabled')+' title="'
+   +(ready?'Copy the message to paste into your own email':'Pick a day and a time first')
+   +'">Copy email text</button>';
+  if(CAL.day||CAL.slot) h+='<button class="btn" id="cClear">Clear</button>';
+  if(CONTACT.calendly) h+='<button class="btn" id="cBook">Book a time</button>';
+  h+='<span class="grow"></span><span class="fnote">'
+   +(ready?'Ready: <b>'+esc(dayLabel(CAL.day))+'</b>, '+esc(CAL.slot)
+          :'Pick a day, then a time. Nothing is sent until you press send in your own email program.')
+   +'</span>';
+  contactFoot.innerHTML=h;
+}
+function renderContact(){
+  var h='<section class="gsec"><h4>When to talk to a person</h4>'+CCOPY.when+'</section>'
+   +'<section class="gsec"><h4>Your own people first</h4>'+CCOPY.own+'</section>'
+   +'<section class="gsec"><h4>Who to contact</h4><p>'+CCOPY.whoIntro+'</p>'+whoHtml()+'</section>'
+   +'<section class="gsec"><h4>Request a meeting</h4><p>'+CCOPY.meet+'</p>'
+   +'<div class="cstep">Pick a day</div><div id="calWrap">'+calHtml()+'</div>'
+   +'<div id="slotWrap">'+slotHtml()+'</div>'
+   +'<label class="copt"><input type="checkbox" id="cPath"'+(CAL.path?' checked':'')+'>'
+   +'<span><b>Include my path</b>'
+   +'<span class="d">Adds the questions, answers, pathways and result to the email.</span></span>'
+   +'</label></section>';
+  if(CONTACT.calendly) h+='<section class="gsec"><h4>Book a time directly</h4>'+CCOPY.book+'</section>';
+  h+='<section class="gsec"><h4>After you send</h4>'+CCOPY.after+'</section>';
+  contactBody.innerHTML=h;
+  renderContactFoot();
+}
+function redrawCal(){ var w=document.getElementById('calWrap'); if(w) w.innerHTML=calHtml(); }
+function redrawSlots(){ var w=document.getElementById('slotWrap'); if(w) w.innerHTML=slotHtml(); }
+function openContact(){
+  var base=CAL.view||new Date();
+  CAL.view=new Date(base.getFullYear(),base.getMonth(),1);
+  contactFocus=document.activeElement;
+  renderContact();
+  contactEl.hidden=false;
+  contactBody.scrollTop=0;
+  var c=contactEl.querySelector('[data-cclose]');
+  if(c) try{ c.focus({preventScroll:true}); }catch(e){}
+}
+function closeContact(){
+  contactEl.hidden=true;
+  if(contactFocus&&contactFocus.focus) try{ contactFocus.focus({preventScroll:true}); }catch(e){}
+}
+function sendMail(){
+  if(!CONTACT.email||!CAL.day||!CAL.slot) return;
+  var m=mailText();
+  window.location.href='mailto:'+encodeURIComponent(CONTACT.email)
+   +'?subject='+encodeURIComponent(m.subject)+'&body='+encodeURIComponent(m.body);
+}
+/* A long path can push a mailto past what some mail clients accept, and a
+   reader may have no mail client registered at all — so the text is always
+   available to carry across by hand. */
+function copyMail(btn){
+  if(!CAL.day||!CAL.slot) return;
+  var m=mailText();
+  var txt='To: '+(CONTACT.email||'[email address]')+NLC+'Subject: '+m.subject+NLC+NLC+m.body;
+  function done(){
+    btn.textContent='Copied';
+    setTimeout(function(){ btn.textContent='Copy email text'; },1800);
+  }
+  function fallback(){
+    var ta=document.createElement('textarea');
+    ta.value=txt; ta.setAttribute('readonly','');
+    ta.style.position='fixed'; ta.style.top='-1000px';
+    document.body.appendChild(ta); ta.select();
+    var ok=false;
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(ok) done(); else btn.textContent='Could not copy';
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(done,fallback);
+  else fallback();
+}
+contactEl.addEventListener('click',function(e){
+  if(e.target.closest('[data-cclose]')){ closeContact(); return; }
+  var m=e.target.closest('[data-mon]');
+  if(m){
+    CAL.view=new Date(CAL.view.getFullYear(),CAL.view.getMonth()+parseInt(m.dataset.mon,10),1);
+    redrawCal(); return;
+  }
+  var d=e.target.closest('[data-day]');
+  if(d){
+    CAL.day=new Date(CAL.view.getFullYear(),CAL.view.getMonth(),parseInt(d.dataset.day,10));
+    CAL.slot=null;
+    redrawCal(); redrawSlots(); renderContactFoot(); return;
+  }
+  var s=e.target.closest('[data-slot]');
+  if(s){ CAL.slot=s.dataset.slot; redrawSlots(); renderContactFoot(); return; }
+  if(e.target.closest('#cSend')){ sendMail(); return; }
+  var cp=e.target.closest('#cCopy');
+  if(cp){ copyMail(cp); return; }
+  if(e.target.closest('#cClear')){
+    CAL.day=null; CAL.slot=null;
+    redrawCal(); redrawSlots(); renderContactFoot(); return;
+  }
+  if(e.target.closest('#cBook')){ window.open(CONTACT.calendly,'_blank','noopener'); return; }
+});
+contactEl.addEventListener('change',function(e){
+  if(e.target.id==='cPath') CAL.path=e.target.checked;
+});
+document.getElementById('btnContact').addEventListener('click',openContact);
+document.getElementById('guideContact').addEventListener('click',function(){ closeGuide(); openContact(); });
 
 /* ---------- start / reset ---------- */
 function start(){
@@ -1597,7 +2106,14 @@ applyView=function(){ _applyView(); paintParallax(); };
    measure it synchronously — deliberately NOT via requestAnimationFrame,
    which never fires in a background tab and would leave the page blank
    until the reader switched to it. */
-start();
+/* A reader meeting this for the first time gets the guide before the tree;
+   after that the guide is a button and the tree opens straight away. Closing
+   the guide is what calls start(). */
+(function(){
+  var seen=false;
+  try{ seen=localStorage.getItem(GUIDE_KEY)==='1'; }catch(e){}
+  if(seen) start(); else openGuide();
+})();
 /* If the first measurement landed before the browser had sized the stage
    (webfont swap, restored window), re-centre once everything settles. */
 window.addEventListener('load',function(){ if(started) focusFrontier(); });

@@ -430,10 +430,31 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
    Edits happen on T, never on the loaded defaults, so Revert is always honest.
    ========================================================================= */
 var DRAFT_KEY='tas-tree-draft';
-var BASE=(window.TAS_TREE||{NODES:{},OUT:{},NONTAS:[],CRITERIA:[],NEXT:[],LINKS:[],DISC:''});
+var BASE=(window.TAS_TREE||{NODES:{},OUT:{},NONTAS:[],CRITERIA:[],NEXT:[],LINKS:[],
+                            DISC:{},CONTACT:{}});
+/* The seven disclaimer placements, in the order a reader meets them. */
+var DISC_FIELDS=[
+  ['bar','The standing bar',   'One line, under the top bar for the whole session. Plain text \u2014 no tags.'],
+  ['guide','In the guide',     'The \u201cwhat this tool is not\u201d box, high in the guide. HTML.'],
+  ['boundary','Boundary risk', 'The danger card in the result, when a boundary answer came up. HTML.'],
+  ['authority','Eligibility is not authority','Its own card in the result, above the criteria. HTML.'],
+  ['result','Foot of the result','Closing note in the result panel. HTML.'],
+  ['print','On the print-out', 'This one has to stand alone months later with none of the tool around it. HTML.'],
+  ['cites','About the citations','Printed and shown at the foot of the result. HTML.']
+];
+var CONTACT_FIELDS=[
+  ['name','Name',''],
+  ['role','Role or title',''],
+  ['email','Email','Without this the Contact panel can only offer \u201ccopy the text\u201d.'],
+  ['phone','Phone',''],
+  ['calendly','Scheduling link','Any URL \u2014 Calendly, Bookings, anything. Fill it in and a Book a time button appears.']
+];
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
 var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */
 try{ var raw=localStorage.getItem(DRAFT_KEY); if(raw) T=JSON.parse(raw); }catch(e){}
+/* a draft written before the disclaimer set was split still opens */
+normaliseCopy();
+
 
 var TERMINALS={END:'Result',END_NONTAS:'Non-TAS pathways'};
 function isTerminal(id){ return TERMINALS.hasOwnProperty(id); }
@@ -1267,10 +1288,49 @@ function renderContent(){
         return {t:line.slice(0,i<0?line.length:i).trim(),u:i<0?'':line.slice(i+2).trim()};
       });
     },{area:true,rows:4}));
-  pane.appendChild(sectionTitle('Standing disclaimer'));
-  pane.appendChild(field('Shown on every screen and on the print-out',T.DISC,function(v){ T.DISC=v; },{area:true,rows:5}));
+  pane.appendChild(sectionTitle('Disclaimers'));
+  var dnote=document.createElement('p'); dnote.className='sub';
+  dnote.textContent='Seven placements, because they do different jobs. Leave one blank and that '
+    +'placement simply carries nothing \u2014 which for the bar and the print-out means a reader sees '
+    +'no disclaimer at all, so blank them deliberately or not at all.';
+  pane.appendChild(dnote);
+  DISC_FIELDS.forEach(function(f){
+    pane.appendChild(field(f[1],T.DISC[f[0]],function(v){ T.DISC[f[0]]=v; },
+      {area:true,rows:f[0]==='bar'?3:6,hint:f[2]}));
+  });
+  pane.appendChild(sectionTitle('Contact'));
+  var cnote=document.createElement('p'); cnote.className='sub';
+  cnote.textContent='Who the Contact button reaches. Until these are filled in the panel says so '
+    +'plainly rather than naming anyone.';
+  pane.appendChild(cnote);
+  CONTACT_FIELDS.forEach(function(f){
+    pane.appendChild(field(f[1],T.CONTACT[f[0]],function(v){ T.CONTACT[f[0]]=v; },{hint:f[2]}));
+  });
 }
 
+/* DISC was a single string before the disclaimer set was split by placement.
+   An older draft or export still carrying one is read as the bar line, so
+   nothing is lost and nothing has to be re-typed. */
+function normaliseCopy(){
+  if(typeof T.DISC==='string'){ var was=T.DISC; T.DISC={bar:was}; }
+  if(!T.DISC||typeof T.DISC!=='object') T.DISC={};
+  if(!T.CONTACT||typeof T.CONTACT!=='object') T.CONTACT={};
+  /* A field the draft has never heard of falls back to what the repo ships,
+     not to blank — otherwise opening the editor on an older draft would show
+     seven empty disclaimer boxes and invite someone to save them empty. */
+  DISC_FIELDS.forEach(function(f){
+    if(typeof T.DISC[f[0]]!=='string') T.DISC[f[0]]=(BASE.DISC&&BASE.DISC[f[0]])||'';
+  });
+  CONTACT_FIELDS.forEach(function(f){
+    if(typeof T.CONTACT[f[0]]!=='string') T.CONTACT[f[0]]=(BASE.CONTACT&&BASE.CONTACT[f[0]])||'';
+  });
+  /* the same guard the import path has: a hand-written or partial draft must
+     not take the editor down on load */
+  ['OUT','NONTAS','CRITERIA','NEXT','LINKS'].forEach(function(k){
+    if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{};
+  });
+  if(!T.NODES||typeof T.NODES!=='object') T.NODES=clone(BASE.NODES||{});
+}
 function checks(){
   var out=[], reach=reachable();
   if(!T.NODES[ROOT]) out.push({bad:true,t:'No root question',d:'The tree starts at "'+ROOT+'", which does not exist.'});
@@ -1345,7 +1405,7 @@ document.getElementById('bImport').onclick=function(){
 document.getElementById('bReset').onclick=function(){
   if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
-  T=clone(BASE); sel=null; markDirty(false); render();
+  T=clone(BASE); normaliseCopy(); sel=null; markDirty(false); render();
 };
 document.getElementById('bAddQ').onclick=function(){ addQuestion(null); };
 document.getElementById('bOpen').onclick=function(){ window.open('index.html','_blank'); };
@@ -1381,7 +1441,7 @@ document.getElementById('dlgOk').onclick=function(){
     if(!d.NODES||typeof d.NODES!=='object') throw new Error('no NODES object found');
     T=d;
     ['OUT','NONTAS','CRITERIA','NEXT','LINKS'].forEach(function(k){ if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{}; });
-    if(typeof T.DISC!=='string') T.DISC='';
+    normaliseCopy();
     sel=null; markDirty(); render();
     dlg.close?dlg.close():dlg.removeAttribute('open');
   }catch(e){ alert('Could not read that: '+e.message); }
