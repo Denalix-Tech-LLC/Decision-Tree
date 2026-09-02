@@ -5,3 +5,11 @@ decision-tree-prompt.md
 .claude
 .github
 README.md
+docs
+
+# local-only tooling: the dev server and the database scripts. The functions
+# in /api and package.json must NOT be listed here — they are the deployment.
+dev-server.mjs
+scripts
+.env
+.env.example

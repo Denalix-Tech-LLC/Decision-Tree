@@ -1,84 +1,9 @@
 <meta charset="utf-8">
 <title>TAS Decision Tree</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- the palette and the backdrop, shared with /admin and /work -->
+<link rel="stylesheet" href="theme.css">
 <style>
-:root{
-  /* ---- BRAND PALETTE (from the brand guide) ----
-     Slate #2b4552 · Olive #899163 · Orange #c98150 · Pink #c24e78
-     Gold #dec26a · Sky #b8d0d8 · Neutrals #e5e8eb / #081b23
-     The guide directs that the two neutrals replace pure black and white
-     everywhere, text and backgrounds included, so #fff / #000 appear nowhere
-     below. Values marked (tint) are mixes of a brand colour with a brand
-     neutral — needed for card faces and semantic washes, which the guide does
-     not enumerate. Nothing here is from outside the palette. */
-  --bg:#e5e8eb;
-  --surface:#f2f4f6; --surface-2:#e5e8eb;          /* (tint) card face lifts off the neutral page */
-  --ink:#081b23; --muted:#4a5c66; --faint:#6f8290;
-  --accent:#2b4552; --accent-soft:#b8d0d8; --accent-ink:#2b4552;
-  --border:#c5ced4; --border-strong:#a6b4bd;       /* (tint) slate into the neutral */
-  --risk:#a35f2c; --risk-bg:#f6e6d8; --risk-line:#c98150;
-  --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
-  --alert:#a13760; --alert-bg:#f6e0e8;
-  --gold:#dec26a;
-  --on-accent:#e5e8eb; --amb:.5;
-  --photo-op:.34;
-  --sky-top:#cfdde3; --sky-mid:#dce3e7; --sky-bot:#e5e8eb;
-  --cloud:rgba(242,244,246,.8); --haze:rgba(229,232,235,.62);
-  --ridge-3:#cbd8de; --ridge-2:#b3c6cf; --ridge-1:#93aeba;
-  --mote:rgba(43,69,82,.42);
-  /* ---- BRAND TYPE ----
-     Real families first, then the closest system stand-ins, because this page
-     makes no external requests. Self-host Morvi / Gotham / Marion / Dongra as
-     woff2 @font-face and the real faces take over with no other change. */
-  --display:"Morvi","Haettenschweiler","Arial Narrow",Impact,system-ui,sans-serif;
-  --sans:"Gotham Book","Gotham","Montserrat","Century Gothic","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --serif:"Marion",Georgia,"Iowan Old Style","Palatino Linotype",serif;
-  --mono:var(--sans);                              /* labels are Gotham caps, not monospace */
-  --track:.025em;                                  /* guide: tracking +25 */
-  --sh1:0 1px 2px rgba(21,35,42,.05),0 6px 18px rgba(21,35,42,.06);
-  --sh2:0 2px 8px rgba(21,35,42,.09),0 18px 40px rgba(21,35,42,.13);
-  --ease:cubic-bezier(.22,.68,0,1);
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#081b23;
-    --surface:#11303d; --surface-2:#0d2530;
-    --ink:#e5e8eb; --muted:#a8bac4; --faint:#7d919d;
-    --accent:#b8d0d8; --accent-soft:#173a49; --accent-ink:#cfe3e9;
-    --border:#1e4150; --border-strong:#2d5768;
-    --risk:#dda06e; --risk-bg:#3a2716; --risk-line:#c98150;
-    --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
-    --alert:#d9739a; --alert-bg:#3a1a26;
-    --gold:#dec26a;
-    --on-accent:#081b23; --amb:.3;
-    --photo-op:.2;
-    --sky-top:#050f14; --sky-mid:#07161d; --sky-bot:#081b23;
-    --cloud:rgba(184,208,216,.07); --haze:rgba(184,208,216,.05);
-    --ridge-3:#0c222c; --ridge-2:#11303d; --ridge-1:#173d4d;
-    --mote:rgba(184,208,216,.4);
-    --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
-    --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#081b23;
-  --surface:#11303d; --surface-2:#0d2530;
-  --ink:#e5e8eb; --muted:#a8bac4; --faint:#7d919d;
-  --accent:#b8d0d8; --accent-soft:#173a49; --accent-ink:#cfe3e9;
-  --border:#1e4150; --border-strong:#2d5768;
-  --risk:#dda06e; --risk-bg:#3a2716; --risk-line:#c98150;
-  --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
-  --alert:#d9739a; --alert-bg:#3a1a26;
-  --gold:#dec26a;
-  --on-accent:#081b23; --amb:.3;
-  --photo-op:.2;
-  --sky-top:#050f14; --sky-mid:#07161d; --sky-bot:#081b23;
-  --cloud:rgba(184,208,216,.07); --haze:rgba(184,208,216,.05);
-  --ridge-3:#0c222c; --ridge-2:#11303d; --ridge-1:#173d4d;
-  --mote:rgba(184,208,216,.4);
-  --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
-  --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
-}
 
 *{box-sizing:border-box}
 /* A .btn carries display:inline-flex, which outranks the user-agent rule for
@@ -102,51 +27,25 @@ a{color:var(--accent-ink)}
    slow cloud banks, and drifting air motes sit behind everything at low
    contrast so card text stays fully legible.
    ========================================================================= */
-.env{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:paint}
 
 /* sky wash */
-.env .sky{position:absolute;inset:0;
-  background:linear-gradient(to bottom,var(--sky-top) 0%,var(--sky-mid) 46%,var(--sky-bot) 100%)}
+
+/* The sun, low and half-taken by the nearest ridge. It is what makes the wash
+   above read as a sunset rather than a warm sky, and it is the only thing on
+   the page brighter than the palette — a light source, like the arrival bloom,
+   not a surface. Sized in vmin so it stays a sun on a phone. */
+/* and the light it throws along the horizon, wider and much fainter */
 
 /* slow cloud banks */
-.env .clouds span{position:absolute;display:block;border-radius:50%;
-  background:radial-gradient(ellipse 58% 46% at 50% 50%,var(--cloud) 0%,transparent 74%);
-  opacity:calc(var(--amb) * .78);will-change:transform}
 .env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
 .env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
 .env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
-@keyframes cloud1{0%{transform:translateX(-14vw)}50%{transform:translateX(118vw)}50.01%{transform:translateX(-70vw)}100%{transform:translateX(-14vw)}}
-@keyframes cloud2{0%{transform:translateX(-60vw)}100%{transform:translateX(108vw)}}
-@keyframes cloud3{0%{transform:translateX(-82vw)}100%{transform:translateX(100vw)}}
 
 /* the haze band the Act exists to clear */
-.env .haze{position:absolute;left:0;right:0;bottom:20%;height:26%;
-  background:linear-gradient(to bottom,transparent,var(--haze) 62%,transparent);
-  opacity:calc(var(--amb) * 1.15)}
 
 /* ridgelines, far to near */
-.env .ridges{position:absolute;left:0;right:0;bottom:0;width:100%;height:46vh;min-height:260px;display:block}
-.env .ridges path{transition:fill .4s}
-.env .ridges .r3{fill:var(--ridge-3)}
-.env .ridges .r2{fill:var(--ridge-2)}
-.env .ridges .r1{fill:var(--ridge-1)}
 
 /* drifting air motes */
-.env .motes span{position:absolute;bottom:2vh;display:block;width:2px;height:2px;border-radius:50%;
-  background:var(--mote);opacity:0;animation:rise linear infinite}
-@keyframes rise{
-  0%{transform:translateY(0) translateX(0);opacity:0}
-  18%{opacity:calc(var(--amb) * .45)}
-  78%{opacity:calc(var(--amb) * .3)}
-  100%{transform:translateY(-42vh) translateX(3vw);opacity:0}
-}
-.env .motes span:nth-child(1){left:11%;animation-duration:126s;animation-delay:0s}
-.env .motes span:nth-child(2){left:29%;animation-duration:148s;animation-delay:22s}
-.env .motes span:nth-child(3){left:44%;animation-duration:114s;animation-delay:47s}
-.env .motes span:nth-child(4){left:61%;animation-duration:158s;animation-delay:13s}
-.env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
-.env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}
-
 
 /* ---- optional photograph ----
    Drop a file named land.jpg (or .png / .webp — see README) beside this page
@@ -157,14 +56,7 @@ a{color:var(--accent-ink)}
    The treatment is deliberate. The image is masked away toward the top, where
    the cards live, desaturated toward the brand palette and held at low opacity,
    so it can never compete with 13px text sitting on top of it. */
-.env .photo{position:absolute;inset:0;
-  background-image:url("land.jpg");background-size:cover;background-position:50% 76%;
-  opacity:var(--photo-op);filter:saturate(.5) contrast(.9) brightness(1.02);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%);
-  mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%)}
 /* pulls whatever the photo is toward the brand neutrals */
-.env .photo::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(to top,var(--sky-bot) 0%,transparent 55%)}
 
 /* ---- arriving at a result ----
    A sunrise rather than confetti. This tool ends a sovereignty decision, so the
@@ -213,8 +105,13 @@ a{color:var(--accent-ink)}
 }
 
 /* top bar */
+/* z-index 7, not 5: the bar is a flex item, so its z-index makes it a
+   stacking context, and the rail and the notice below it were siblings at the
+   same level and later in the document — which meant anything hanging out of
+   the bar, like the Contact callout, was painted under them however high its
+   own z-index went. The top bar is the topmost chrome; it should say so. */
 .bar{flex:none;display:flex;align-items:center;gap:12px;padding:10px clamp(12px,2.5vw,20px);
-  background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:5}
+  background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:7}
 .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
 .brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);
   display:grid;place-items:center;color:var(--on-accent)}
@@ -244,7 +141,60 @@ a{color:var(--accent-ink)}
 #btnSound.muted{color:var(--faint)}
 @media (max-width:700px){ #btnSound .sndLabel{display:none} }
 /* five controls will not fit a phone; the two with icons lose their words */
+/* ---------------------------------------------------------------------------
+   THE CONTACT CUE
+   One question in this tree carries real-world stakes the tool cannot weigh:
+   the boundary question, where what the Tribe asserts is seen by other
+   governments and can be challenged in court. While that question is open,
+   Contact stops being a button in a row and says so — it takes the risk
+   colour, breathes, and a callout points up at it. Answering the question
+   puts it back.
+   ------------------------------------------------------------------------- */
+.cuewrap{position:relative;display:inline-flex}
+#btnContact.needed{border-color:var(--risk-line);background:var(--risk-bg);color:var(--risk);
+  animation:cuePulse 2.6s ease-in-out infinite}
+#btnContact.needed:hover{border-color:var(--risk);color:var(--risk)}
+@keyframes cuePulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(201,129,80,0)}
+  45%{box-shadow:0 0 0 5px rgba(201,129,80,.26)}
+}
+.cue{position:absolute;top:calc(100% + 10px);right:0;z-index:9;white-space:nowrap;
+  background:var(--risk-bg);border:1px solid var(--risk-line);color:var(--risk);
+  border-radius:9px;padding:6px 11px;font-family:var(--sans);font-weight:600;
+  font-size:11.5px;letter-spacing:var(--track);box-shadow:var(--sh2);cursor:pointer;
+  animation:cueIn .34s var(--ease) both}
+.cue:hover{background:var(--risk-line);color:var(--on-accent);border-color:var(--risk-line)}
+.cue:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+/* the arrow, a square of the same face turned on its corner */
+.cue i{position:absolute;top:-5px;right:18px;width:8px;height:8px;transform:rotate(45deg);
+  background:var(--risk-bg);border-left:1px solid var(--risk-line);border-top:1px solid var(--risk-line)}
+.cue:hover i{background:var(--risk-line);border-color:var(--risk-line)}
+@keyframes cueIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  #btnContact.needed{animation:none}
+  .cue{animation:none}
+}
+/* Below this the bar wraps to two rows and the callout would hang over the
+   standing notice — the one line about what this tool is not, which the reader
+   is never supposed to lose. The button keeps its colour and its pulse; the
+   words go. */
+@media (max-width:560px){ .cue{display:none} }
 @media (max-width:820px){ #btnGuide .lb,#btnContact .lb{display:none} }
+/* The bar gained a Save button and an account chip. On a narrow screen the
+   labels go before the buttons do — an icon with a title is still reachable,
+   a button pushed off the edge is not. */
+@media (max-width:900px){ #btnSavePath .lb{display:none} }
+@media (max-width:560px){
+  /* Below this the bar cannot hold a title and seven controls on one line, so
+     it stops trying: the title takes the first row and the controls the
+     second, wrapping among themselves. Nothing is dropped — on a phone the
+     account chip and Save are the two most likely to be wanted. */
+  .bar{flex-wrap:wrap;row-gap:8px;padding-bottom:9px}
+  .brand{flex:1 1 100%;min-width:0}
+  .brand h1{font-size:15px}
+  .acts{flex:1 1 100%;min-width:0;flex-wrap:wrap;justify-content:flex-start}
+  .btn{padding:7px 10px}
+}
 
 .rail{flex:none;height:3px;background:var(--surface-2);position:relative;overflow:hidden;z-index:5}
 .rail i{position:absolute;inset:0 auto 0 0;width:0%;display:block;
@@ -309,6 +259,11 @@ a{color:var(--accent-ink)}
 .tnode.opt .kb{position:absolute;top:8px;right:9px;width:18px;height:18px;border-radius:5px;
   background:var(--surface-2);border:1px solid var(--border-strong);display:grid;place-items:center;
   font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);transition:.18s}
+/* The badge floats over the corner, so the first line of the label has to end
+   before it. On a wide card the label never reached that far; on a narrow one
+   it ran straight underneath. */
+.tnode.opt .ttl{padding-right:22px}
+.tnode.opt.chosen .ttl,.tnode.opt.notaken .ttl{padding-right:0}
 .tnode.opt:hover .kb{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 
 /* chosen / not taken */
@@ -367,13 +322,22 @@ a{color:var(--accent-ink)}
    hover, so the branch has time to read as growing rather than appearing.
    Carried on its own class so hover and state changes stay quick. */
 .tnode.entering{transition:opacity .8s var(--ease),transform .9s var(--ease)}
+/* Cutting the tree back with the x is a slower withdrawal than growing is: the
+   reader asked for something to be taken away, and watching it go is how they
+   see what the answer was holding up. Each limb takes its time on the way out
+   as well as waiting its turn. */
+.tnode.entering.slow{transition:opacity 1.15s var(--ease),transform 1.25s var(--ease)}
+/* A limb on its way out must not be clickable. The retreat now lasts long
+   enough to catch a click, and a click on a card that is half gone would
+   answer a question the reader is in the middle of withdrawing. */
+.tnode.leaving{pointer-events:none}
 
 /* edges */
 .edge{fill:none;stroke:var(--border-strong);stroke-width:4;stroke-linecap:round}
 .edge.taken{stroke:var(--good);stroke-width:6.5}
 /* a hairline of the page colour under each limb, so a line crossing the
    backdrop or another line still reads as a separate limb */
-.edge.halo{stroke:var(--bg);stroke-width:9;opacity:.85}
+.edge.halo{stroke:var(--halo);stroke-width:9;opacity:.85}
 .edge.halo.taken{stroke-width:11}
 .edge.dimmed{opacity:.3}
 .edge.grant{stroke:var(--good-line);stroke-width:3.4;stroke-dasharray:6 5}
@@ -427,6 +391,44 @@ body.running .hint{opacity:1}
   padding:13px clamp(16px,3vw,26px);border-top:1px solid var(--border);background:var(--surface-2)}
 .doc .dfoot .grow{flex:1}
 .doc .dfoot .fnote{font-size:11.5px;color:var(--muted);line-height:1.4;max-width:340px}
+
+/* ---------------------------------------------------------------------------
+   THE WALKTHROUGH
+   Five short screens a first-time reader is shown before the tree, ending in
+   the button that starts it. It is not the guide: the guide is the manual,
+   reachable all session and written to be read out of order. This is the one
+   pass that gets someone from "what am I looking at" to a first answer, and
+   it is over in five clicks.
+   ------------------------------------------------------------------------- */
+.walk .doc{width:min(560px,100%)}
+.walk .dbody{padding-top:16px}
+.walk .dbody p{margin:0 0 11px;font-size:15px}
+.walk .dbody p:last-child{margin-bottom:2px}
+.walk .dbody b{font-weight:650}
+.walk .wart{margin:0 0 15px;border:1px solid var(--border);border-radius:12px;
+  background:var(--surface-2);padding:13px 14px}
+.walk .wart svg{display:block;width:100%;height:auto}
+.walk .wnote{margin:13px 0 2px;border-left:3px solid var(--risk);background:var(--risk-bg);
+  border-radius:0 9px 9px 0;padding:10px 13px;font-size:13.5px;color:var(--ink);line-height:1.5}
+.walk .wnote b{color:var(--risk)}
+.wdots{display:flex;gap:7px;align-items:center}
+.wdots i{display:block;width:7px;height:7px;border-radius:50%;background:var(--border-strong);
+  transition:background .2s,transform .2s}
+.wdots i.on{background:var(--accent);transform:scale(1.35)}
+.wdots i.done{background:var(--accent-soft)}
+/* the drawing speaks the tree's own language: a question, options under it,
+   the chosen one lit and the rest receded */
+.wq{fill:var(--surface);stroke:var(--accent);stroke-width:1.6}
+.wo{fill:var(--surface);stroke:var(--border-strong);stroke-width:1.2}
+.wo.pick{fill:var(--good-bg);stroke:var(--good-line);stroke-width:1.8}
+.wo.grey{opacity:.45}
+.wl{fill:none;stroke:var(--border-strong);stroke-width:2.4;stroke-linecap:round}
+.wl.pick{stroke:var(--good);stroke-width:3.4}
+.wt{font-family:var(--sans);font-size:8.5px;fill:var(--muted)}
+.wt.on{fill:var(--ink);font-weight:600}
+.wchip{fill:var(--accent-soft)}
+.wchip-t{font-family:var(--sans);font-size:8px;font-weight:600;fill:var(--accent-ink)}
+
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn:disabled:hover{border-color:var(--border-strong);color:var(--ink);transform:none;box-shadow:none}
 
@@ -572,6 +574,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
          --lift:0px!important;--sc:1!important}
   .stage{perspective:none!important}
   .tnode.entering{transition:opacity .4s linear!important}
+  .tnode.entering.slow{transition:opacity .55s linear!important}
   .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
   .env .ridges{transform:none!important}
   .env .clouds span,.env .motes span{animation:none!important}
@@ -607,6 +610,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 
 <div class="env" aria-hidden="true">
   <div class="sky"></div>
+  <div class="sun"></div>
   <div class="photo"></div>
   <div class="clouds"><span></span><span></span><span></span></div>
   <div class="haze"></div>
@@ -628,15 +632,27 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       </span>
     </div>
     <div class="acts">
-      <button class="btn" id="btnGuide" title="How to use this tool">
+      <button class="btn" id="btnGuide" title="How to use this tool — the five-screen introduction">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v18H6.5A2.5 2.5 0 0 1 4 18.5zM12 3h5.5A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5H12"/></svg>
         <span class="lb">Guide</span>
       </button>
-      <button class="btn" id="btnContact" title="Talk to a person">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span class="lb">Contact</span>
-      </button>
+      <span class="cuewrap">
+        <button class="btn" id="btnContact" title="Talk to a person">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="lb">Contact</span>
+        </button>
+        <!-- Raised only while a question carrying a risk note is open. It
+             points at the button rather than replacing it, so the reader can
+             ignore it and carry on. -->
+        <button class="cue" id="contactCue" hidden type="button">Worth a word with counsel<i></i></button>
+      </span>
       <button class="btn" id="btnResult" hidden>Result</button>
+      <!-- Saving is an account feature and says so before it asks: a guest
+           who presses this gets the explanation, not a silent failure. -->
+      <button class="btn" id="btnSavePath" hidden title="Keep this path on your account and come back to it later">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+        <span class="lb">Save</span>
+      </button>
       <button class="btn" id="btnSound" aria-pressed="true" title="Sound on — click to mute">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M11 5 6 9H3v6h3l5 4z"/><path class="wave1" d="M16 9a4 4 0 0 1 0 6"/>
@@ -675,9 +691,32 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
         Print
       </button>
+      <button class="btn sm" data-savedoc="1" hidden title="Keep this result as a document you can edit, print and come back to">Save as document</button>
       <button class="btn sm" data-close="1">Close ✕</button>
     </div>
     <div class="body" id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- The walkthrough. What a first-time reader meets before the tree: five
+     screens, then the button that starts it. Reopenable from the guide, and
+     from /?walk=1. -->
+<div class="ovl walk" id="walk" hidden role="dialog" aria-modal="true" aria-labelledby="walkTitle">
+  <div class="bg"></div>
+  <div class="doc narrow">
+    <div class="dhead">
+      <div><span class="kk" id="walkStep">Step 1</span><h3 id="walkTitle">How this works</h3></div>
+      <span class="grow"></span>
+      <button class="btn sm" id="walkGuide" title="Everything here, in full, plus the parts a walkthrough leaves out">Full guide</button>
+      <button class="btn sm" id="walkSkip">Skip &#10005;</button>
+    </div>
+    <div class="dbody" id="walkBody"></div>
+    <div class="dfoot">
+      <div class="wdots" id="walkDots" aria-hidden="true"></div>
+      <span class="grow"></span>
+      <button class="btn" id="walkBack">Back</button>
+      <button class="btn solid" id="walkNext">Next</button>
+    </div>
   </div>
 </div>
 
@@ -695,6 +734,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     <div class="dbody" id="guideBody"></div>
     <div class="dfoot">
       <button class="btn solid" id="guideGo">Start the tree</button>
+      <button class="btn" id="guideWalk" title="The five-screen introduction, again">Walkthrough</button>
       <button class="btn" id="guideContact">Contact</button>
       <span class="grow"></span>
       <span class="fnote">The <b>Guide</b> button in the top bar reopens this whenever you have a doubt.</span>
@@ -719,7 +759,13 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 
 <div id="printOut"></div>
 
+<!-- the canvas arithmetic the tree and the editor share -->
+<script src="view.js"></script>
 <script src="tree-data.js"></script>
+<!-- Accounts, saved work and the guest explanation. Loaded before the tree so
+     the top bar can carry an account chip from the first paint; the tree runs
+     perfectly well if this file 404s, and the Save buttons then say so. -->
+<script src="account.js"></script>
 
 <script>
 "use strict";
@@ -771,11 +817,16 @@ function sndChoose(){ voice({from:392,dur:0.20,type:'sine',vol:0.26,cut:1600});
                       voice({from:587.33,dur:0.30,type:'sine',vol:0.20,cut:1900,delay:0.07}); }
 function sndResult(){ [523.25,659.25,783.99,1046.50].forEach(function(f,i){
                         voice({from:f,dur:0.85,type:'sine',vol:0.22,cut:2600,delay:i*0.10}); }); }
-function sndRetract(){voice({from:520,to:190,dur:0.44,type:'triangle',vol:0.18,cut:1000}); }
-/* the pentatonic run walked backwards, one note per limb as it withdraws */
-function sndUnwind(i){
-  var f=PENTA[(PENTA.length-1-((i>>1)%PENTA.length))];
-  voice({from:f,dur:0.24,type:'sine',vol:0.16,cut:1600});
+function sndRetract(dur){voice({from:520,to:190,dur:dur||0.44,type:'triangle',vol:0.18,cut:1000}); }
+/* The pentatonic run walked backwards, one note per limb as it withdraws.
+   The caller passes the note's own index rather than a loop counter, so a
+   fast retreat can play one note per two limbs and a slow one can play a note
+   for each — the run is the same either way. */
+function sndUnwind(step,soft){
+  var f=PENTA[(PENTA.length-1-(step%PENTA.length))];
+  voice({from:f,dur:soft?0.34:0.24,type:'sine',vol:soft?0.18:0.16,cut:1600});
+  /* an octave under, quietly, so a slow withdrawal has some floor to it */
+  if(soft) voice({from:f/2,dur:0.30,type:'sine',vol:0.07,cut:900});
 }
 
 function setSound(on){
@@ -790,90 +841,30 @@ function setSound(on){
   }
 }
 /* ===========================================================================
-   DATA — questions, answers, and the pathways answers unlock
+   THE CONTENT
+   Empty here on purpose. The questions, the pathways and the result copy used
+   to sit in this file as well, as a fallback for a page that could be opened
+   on its own — and by the time anyone looked, that copy had drifted from
+   tree-data.js, which overrides it on every load. A second copy of a legal
+   citation that nobody reads is not a safety net.
+
+   What fills these in, lowest precedence first:
+
+     1. tree-data.js   the file the repo ships, loaded before this script
+     2. /api/tree      what the editor published, if anything (async, below)
+     3. a local draft  saved from /admin, this browser only
+     4. ?tree= / ?run= a saved tree, or the snapshot inside a saved path
+
+   If none of them arrive, the page says so rather than drawing an empty
+   canvas — see the check at the foot of this block.
    ========================================================================= */
-var NODES={
-  q1:{tag:'Question 1 · Boundaries',short:'Boundaries',
-    q:'Are any of the Tribe’s jurisdictional boundaries disputed?',
-    a:[{label:'No — boundaries are clear',short:'No — clear',to:'q2'},
-       {label:'Yes — some are disputed',short:'Yes — disputed',to:'q1b'},
-       {label:'We’re not sure yet',short:'Not sure',to:'q1b'}]},
-  q1b:{tag:'Question 1b · Boundary risk',short:'Boundary risk',risky:true,
-    q:'How would you like to proceed?',
-    note:'EPA must share your boundary showing with the appropriate governmental entities, who may comment and later challenge it in court. An adverse ruling could narrow the CAA regulatory jurisdiction EPA recognizes — it does not affect land title.',
-    a:[{label:'Undisputed areas only',short:'Undisputed only',to:'q2'},
-       {label:'Our full claimed area',short:'Full area',to:'q2'},
-       {label:'Don’t pursue TAS now',short:'Don’t pursue',to:'END_NONTAS'}]},
-  q2:{tag:'Question 2 · Sources',short:'Sources',
-    q:'How many air-pollution sources are within your jurisdiction?',
-    a:[{label:'Many',short:'Many',to:'q3',grants:'regulatory'},
-       {label:'A few, or a local issue',short:'A few',to:'q3',grants:'targeted'},
-       {label:'None or very few',short:'None/very few',to:'q3'}]},
-  q3:{tag:'Question 3 · Good neighbour',short:'Good neighbour',
-    q:'Do outside sources affect your air, or do you want a say in nearby permits?',
-    a:[{label:'Yes',short:'Yes',to:'q4',grants:'participatory'},
-       {label:'No',short:'No',to:'q4'}]},
-  q4:{tag:'Question 4 · Capacity',short:'Capacity',
-    q:'Do you have the capacity to run an air program?',
-    a:[{label:'Yes, we’re ready',short:'Ready',to:'END'},
-       {label:'Not yet — we’d build it',short:'Building',to:'END',grants:'capacity'},
-       {label:'Unsure',short:'Unsure',to:'END',grants:'capacity'}]}
-};
-var OUT={
-  regulatory:{name:'Regulatory TAS',title:'Be the primary implementing authority',
-    body:'Develop and run the programs that permit, inspect and enforce on the sources in your jurisdiction. You choose <b>how</b>:',
-    options:[{h:'Develop your own programs → EPA approval',d:'You tailor the rules and are the primary enforcer. Once approved they are federally enforceable.'},
-             {h:'Take delegation of federal rules',d:'No rule-writing — use existing federal rules (40 CFR part 71). You permit and inspect; enforcement is referred to EPA. A good capacity-building first step.'}],
-    sections:['§110 TIP','O₃ plans §§181–185','PM plans §§188–189','SO₂/NO₂/Pb §§191–192','CO plans §§186–187','Regional haze §169A','PSD §165','NSR §173','§167 enforcement','Title V §§501–507','§111 NSPS','§112 air toxics','§114 records','§129 solid-waste combustion','§303 emergency powers']},
-  targeted:{name:'Targeted Regulatory TAS',title:'Address a specific, localized issue',
-    body:'Even with only a few sources a focused program can help — for example a burning ordinance for wood smoke under a Tribal Implementation Plan.',
-    sections:['§110 TIP','PM NAAQS']},
-  participatory:{name:'Participatory TAS',title:'A formal “good neighbour” voice',
-    body:'Get early review of, and standing to comment on, neighbouring states’ plans and permits — and petition EPA when outside sources affect your air.',
-    sections:['§126(a)/(b)','§110(a)(2)(D)(i)','§505(a)','§105 grants','§319 monitoring','§107(d) designations']},
-  capacity:{name:'Capacity building',title:'You can pursue TAS while you build capacity',
-    body:'Not being “ready” is not a barrier. Options that lower the lift:',
-    checks:[{h:'Submit a capability plan',d:'Show EPA how you will gain the technical expertise over time.'},
-            {h:'Take delegation instead of writing rules',d:'Use federal rules under 40 CFR part 71 to start.'},
-            {h:'Phase your program',d:'Seek TAS for a few sections now, add more later.'},
-            {h:'Partner or form a consortium',d:'Share staff and expertise with neighbouring Tribes.'}]}
-};
-var NONTAS=[
-  {h:'Use your inherent Tribal authority',d:'Develop your own programs without submitting them to EPA for approval.'},
-  {h:'Grants',d:'§103 (investigative) grants need no TAS; §105 (programmatic) grants can flow through a Performance Partnership Grant (PPG). Note §105 without TAS carries the standard 40% match, whereas TAS reduces it to 5% (then up to 10%).'},
-  {h:'Run programs directly',d:'Monitoring, environmental education, indoor-air and radon programs — all without TAS.'}
-];
-var CRITERIA=[
-  {h:'Federal recognition',d:'Listed by the Department of the Interior. § 49.6(a)'},
-  {h:'A governing body carrying out substantial duties',d:'A narrative on your government’s form, functions and source of authority. § 49.6(b)'},
-  {h:'A jurisdictional showing',d:'Reservation: map + legal description of exterior boundaries. Off-reservation: a statement of legal counsel on the basis for jurisdiction. § 49.6(c)'},
-  {h:'Reasonable capability — or a plan to build it',d:'§ 49.6(d). You may reuse documentation from a prior TAS approval per § 49.7(a)(8).'}
-];
-var NEXT=[
-  {h:'Bring this result to Tribal leadership, Council and legal counsel.',d:'The boundary and sovereignty stakes make this a governance decision, not just a technical one.'},
-  {h:'Assemble your jurisdictional showing.',d:'Map and legal description (reservation), or a counsel statement (off-reservation).'},
-  {h:'Document your governing body and capability — or a plan to build it.',d:''},
-  {h:'Contact your EPA Regional Office Tribal air lead (or OAQPS).',d:'They can confirm scope and help streamline the application.'},
-  {h:'Review the detailed CAA-section summary before finalizing which sections to seek.',d:''}
-];
-var LINKS=[
-  {t:'CAA: Summary of content & applicability for TAS (Titles I, III, V)',u:'https://www.epa.gov/tribal-air/clean-air-act-summary-content-applicability-tas-titles-i-iii-and-v'},
-  {t:'Tribal Authority Rule (TAR) under the Clean Air Act',u:'https://www.epa.gov/tribal-air/tribal-authority-rule-tar-under-clean-air-act'}
-];
+var NODES={}, OUT={}, NONTAS=[], CRITERIA=[], NEXT=[], LINKS=[];
+var DISC={bar:'',guide:'',boundary:'',authority:'',result:'',print:'',cites:''};
 /* ---------------------------------------------------------------------------
    DISCLAIMERS. Seven placements, because they do different jobs: the standing
    bar is one line the reader never loses, the printout has to stand alone
    months later with none of the tool around it. Editable at /admin.
    ------------------------------------------------------------------------- */
-var DISC={
-  bar:`General information to support your discussion — not legal advice, and not an official EPA product. Confirm with Tribal legal counsel.`,
-  guide:`<p>This is not an official EPA product, carries no EPA endorsement, and is not legal advice. It does not determine eligibility and it sends nothing to EPA. What you get at the end is a written summary of the route you chose — something to open a conversation with Tribal legal counsel, with leadership and Council, and with your EPA Regional Office Tribal air lead.</p><p>Every answer is one you select yourself. The tool cannot verify anything about your boundaries, your sources or your capacity, so a result is only as sound as what was entered. Read it as one input into a governance decision, not as the decision.</p>`,
-  boundary:`<p>A TAS request requires a jurisdictional showing — for a reservation, a map and legal description of the exterior boundaries; for off-reservation areas, a statement of legal counsel on the basis for jurisdiction (<code>40 CFR §49.7</code>). EPA notifies the appropriate governmental entities, including neighbouring state and local air agencies, and gives them a period to comment on the Tribe's jurisdictional assertion (<code>40 CFR §49.9</code>). After an approval, EPA's determination and the jurisdictional basis for it can be challenged in court.</p><p>If such a challenge succeeded, the effect would be to <b>narrow the Clean Air Act regulatory jurisdiction EPA recognizes</b> for the Tribe — a limit on the area over which the Tribe could implement and enforce CAA programs. It does <b>not</b> affect land title or ownership. Nothing in a TAS proceeding changes who holds or owns the land; the two are separate questions and should not be described to Council as one.</p><p>Neither comment nor a court challenge is automatic. But the showing is open to others, so the possibility belongs in the decision before you file. Which areas to request — the full claimed area, or undisputed areas only — is a judgement for Tribal legal counsel and Council.</p>`,
-  authority:`<p>TAS is a threshold status. An approval means EPA recognizes the Tribe as eligible for treatment in the same manner as a state for the Clean Air Act sections named in the request. It does not, by itself, put a program in place or give the Tribe authority to permit, inspect or enforce.</p><p>Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it — a Tribal implementation plan under <code>§110</code>, a title V operating-permit program, delegation of the federal rules at <code>40 CFR Part 71</code>, and so on. Until that second step is complete for a given program, EPA remains the implementing authority. Plan for both stages, and for the time between them.</p>`,
-  result:`<p>This result reflects only the answers selected here. It is general information to support your discussion — not legal advice, not a determination of eligibility, and not an official EPA product. Nothing has been sent to EPA.</p><p>Before anyone relies on it: confirm every section number against the current Clean Air Act and <code>40 CFR Part 49</code>, review the sections with Tribal legal counsel, and speak with your EPA Regional Office Tribal air lead.</p>`,
-  print:`<p>This document was produced by the TAS Decision Tree, an unofficial planning aid. It is not an EPA product, carries no EPA endorsement or approval, and is not legal advice. It records the answers someone selected in the tool on the date it was generated, and the options those answers point to. Nothing in it has been reviewed by, filed with, or decided by EPA, and it is not an application.</p><p>If you are reading it some time later, treat it as a snapshot: the Clean Air Act, <code>40 CFR Part 49</code>, EPA guidance and the Tribe's own circumstances may all have changed. Confirm every section number against the current statute and regulation, and read it with Tribal legal counsel.</p><p>Two points are easy to lose without the rest of the tool in front of you:</p><ul><li>TAS is a threshold eligibility status. Each program must still be submitted to EPA separately and approved before the Tribe can implement or enforce it.</li><li>If the route recorded here involved a disputed or uncertain boundary: a TAS request requires a jurisdictional showing, EPA notifies the appropriate governmental entities, they may comment on the Tribe's jurisdictional assertion, and after an approval EPA's determination and its jurisdictional basis can be challenged in court. An adverse ruling could narrow the Clean Air Act regulatory jurisdiction EPA recognizes for the Tribe. It would <b>not</b> affect land title or ownership.</li></ul><p>Questions about scope or eligibility go to your EPA Regional Office Tribal air lead.</p>`,
-  cites:`<p>The section numbers here — Clean Air Act sections such as <code>§110</code>, <code>§126</code> and <code>§505(a)</code>, the eligibility criteria at <code>40 CFR §49.6</code>, the contents of a request at <code>§49.7</code>, and the provisions Part 49 does not open to Tribes at <code>§49.4</code> — point you to the right part of the law. They are not authority to quote. Statutes, regulations and guidance change, and this tool is not updated automatically.</p><p>Confirm each cite against the current Clean Air Act and <code>40 CFR Part 49</code> before it goes into a request, a Council briefing, or anything else people will act on. Tribal legal counsel and your EPA Regional Office Tribal air lead can confirm which sections apply to what you intend to seek.</p>`
-};
 
 /* Who a reader reaches with a question. All five are blank in the repo: the
    Tribe deploying this tool fills them in at /admin (or here) before it is
@@ -901,6 +892,10 @@ var GUIDE=[
    html:`<p><b>Print</b> at the top of the result panel prints the result or saves it as a PDF, depending on what you choose in your browser's print dialog.</p><p>It opens with a drawing of the route you took — each question, the answer chosen, the pathway it unlocked, and the result — then the written sections: the recommended pathways with their sections, the non-TAS options, the eligibility criteria, next steps, references, and the standing notice. Someone who was not at the screen can read it and see both what the tool pointed to and how you got there.</p><p><b>Confirm every section number against the current Clean Air Act and 40 CFR Part 49 before anyone relies on it.</b> Sections are amended and renumbered, and this is not an official EPA product.</p>`},
   {h:`Changing the content`,
    html:`<p>The questions, answers, pathways and result text can be changed in the editor at <code>/admin</code>. Edits are held in that browser, so the tree shows them on that machine only. <b>Export</b> downloads a <code>tree-data.js</code> file; publishing that file to the site is what puts the change in front of everyone else.</p>`},
+  {h:`Keeping your work, and using this as a guest`,
+   html:`<p>You can use every part of this tool without an account. Answer the questions, re-route the tree, open the result, print it. Nothing is sent anywhere and nothing is required of you.</p><p>What a guest cannot do is <b>keep</b> any of it. Close the tab and the path is gone; the editor's working copy lives in this browser on this machine, and clearing the browser clears it. <b>Print</b> is how a guest keeps a result — the print-out is written to stand on its own.</p><p>Signing in takes one of two forms — <b>Continue with Google</b>, or an email address and a password you choose. Either way it adds three things and changes nothing else:</p><ul><li><b>Save</b> in the top bar keeps the path you are on — every answer, and the tree as it stood when you answered it. Open it again later and the tree grows back to exactly where you left off, whatever has been edited since.</li><li><b>Save as document</b>, in the result, turns the result into a document you can edit word by word, print, and open again months later.</li><li>At <code>/admin</code>, <b>My trees</b> keeps your version of the questions and recommendations somewhere other than one browser.</li></ul><p>All of it sits under <b>My work</b>, reached from the account button in the top bar. Deleting something there moves it to a deleted list rather than destroying it, and you can restore it or delete it for good.</p><p>An account here is a place to keep work, nothing more. It is not a submission to EPA, it is not visible to anyone else, and no one is notified when you save. Signing in with Google tells this tool your name, your email address and nothing else, and gives it no ability to do anything in your Google account. If the deployment you are using has no storage behind it, or has not been set up for Google, the sign-in panel says so and offers what it does have.</p>`},
+  {h:`Working on the document afterwards`,
+   html:`<p>The result panel prints, but it does not let you change a word. <b>Save as document</b> does: it takes the print-out exactly as it stands — the drawing of the route, the answers, the pathways and their sections, the criteria, the next steps, the references and the standing notice — and keeps it on your account as something you can rewrite. On <b>My work</b> you can also turn any saved path into a document later, with <b>Make a document</b>.</p><p>Open it at <b>My work → Documents</b>. The title at the top is a plain field; the body below it is the document itself, edited in place. The toolbar holds what a briefing needs and nothing else: <b>B</b>, <b>I</b> and <b>U</b>; <b>Heading</b>, <b>Sub</b> and <b>Text</b> for the three levels; bulleted and numbered lists; <b>Quote</b> for something set apart; <b>Clear</b> to strip formatting off a selection that came in wearing someone else's; <b>Rule</b> for a horizontal line; and undo and redo.</p><p>Text pasted from elsewhere arrives as plain text on purpose. A block of another page's HTML is the quickest way to make a document that will not print properly.</p><p>It <b>saves itself</b> about a second after you stop typing. The line beside <b>All documents</b> says <i>Saving…</i>, then <i>Saved</i>, and says so plainly if a save failed — if it ever does, the words are still on your screen, so do not close the tab. <b>Save</b> forces it immediately, and so does <code>ctrl</code>+<code>s</code>.</p><p><b>Print / Save PDF</b> prints what you have made of it, not what the tree produced — the editing tools and the page around them are not printed. <b>Duplicate</b> before a substantial rewrite gives you the earlier version to go back to; there is no version history beyond the copies you make. <b>Delete</b> moves a document to the deleted list, where <b>Restore</b> brings it back.</p><p>Two things a document does <i>not</i> do. Editing it never changes the tree, and never changes the saved path it came from — so the record of what was actually answered survives whatever you write on top of it. And a document is a snapshot: it does not update if you later change an answer or edit the content at <code>/admin</code>. To reflect a changed decision, make a new document and keep or delete the old one deliberately.</p><p>As a guest none of this is available, because nothing can be kept. <b>Print</b> in the result is the way to take a copy away with you.</p>`},
   {h:`Getting help`,
    html:`<p><b>Contact</b> in the top bar reaches whoever maintains this tool — use it for a citation that looks wrong, a question that reads badly, or behaviour you did not expect.</p><p>For the decision itself, work with Tribal legal counsel and then your EPA Regional Office Tribal air lead, who can confirm scope and what a request needs. <b>Guide</b> in the top bar reopens this page at any time.</p>`}
 ];
@@ -922,27 +917,80 @@ var CCOPY={
    file still works on its own; tree-data.js is what the repo ships; a draft
    saved from /admin wins over both, for this browser only.
    ------------------------------------------------------------------------- */
+/* Named rather than closed over, because content now arrives from three more
+   places than it used to: a tree saved to an account, a snapshot carried
+   inside a saved path, and a preview opened from /work. All of them mean the
+   same thing — replace the content and redraw. */
+function adoptContent(d){
+  if(!d) return;
+  if(d.NODES&&Object.keys(d.NODES).length) NODES=d.NODES;
+  if(d.OUT) OUT=d.OUT;
+  if(d.NONTAS) NONTAS=d.NONTAS;
+  if(d.CRITERIA) CRITERIA=d.CRITERIA;
+  if(d.NEXT) NEXT=d.NEXT;
+  if(d.LINKS) LINKS=d.LINKS;
+  /* DISC used to be one string. A file that still carries one is read as
+     the standing bar line, so an old export keeps working. */
+  if(typeof d.DISC==='string'&&d.DISC) DISC.bar=d.DISC;
+  else if(d.DISC) for(var k in d.DISC){ if(d.DISC[k]) DISC[k]=d.DISC[k]; }
+  if(d.CONTACT) for(var c in d.CONTACT){ if(typeof d.CONTACT[c]==='string') CONTACT[c]=d.CONTACT[c]; }
+  if(d.GUIDE&&d.GUIDE.length) GUIDE=d.GUIDE;
+}
 (function(){
-  function adopt(d){
-    if(!d) return;
-    if(d.NODES&&Object.keys(d.NODES).length) NODES=d.NODES;
-    if(d.OUT) OUT=d.OUT;
-    if(d.NONTAS) NONTAS=d.NONTAS;
-    if(d.CRITERIA) CRITERIA=d.CRITERIA;
-    if(d.NEXT) NEXT=d.NEXT;
-    if(d.LINKS) LINKS=d.LINKS;
-    /* DISC used to be one string. A file that still carries one is read as
-       the standing bar line, so an old export keeps working. */
-    if(typeof d.DISC==='string'&&d.DISC) DISC.bar=d.DISC;
-    else if(d.DISC) for(var k in d.DISC){ if(d.DISC[k]) DISC[k]=d.DISC[k]; }
-    if(d.CONTACT) for(var c in d.CONTACT){ if(typeof d.CONTACT[c]==='string') CONTACT[c]=d.CONTACT[c]; }
-    if(d.GUIDE&&d.GUIDE.length) GUIDE=d.GUIDE;
-  }
-  try{ adopt(window.TAS_TREE); }catch(e){}
+  try{ adoptContent(window.TAS_TREE); }catch(e){}
   try{
     var raw=localStorage.getItem('tas-tree-draft');
-    if(raw) adopt(JSON.parse(raw));
+    if(raw) adoptContent(JSON.parse(raw));
   }catch(e){}
+})();
+
+/* The published tree, from /api/tree. Fetched rather than waited for: the
+   page draws immediately from tree-data.js, and the published version — which
+   on most deployments is the same content — drops in when it arrives.
+
+   It is only adopted if the reader has not answered anything yet. Swapping the
+   questions under someone mid-decision to save them one reload is the wrong
+   trade, so a reader already down the tree keeps what they started with and
+   gets the published copy next time.
+
+   A local /admin draft outranks it, because that draft is the editor's own
+   work in progress and the whole point of previewing it. */
+(function(){
+  if(!window.fetch) return;
+  var hasDraft=false;
+  try{ hasDraft=!!localStorage.getItem('tas-tree-draft'); }catch(e){}
+  if(hasDraft) return;
+  fetch('/api/tree',{cache:'no-store',headers:{Accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){
+      if(!d||!d.published||!d.data) return;
+      if(path.length) return;                 /* someone is mid-answer */
+      if(JSON.stringify(d.data.NODES||{})===JSON.stringify(NODES)) return;
+      adoptContent(d.data);
+      var t=document.getElementById('noticeTxt');
+      if(t&&DISC.bar) t.textContent=DISC.bar;
+      guideBuilt=false;
+      if(started){ hushed={}; build(); focusFrontier(); }
+    })
+    .catch(function(){ /* no API, or offline: the file is already in place */ });
+})();
+
+/* Nothing to ask. tree-data.js is the one hard content dependency this page
+   has, so if it did not load there is no tree to draw and no honest way to
+   pretend otherwise. */
+(function(){
+  if(NODES&&Object.keys(NODES).length) return;
+  document.addEventListener('DOMContentLoaded',function(){
+    var st=document.getElementById('stage');
+    if(!st) return;
+    st.innerHTML='<div style="max-width:34rem;margin:14vh auto;padding:0 20px;'+
+      'font-family:var(--serif);color:var(--ink)">'+
+      '<h2 style="font-family:var(--display);font-weight:400;font-size:26px;'+
+      'text-transform:uppercase;letter-spacing:.02em;margin:0 0 10px">The questions did not load</h2>'+
+      '<p style="color:var(--muted)">This page reads them from <code>tree-data.js</code>, '+
+      'and that file did not arrive. Reload; if it happens again the file is missing '+
+      'from the deployment.</p></div>';
+  });
 })();
 
 /* The standing bar is content, so it comes from the data rather than being
@@ -956,6 +1004,28 @@ var CCOPY={
    STATE
    ========================================================================= */
 var QW=330, OW=196, HGAP=18, VGAP=54;
+/* The card sizes above are what a desktop gets. A phone is 375px wide and a
+   fan of three answers at 196 apiece is 624 — so the first answer used to sit
+   off the left edge of the screen with nothing to say it was there.
+
+   Rather than a breakpoint, the fan is measured against the stage it has to
+   fit into: the answers share the width available, down to a floor where the
+   text stops being readable and panning is the honest answer instead. A
+   question with two answers stays wide on a phone; one with five narrows.
+   Everything is still the same fan, on every screen. */
+var OW_MIN=92, EDGE=14;
+function stageW(){
+  var r=stage.getBoundingClientRect();
+  return r.width||document.documentElement.clientWidth||960;
+}
+/* The gap between answers is generous where there is room and tight where
+   there is not: at 320px the desktop gap alone was 36 of the 320. */
+function gapW(){ return stageW()<440?8:HGAP; }
+function questionW(){ return Math.min(QW, stageW()-EDGE*2); }
+function optionW(n){
+  var room=stageW()-EDGE*2-(n-1)*gapW();
+  return Math.max(OW_MIN, Math.min(OW, Math.floor(room/n)));
+}
 var path=[], collected=[], started=false, terminal=null;
 /* notes the reader has dismissed, so they stay dismissed across re-renders */
 var hushed={};
@@ -977,14 +1047,13 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
    breathing room; a tree smaller than the stage simply centres on that axis. */
 var PAN_MARGIN=110;
 function clampView(){
-  if(!window.__tree) return;
-  var r=stage.getBoundingClientRect();
-  if(!r.width||!r.height) return;
-  var W=window.__tree.w*view.s, H=window.__tree.h*view.s, m=PAN_MARGIN;
-  var loX=r.width-m-W, hiX=m;
-  view.tx=(loX>hiX)?(r.width-W)/2:Math.min(hiX,Math.max(loX,view.tx));
-  var loY=r.height-m-H, hiY=m;
-  view.ty=(loY>hiY)?(r.height-H)/2:Math.min(hiY,Math.max(loY,view.ty));
+  if(!window.__tree||!window.TASView) return;
+  /* A tree shorter than the stage is centred vertically, which is right on a
+     wide screen and wrong on a tall one: at the first question a phone showed
+     a third of a screen of empty sky above a single card. The tree grows
+     downward, so on a tall stage it is held toward the top and the room is
+     left where it will be needed. */
+  TASView.clamp(view,stage.getBoundingClientRect(),window.__tree,PAN_MARGIN,0.2);
 }
 function applyView(){
   clampView();
@@ -1038,7 +1107,7 @@ function build(){
     var qEl=document.createElement('div');
     qEl.className='tnode q'+(n.risky?' risky':'')
       +(answered===null?' active':' reopenable');
-    qEl.style.width=QW+'px';
+    qEl.style.width=questionW()+'px';
     qEl.dataset.node=id;
     if(answered!==null){
       qEl.setAttribute('tabindex','0');
@@ -1086,7 +1155,8 @@ function build(){
     if(prevChosenEl) edges.push({from:prevChosenEl,to:qEl,taken:true});
 
     /* ---- option nodes fanned under it ---- */
-    var optRow=[], total=n.a.length*OW+(n.a.length-1)*HGAP;
+    var ow=optionW(n.a.length), hg=gapW();
+    var optRow=[], total=n.a.length*ow+(n.a.length-1)*hg;
     var startX=anchor-total/2;
     var chosenEl=null;
     for(var ai=0;ai<n.a.length;ai++){
@@ -1094,7 +1164,7 @@ function build(){
       var oEl=document.createElement('div');
       var state=(answered===null)?'':(answered===ai?' chosen':' notaken');
       oEl.className='tnode opt'+state;
-      oEl.style.width=OW+'px';
+      oEl.style.width=ow+'px';
       oEl.dataset.node=id; oEl.dataset.ai=String(ai);
       oEl.innerHTML='<span class="ttl">'+esc(a.label)+'</span>'
         +(a.grants?'<span class="sub">unlocks '+esc(OUT[a.grants].name)+'</span>':'')
@@ -1104,7 +1174,7 @@ function build(){
         +(answered===ai?' — your current choice'
           :(answered===null?'':' — switch the tree to this branch')));
       nodesEl.appendChild(oEl);
-      var cx=startX+ai*(OW+HGAP)+OW/2;
+      var cx=startX+ai*(ow+hg)+ow/2;
       optRow.push({el:oEl,cx:cx});
       edges.push({from:qEl,to:oEl,taken:answered===ai,dimmed:answered!==null&&answered!==ai});
       /* No pathway leaf node here. What an answer unlocks is already said on
@@ -1124,7 +1194,7 @@ function build(){
     var v=verdict(endId);
     var rEl=document.createElement('div');
     rEl.className='tnode result active';
-    rEl.style.width=(QW-20)+'px';
+    rEl.style.width=(questionW()-20)+'px';
     rEl.id='resultNode';
     rEl.setAttribute('tabindex','0'); rEl.setAttribute('role','button');
     rEl.setAttribute('aria-label','Your result: '+v.t+'. Open the full result.');
@@ -1139,6 +1209,25 @@ function build(){
   document.getElementById('btnResult').hidden=!terminal;
   updateRail();
   updateHint();
+  updateContactCue();
+}
+
+/* Contact is loud only where it earns it: an open question the content has
+   marked risky. That is a property of the data, not a hard-coded question id,
+   so a tree edited at /admin gets the same behaviour on whatever it marks. */
+var cueHushed=false;
+function updateContactCue(){
+  var open=nodesEl.querySelector('.tnode.q.active.risky');
+  var want=!!open;
+  var btn=document.getElementById('btnContact'), cue=document.getElementById('contactCue');
+  if(!btn||!cue) return;
+  btn.classList.toggle('needed',want);
+  btn.title=want
+    ? 'This question is worth a conversation — talk to a person'
+    : 'Talk to a person';
+  cue.hidden=!want||cueHushed;
+  /* a question answered and then reopened deserves the cue again */
+  if(!want) cueHushed=false;
 }
 
 /* measure, place, then draw the edges between real boxes */
@@ -1193,6 +1282,9 @@ function layout(rows,edges){
     var halo=document.createElementNS('http://www.w3.org/2000/svg','path');
     halo.setAttribute('class','edge halo'+(e.taken?' taken':'')+(e.dimmed?' dimmed':''));
     halo.setAttribute('d',d);
+    /* the same normalisation as the line it sits under, so the pair draws and
+       withdraws at one rate rather than two */
+    halo.setAttribute('pathLength','1');
     edgesEl.appendChild(halo);
     var p=document.createElementNS('http://www.w3.org/2000/svg','path');
     p.setAttribute('class','edge'+(e.taken?' taken':'')+(e.dimmed?' dimmed':'')+(e.grant?' grant':''));
@@ -1202,6 +1294,7 @@ function layout(rows,edges){
     p.setAttribute('pathLength','1');
     edgesEl.appendChild(p);
     b.el.__inEdge=p;               /* the one edge that feeds this node */
+    b.el.__inHalo=halo;            /* and the halo under it — they move together */
   });
 }
 
@@ -1283,7 +1376,9 @@ function grow(){
   focusFrontier();
 }
 /* how the tree grows, in ms — tune these to taste */
-var GROW_HOLD=380, GROW_STAGGER=480, GROW_SETTLE=760, RETRACT_STAGGER=55, EDGE_DRAW=340;
+/* RETRACT_STAGGER used to live here at a flat 55ms. A cut-back now paces
+   itself from how much it is taking away — see reopen(). */
+var GROW_HOLD=380, GROW_STAGGER=480, GROW_SETTLE=760, EDGE_DRAW=340;
 
 /* ---- drawing a limb ----------------------------------------------------
    Measured from the real curve rather than the pathLength attribute, and
@@ -1332,6 +1427,21 @@ function clearEdge(pth){
    exactly how the result card ended up stranded off-screen, fully opaque. */
 var revealTimers=[];
 function stopReveal(){ revealTimers.forEach(clearTimeout); revealTimers=[]; }
+/* the same for a cut-back, which owns the canvas while it runs */
+var cutTimers=[], cutting=false;
+function stopCut(){ cutTimers.forEach(clearTimeout); cutTimers=[]; cutting=false; }
+/* A limb's line is two paths — the coloured stroke and the halo that keeps it
+   off the backdrop. Animating only the stroke left the halo standing on its
+   own after the card and the line had gone, which read as the line outliving
+   the card it belonged to. Nothing addresses one without the other now. */
+function primeLimb(el){
+  var a=primeEdge(el.__inEdge), b=primeEdge(el.__inHalo);
+  return a>0||b>0;
+}
+function drawLimb(el,ms){ drawEdge(el.__inEdge,ms); drawEdge(el.__inHalo,ms); }
+function clearLimb(el){ clearEdge(el.__inEdge); clearEdge(el.__inHalo); }
+function undrawLimb(el,ms){ undrawEdge(el.__inEdge,ms); undrawEdge(el.__inHalo,ms); }
+
 function revealFresh(fresh){
   var k=motionScale(), draw=Math.round(EDGE_DRAW*k),
       hold=Math.round(GROW_HOLD*k), step=Math.round(GROW_STAGGER*k),
@@ -1339,14 +1449,14 @@ function revealFresh(fresh){
   /* hide node and line together, before the browser paints either */
   fresh.forEach(function(el){
     el.classList.add('pre','entering');
-    el.__primed=primeEdge(el.__inEdge)>0;
+    el.__primed=primeLimb(el);
   });
   fresh.forEach(function(el,i){
-    var pth=el.__inEdge, at=hold+i*step, nodeAt=at+(el.__primed?draw:0);
-    if(el.__primed) revealTimers.push(setTimeout(function(){ drawEdge(pth,draw); sndLine(); },at));
+    var at=hold+i*step, nodeAt=at+(el.__primed?draw:0);
+    if(el.__primed) revealTimers.push(setTimeout(function(){ drawLimb(el,draw); sndLine(); },at));
     revealTimers.push(setTimeout(function(){
       el.classList.remove('pre');
-      clearEdge(pth);
+      clearLimb(el);
       if(el.id==='resultNode') sndResult(); else sndNode(i);
     },nodeAt));
     revealTimers.push(setTimeout(function(){ el.classList.remove('entering'); },nodeAt+settleMs));
@@ -1374,7 +1484,17 @@ function reopen(nodeId){
   var idx=-1;
   for(var i=0;i<path.length;i++) if(path[i].node===nodeId){ idx=i; break; }
   if(idx<0) return;                       /* not answered yet — nothing to undo */
-  sndRetract();
+  /* A grow sequence still in flight owns timers that would fire mid-retreat:
+     sndLine and sndNode over the top of the withdrawal, and a settle() that
+     strips .pre off limbs already retreating and snaps them back. The retreat
+     owns the canvas from here. */
+  stopReveal();
+  /* A withdrawal now lasts long enough that a second x can arrive during it.
+     The later one wins: its timers replace the earlier ones rather than
+     interleaving with them, and the earlier limbs are simply gone at the next
+     build() either way. */
+  stopCut();
+  cutting=true;
   path=path.slice(0,idx);
   collected=[];
   path.forEach(function(pp){
@@ -1391,7 +1511,7 @@ function reopen(nodeId){
     if(canAnimate()) revealFresh(fresh);
     focusFrontier();
   }
-  if(!canAnimate()){ rebuild(); return; }
+  if(!canAnimate()){ cutting=false; rebuild(); return; }
 
   var keep={}; chainIds().forEach(function(id){ keep[id]=1; });
   var doomed=Array.prototype.filter.call(nodesEl.children,function(el){
@@ -1400,18 +1520,49 @@ function reopen(nodeId){
     if(!keep[id]) return true;                            /* questions below this one */
     return el.classList.contains('opt')&&id===nodeId;     /* its answers get rebuilt live */
   });
+  /* How fast the tree comes back. Deliberately slower than Start over: that
+     one clears everything and wants to be over with, this one is showing the
+     reader precisely what a single answer was holding up, deepest limb first.
+     The pace is set from the number of limbs so the whole withdrawal lands
+     around a second and three quarters however deep the cut is, with a floor
+     that keeps a two-limb cut from being a blink. Reduced motion shortens it
+     rather than lengthening it — the setting asks for less movement, and a
+     sequence it has to sit through is still movement. */
+  var step=Math.max(90,Math.min(300,Math.round(1800/doomed.length)));
+  step=Math.max(70,Math.round(step*motionScale()));
+  /* at this pace every limb can have its own note without machine-gunning */
+  var perLimb=step>=130;
+  /* matched to .tnode.entering (.8s) and .tnode.entering.slow (1.15s), a shade
+     under so the line is gone as the card finishes rather than after it */
+  var fade=Math.round((step>=150?1150:800)*0.88*motionScale());
+  sndRetract(step>=150?0.62:0.44);
+  var note=0;
   doomed.reverse().forEach(function(el,i){
-    el.classList.add('entering');
-    setTimeout(function(){ el.classList.add('pre'); },i*RETRACT_STAGGER);
+    el.classList.add('entering','leaving');
+    if(step>=150) el.classList.add('slow');
+    cutTimers.push(setTimeout(function(){
+      /* the limb's line retreats back up with it, the way Start over does —
+         the retreat note describes a line withdrawing, so there has to be a
+         line withdrawing under it */
+      /* The line goes over the card's own fade, not faster than it. Retracting
+         it in a fraction of the time left the card hanging on the end of
+         nothing, which is what made the two read as separate events. */
+      undrawLimb(el,fade);
+      el.classList.add('pre');
+      if(perLimb||i%2===0) sndUnwind(note++,perLimb);
+    },i*step));
   });
-  setTimeout(rebuild,doomed.length*RETRACT_STAGGER+520);
+  cutTimers.push(setTimeout(function(){
+    cutting=false;
+    rebuild();
+  },doomed.length*step+620));
 }
 function settle(){
   /* The grow animation leaves a repair timer behind. One firing mid-withdrawal
      strips .pre off limbs that are already retreating, which snaps them back
      into place — that is what stranded the result card off-screen. A
      withdrawal owns the canvas until it finishes. */
-  if(unwinding) return;
+  if(unwinding||cutting) return;
   Array.prototype.forEach.call(nodesEl.querySelectorAll('.tnode.pre, .tnode.entering'),function(el){
     el.classList.remove('pre'); el.classList.remove('entering');
     el.style.opacity=''; el.style.transform='';
@@ -1490,11 +1641,8 @@ function focusFrontier(){
   applyView();
 }
 function zoomBy(k,cx,cy){
-  var r=stage.getBoundingClientRect();
-  if(cx==null){ cx=r.width/2; cy=r.height/2; }
-  var ns=Math.min(2,Math.max(.15,view.s*k));
-  var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
-  view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns;
+  if(!window.TASView) return;
+  TASView.zoom(view,stage.getBoundingClientRect(),k,cx,cy);
   applyView();
 }
 var drag=null;
@@ -1543,7 +1691,39 @@ stage.addEventListener('touchend',function(){ pinch=null; },{passive:true});
 document.getElementById('zIn').addEventListener('click',function(){ zoomBy(1.2); });
 document.getElementById('zOut').addEventListener('click',function(){ zoomBy(1/1.2); });
 document.getElementById('zFit').addEventListener('click',fit);
-window.addEventListener('resize',function(){ if(started) fit(); });
+/* A resize used to only refit the view, but the card widths are decided when
+   the tree is built — so turning a phone sideways kept the narrow fan it was
+   drawn with, and turning it back kept the wide one off the edge. If the
+   widths the current screen calls for differ from the ones on the canvas, the
+   tree is drawn again; otherwise it is only refitted, which is cheap. */
+var resizeTimer=null;
+function relayout(){
+  if(!started) return;
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(function(){
+    var q=nodesEl.querySelector('.tnode.q');
+    var stale=q&&Math.abs(q.offsetWidth-questionW())>1;
+    if(stale){ stopReveal(); build(); focusFrontier(); }
+    else fit();
+  },140);
+}
+/* Watched rather than listened for. A window resize event is not the only way
+   the canvas changes size — a device rotating, a browser bar sliding away, a
+   panel folding — and the stage is the thing whose width the layout is
+   actually computed from, so the stage is what is watched. */
+if(window.ResizeObserver){
+  try{ new ResizeObserver(relayout).observe(stage); }catch(e){}
+}
+window.addEventListener('resize',relayout);
+window.addEventListener('orientationchange',relayout);
+/* Belt and braces. A rotation that arrives as neither a resize event nor a
+   ResizeObserver callback — an emulated viewport, an embedded webview, a
+   browser bar sliding away — would otherwise leave the tree drawn for the old
+   width until something else forced a redraw. The end of a pan and coming
+   back to the tab are both moments where a rebuild is safe, so they are also
+   moments to notice. */
+stage.addEventListener('pointerup',relayout);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) relayout(); });
 
 function updateRail(){
   var q=currentQuestion();
@@ -1638,6 +1818,10 @@ function resultHtml(){
     +LINKS.map(function(l){return '<a href="'+l.u+'" target="_blank" rel="noopener">'+esc(l.t)+' ↗</a>';}).join('')+'</div></div>';
   h+='<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">'
     +'<button class="btn solid" data-print="1">Print / Save PDF</button>'
+    /* Saving is an account's to offer. A guest gets Print, which is the thing
+       that actually keeps this result for them, rather than a button whose
+       only outcome is a dialog explaining it cannot. */
+    +(canKeep()?'<button class="btn" data-savedoc="1">Save as document</button>':'')
     +'<button class="btn" data-close="1">Back to the tree</button></div>';
   h+='<div class="disc">'+DISC.result+DISC.cites+'</div>';
   return h;
@@ -1648,9 +1832,14 @@ function openSheet(){
   prevFocus=document.activeElement;
   document.getElementById('sheetTitle').textContent=verdict(terminal).t;
   document.getElementById('sheetBody').innerHTML=resultHtml();
+  paintKeepable();
   sheet.hidden=false;
   /* the printout is of the result, so it is offered while the result is open */
   var c=sheet.querySelector('[data-close]'); if(c) c.focus({preventScroll:true});
+  /* Said once, at the only moment it matters: there is now something worth
+     keeping, and a guest is about to close the tab on it. */
+  if(window.TAS) TAS.auth.guestNudge(
+    'You are a guest, so this result is not saved anywhere. Print it, or sign in to keep it as a document.');
 }
 function closeSheet(){
   sheet.hidden=true;
@@ -1659,6 +1848,7 @@ function closeSheet(){
 sheet.addEventListener('click',function(e){
   if(e.target.closest('[data-close]')) closeSheet();
   if(e.target.closest('[data-print]')) doPrint();
+  if(e.target.closest('[data-savedoc]')) saveDocument();
 });
 document.getElementById('btnResult').addEventListener('click',openSheet);
 
@@ -1699,7 +1889,11 @@ function printTree(){
   return '<h3>The route taken</h3><svg class="ptree" viewBox="0 0 '+W+' '+H+'" width="100%" '
     +'preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg">'+parts.join('')+'</svg>';
 }
-function doPrint(){
+/* The printed document, as HTML. Split out from doPrint() because the same
+   document is now two things: what the printer gets, and what "Save as
+   document" keeps on the account for editing later. They must not drift — a
+   reader who prints a saved document has to get the page they saw. */
+function printableHtml(){
   var v=terminal?verdict(terminal):{t:'TAS decision — in progress',s:'This path is not yet complete.'};
   var now=new Date();
   var h='<h2>'+esc(v.t)+'</h2>'
@@ -1727,9 +1921,145 @@ function doPrint(){
   h+='<h3>Next steps</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
   h+='<h3>Reference</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+l.u+'</li>';}).join('')+'</ul>';
   h+='<div class="pd">'+DISC.print+'</div>';
-  document.getElementById('printOut').innerHTML=h;
+  return h;
+}
+function doPrint(){
+  document.getElementById('printOut').innerHTML=printableHtml();
   window.print();
 }
+
+/* ===========================================================================
+   THE WALKTHROUGH
+   Five screens, then the tree. A first-time reader arriving at a canvas with
+   one card on it has no way to know that the card fans open, that the branch
+   they do not take stays on screen, or that any of it can be undone — and the
+   guide, which says all of that, is ten sections long and reads like a manual
+   because that is what it is. This is the shorter promise: what the tool does,
+   how you answer, how you change your mind, what you get — and then a button
+   that begins.
+
+   The drawings speak the tree's own idiom rather than being screenshots: a
+   screenshot goes stale the first time a card changes, and cannot theme
+   itself light and dark.
+   ========================================================================= */
+var WALK_KEY='tas-walk-seen';
+var WALK=[
+  {h:'A tool for one decision',
+   art:'<svg viewBox="0 0 320 96" role="img" aria-label="A question card with three answers fanned beneath it">'
+      +'<rect class="wq" x="86" y="6" width="148" height="30" rx="7"/>'
+      +'<text class="wt on" x="97" y="25">Are any boundaries disputed?</text>'
+      +'<path class="wl" d="M160,36 C160,48 46,48 46,60"/><path class="wl" d="M160,36 L160,60"/>'
+      +'<path class="wl" d="M160,36 C160,48 274,48 274,60"/>'
+      +'<rect class="wo" x="6" y="60" width="80" height="26" rx="6"/><text class="wt" x="16" y="77">No — clear</text>'
+      +'<rect class="wo" x="120" y="60" width="80" height="26" rx="6"/><text class="wt" x="130" y="77">Disputed</text>'
+      +'<rect class="wo" x="234" y="60" width="80" height="26" rx="6"/><text class="wt" x="244" y="77">Not sure</text>'
+      +'</svg>',
+   html:'<p>This helps a Tribe think through whether to seek <b>treatment in the same manner as a state</b> under the Tribal Authority Rule — and if so, for which Clean Air Act sections.</p>'
+       +'<p>It asks four questions. Each opens beneath the last, and the answers you give draw a route through them.</p>'
+       +'<div class="wnote"><b>Read this first.</b> This is not an official EPA product and it is not legal advice. It determines nothing and sends nothing to EPA. What you get at the end is a written summary of the route you chose — something to open a conversation with Tribal legal counsel, leadership and Council.</div>'},
+
+  {h:'Answer, and the tree grows',
+   art:'<svg viewBox="0 0 320 118" role="img" aria-label="An answer chosen, with the next question growing beneath it">'
+      +'<rect class="wq" x="86" y="4" width="148" height="26" rx="7"/><text class="wt on" x="97" y="21">Question 1</text>'
+      +'<path class="wl" d="M160,30 C160,40 60,40 60,50"/><path class="wl pick" d="M160,30 L160,50"/>'
+      +'<rect class="wo grey" x="16" y="50" width="88" height="24" rx="6"/><text class="wt" x="26" y="66">Not taken</text>'
+      +'<rect class="wo pick" x="116" y="50" width="88" height="24" rx="6"/><text class="wt on" x="126" y="66">Your answer</text>'
+      +'<path class="wl pick" d="M160,74 L160,88"/>'
+      +'<rect class="wq" x="86" y="88" width="148" height="26" rx="7"/><text class="wt on" x="97" y="105">Question 2</text>'
+      +'</svg>',
+   html:'<p>Click an answer. The line to the next question draws itself, the question fades in, and its own answers arrive under it one at a time.</p>'
+       +'<p>You can also press the <b>number</b> of an answer, or move between cards with <code>tab</code> and choose with <code>enter</code>.</p>'
+       +'<p>Drag the background to move the canvas. Scrolling pans rather than zooms, so the tree never changes size by accident — hold <code>ctrl</code> and scroll to zoom, and <b>Fit</b> at the bottom right frames the whole thing.</p>'},
+
+  {h:'Nothing you do is stuck',
+   art:'<svg viewBox="0 0 320 100" role="img" aria-label="A greyed branch, and the x that cuts the tree back">'
+      +'<rect class="wq" x="86" y="8" width="148" height="28" rx="7"/><text class="wt on" x="97" y="26">An answered question</text>'
+      +'<circle cx="228" cy="14" r="8" fill="var(--surface)" stroke="var(--alert)" stroke-width="1.4"/>'
+      +'<path d="M225,11 L231,17 M231,11 L225,17" stroke="var(--alert)" stroke-width="1.6" stroke-linecap="round"/>'
+      +'<path class="wl" d="M160,36 C160,48 60,48 60,62"/><path class="wl pick" d="M160,36 C160,48 250,48 250,62"/>'
+      +'<rect class="wo grey" x="16" y="62" width="88" height="26" rx="6"/><text class="wt" x="26" y="79">Click to re-route</text>'
+      +'<rect class="wo pick" x="206" y="62" width="88" height="26" rx="6"/><text class="wt on" x="216" y="79">Chosen</text>'
+      +'</svg>',
+   html:'<p>The answers you did not take stay on the canvas, greyed. <b>Click a greyed answer</b> and the tree re-routes down that branch instead — which is how you show Council what the other choice would have led to.</p>'
+       +'<p>Every answered question carries a small <b>&#10005;</b>. Click it and the tree withdraws back to that question and reopens it, because everything below it no longer follows from your answers.</p>'
+       +'<p><b>Start over</b> in the top bar takes the whole tree back to question one.</p>'},
+
+  {h:'Pathways, and what you get',
+   art:'<svg viewBox="0 0 320 96" role="img" aria-label="Pathway labels above a result document">'
+      +'<rect class="wchip" x="6" y="6" width="88" height="17" rx="5"/><text class="wchip-t" x="14" y="18">Regulatory TAS</text>'
+      +'<rect class="wchip" x="102" y="6" width="96" height="17" rx="5"/><text class="wchip-t" x="110" y="18">Participatory TAS</text>'
+      +'<rect class="wchip" x="206" y="6" width="76" height="17" rx="5"/><text class="wchip-t" x="214" y="18">Capacity</text>'
+      +'<rect class="wq" x="86" y="34" width="148" height="56" rx="7"/>'
+      +'<text class="wt on" x="97" y="51">Your result</text>'
+      +'<rect x="97" y="59" width="112" height="4" rx="2" fill="var(--border-strong)"/>'
+      +'<rect x="97" y="67" width="126" height="4" rx="2" fill="var(--border-strong)"/>'
+      +'<rect x="97" y="75" width="88" height="4" rx="2" fill="var(--border-strong)"/>'
+      +'</svg>',
+   html:'<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. They accumulate: many sources <i>and</i> a wish for a say in nearby permits finishes with two.</p>'
+       +'<p>At the end, <b>Result</b> opens a panel holding the pathways, the sections to consider seeking, the four eligibility criteria, next steps, and the notes that belong with them. <b>Print</b> turns it into a document written to stand on its own months later, in front of someone who was not at the screen.</p>'
+       +'<p>A pathway is a direction to consider, not a finding of eligibility — EPA decides that.</p>'},
+
+  {h:'Keeping what you do here',
+   art:null,
+   html:'<p>You can use every part of this as a <b>guest</b>: answer the questions, re-route, open the result, print it. Nothing is asked of you and nothing is sent anywhere.</p>'
+       +'<p>What a guest cannot do is <b>keep</b> it. Close the tab and the path is gone — so <b>Print</b> is how you take a copy away with you.</p>'
+       +'<p>Signing in adds somewhere to put it: the path you answered, and the result as a document you can edit and come back to next month. The account button in the top bar is there whenever you want it, and never before.</p>'
+       +'<p style="color:var(--muted);font-size:13.5px"><b>Full guide</b>, at the top of this box, goes into all of it properly — moving around the canvas, what each pathway means, editing a saved document, and who to ask. <b>Guide</b> in the top bar brings these five screens back at any point.</p>'}
+];
+
+var walkEl=document.getElementById('walk');
+var walkAt=0, walkFocus=null;
+function walkRender(){
+  var st=WALK[walkAt], last=walkAt===WALK.length-1;
+  document.getElementById('walkStep').textContent='Step '+(walkAt+1)+' of '+WALK.length;
+  document.getElementById('walkTitle').textContent=st.h;
+  document.getElementById('walkBody').innerHTML=
+    (st.art?'<div class="wart">'+st.art+'</div>':'')+st.html;
+  document.getElementById('walkBody').scrollTop=0;
+  var dots='';
+  for(var i=0;i<WALK.length;i++) dots+='<i class="'+(i===walkAt?'on':(i<walkAt?'done':''))+'"></i>';
+  document.getElementById('walkDots').innerHTML=dots;
+  document.getElementById('walkBack').disabled=walkAt===0;
+  /* the last step's button is the promise the whole walkthrough is making */
+  document.getElementById('walkNext').textContent=last?'Begin the tree':'Next';
+}
+function openWalk(){
+  walkFocus=document.activeElement;
+  walkAt=0;
+  walkRender();
+  walkEl.hidden=false;
+  try{ document.getElementById('walkNext').focus({preventScroll:true}); }catch(e){}
+}
+function closeWalk(){
+  walkEl.hidden=true;
+  try{ localStorage.setItem(WALK_KEY,'1'); }catch(e){}
+  /* leaving the walkthrough is what starts the tree, however you leave it */
+  if(!started){ start(); return; }
+  if(walkFocus&&walkFocus.focus) try{ walkFocus.focus({preventScroll:true}); }catch(e){}
+}
+function walkStep(d){
+  var n=walkAt+d;
+  if(n<0) return;
+  if(n>=WALK.length){ closeWalk(); return; }
+  walkAt=n;
+  walkRender();
+}
+document.getElementById('walkNext').addEventListener('click',function(){ walkStep(1); });
+document.getElementById('walkBack').addEventListener('click',function(){ walkStep(-1); });
+document.getElementById('walkSkip').addEventListener('click',closeWalk);
+document.getElementById('walkGuide').addEventListener('click',function(){
+  /* the manual takes over the screen; leaving the walkthrough this way still
+     starts the tree, so closing the guide lands on question one */
+  walkEl.hidden=true;
+  try{ localStorage.setItem(WALK_KEY,'1'); }catch(e){}
+  openGuide();
+});
+document.addEventListener('keydown',function(e){
+  if(walkEl.hidden) return;
+  if(e.key==='Escape'){ e.stopPropagation(); closeWalk(); return; }
+  if(e.key==='ArrowRight'){ e.preventDefault(); walkStep(1); }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); walkStep(-1); }
+});
 
 /* ===========================================================================
    THE GUIDE
@@ -1787,7 +2117,15 @@ function closeGuide(){
 }
 guideEl.addEventListener('click',function(e){ if(e.target.closest('[data-gclose]')) closeGuide(); });
 guideGo.addEventListener('click',closeGuide);
-document.getElementById('btnGuide').addEventListener('click',openGuide);
+/* Guide opens the walkthrough, not the manual. Someone who presses it wants to
+   be shown how this works, and five screens with pictures answers that better
+   than ten sections of prose does. The manual is one button further in, on
+   every screen of the walkthrough, for the reader who wants all of it. */
+document.getElementById('btnGuide').addEventListener('click',function(){
+  if(!walkEl.hidden) return;
+  guideEl.hidden=true;
+  openWalk();
+});
 
 /* ===========================================================================
    CONTACT
@@ -2002,7 +2340,228 @@ contactEl.addEventListener('change',function(e){
   if(e.target.id==='cPath') CAL.path=e.target.checked;
 });
 document.getElementById('btnContact').addEventListener('click',openContact);
+document.getElementById('contactCue').addEventListener('click',function(){
+  /* pressing the callout does the obvious thing, and stops it asking twice */
+  cueHushed=true;
+  document.getElementById('contactCue').hidden=true;
+  openContact();
+});
 document.getElementById('guideContact').addEventListener('click',function(){ closeGuide(); openContact(); });
+document.getElementById('guideWalk').addEventListener('click',function(){
+  /* the guide has to go first: two dialogs open at once is one too many */
+  guideEl.hidden=true;
+  if(!started) start();
+  openWalk();
+});
+
+/* ===========================================================================
+   SAVED WORK
+   A path is what the reader answered; a document is what the result becomes
+   once they can edit it. Both belong to an account, and a guest is told so
+   before anything is lost rather than after.
+
+   A saved path carries a *snapshot* of the tree content it was answered
+   against. Without it, editing a question at /admin would silently rewrite
+   what someone recorded months ago in front of Council — the answers would
+   still be there, attached to questions that no longer say the same thing.
+   ========================================================================= */
+var savedRunId=null, loadedTreeId=null, restoring=false;
+
+function haveAccounts(){ return !!window.TAS; }
+/* Whether there is anywhere to keep work. Everything that offers to save is
+   hidden until this is true: a guest is not half a reader, and a row of
+   buttons that only ever open a sign-in dialog is furniture, not an offer.
+   The account chip in the bar is where signing in lives. */
+function canKeep(){ return haveAccounts()&&TAS.auth.canSave(); }
+function paintKeepable(){
+  var b=document.getElementById('btnSavePath');
+  if(b) b.hidden=!canKeep();
+  var sd=sheet?sheet.querySelector('.head [data-savedoc]'):null;
+  if(sd) sd.hidden=!canKeep();
+}
+function treeSnapshot(){
+  return {NODES:NODES,OUT:OUT,NONTAS:NONTAS,CRITERIA:CRITERIA,NEXT:NEXT,
+          LINKS:LINKS,DISC:DISC,CONTACT:CONTACT,GUIDE:GUIDE};
+}
+function pathTitle(){
+  if(terminal) return verdict(terminal).t;
+  if(!path.length) return 'Untitled path';
+  var last=path[path.length-1], n=NODES[last.node];
+  return 'In progress — ' + ((n&&n.short) || 'question ' + path.length);
+}
+/* Recomputed from the path rather than trusted from storage: the pathways an
+   answer unlocks are a property of the tree, and the tree is what we just
+   adopted. */
+function recollect(){
+  collected=[];
+  path.forEach(function(p){
+    var n=NODES[p.node]; if(!n||!n.a[p.ai]) return;
+    var g=n.a[p.ai].grants;
+    if(g&&collected.indexOf(g)<0) collected.push(g);
+  });
+}
+function setSaveLabel(txt,title){
+  var b=document.getElementById('btnSavePath');
+  if(!b) return;
+  var lb=b.querySelector('.lb');
+  if(lb) lb.textContent=txt;
+  if(title) b.title=title;
+}
+
+function savePath(){
+  if(!haveAccounts()) return;
+  if(!path.length){
+    TAS.ui.toast('Answer at least one question first — there is nothing to save yet.','warn');
+    return;
+  }
+  TAS.auth.requireSignIn(
+    '<b>Guests cannot save.</b> Sign in, or create an account, and this path — every answer, and the tree it was answered against — is kept for you to come back to.'
+  ).then(function(user){
+    if(!user) return;
+    var body={title:pathTitle(),path:path,collected:collected,terminal:terminal,
+              snapshot:treeSnapshot(),treeId:loadedTreeId};
+    var b=document.getElementById('btnSavePath');
+    if(b) b.disabled=true;
+    var p=savedRunId?TAS.store.update('runs',savedRunId,body):TAS.store.create('runs',body);
+    p.then(function(item){
+      if(b) b.disabled=false;
+      var isNew=!savedRunId;
+      savedRunId=item.id;
+      setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+      TAS.ui.toast(isNew?'Path saved to your account.':'Saved path updated.','good',{
+        action:'My work',onAction:function(){ location.href='/work#runs'; }
+      });
+    },function(err){
+      if(b) b.disabled=false;
+      /* A record deleted from another browser must not leave this one
+         updating a row that is gone — save it again as a new one. */
+      if(err.code==='not_found'&&savedRunId){ savedRunId=null; savePath(); return; }
+      TAS.ui.report(err,'save this path');
+    });
+  });
+}
+
+function saveDocument(){
+  if(!haveAccounts()) return;
+  if(!path.length){
+    TAS.ui.toast('There is nothing to write down yet — answer a question first.','warn');
+    return;
+  }
+  TAS.auth.requireSignIn(
+    '<b>Guests cannot save.</b> Sign in and this result becomes a document you can edit, print and open again months from now. As a guest, <b>Print</b> is the way to keep it.'
+  ).then(function(user){
+    if(!user) return;
+    var v=terminal?verdict(terminal):{t:'TAS decision — in progress'};
+    var meta={generatedFrom:'the decision tree',generatedAt:new Date().toISOString(),
+              terminal:terminal||null,pathways:collected.slice(),
+              answers:path.map(function(p){
+                var n=NODES[p.node]||{},a=(n.a&&n.a[p.ai])||{};
+                return {question:n.short||n.tag||p.node,answer:a.short||a.label||''};
+              })};
+    /* Save the path first when it has not been saved, so the document is
+       attached to the answers that produced it rather than floating free. */
+    var first=savedRunId?Promise.resolve({id:savedRunId})
+      :TAS.store.create('runs',{title:pathTitle(),path:path,collected:collected,
+        terminal:terminal,snapshot:treeSnapshot(),treeId:loadedTreeId});
+    first.then(function(run){
+      savedRunId=run.id;
+      setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+      return TAS.store.create('documents',{
+        title:v.t,kind:'result',bodyHtml:printableHtml(),meta:meta,
+        runId:savedRunId,treeId:loadedTreeId
+      });
+    }).then(function(item){
+      TAS.ui.toast('Saved as a document. Every word of it is yours to edit.','good',{
+        ms:7000,action:'Open it',onAction:function(){ location.href='/work#doc/'+item.id; }
+      });
+    },function(err){ TAS.ui.report(err,'save this document'); });
+  });
+}
+
+/* ---- reopening saved work ---- */
+function applyRun(item){
+  restoring=true;
+  if(item.snapshot) adoptContent(item.snapshot);
+  var wanted=(item.path||[]).length;
+  path=(item.path||[]).filter(function(s){
+    var n=NODES[s.node];
+    return n&&n.a&&n.a[s.ai];
+  });
+  recollect();
+  hushed={}; terminal=null; savedRunId=item.id; loadedTreeId=item.treeId||null;
+  stopReveal(); stopUnwind(); clearCelebration();
+  build();
+  view.s=1; focusFrontier();
+  setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+  restoring=false;
+  if(path.length<wanted){
+    TAS.ui.toast('Part of that saved path no longer fits the tree — '+(wanted-path.length)+
+      ' answer'+(wanted-path.length===1?'':'s')+' could not be placed. What is shown is the rest.','warn',{ms:9000});
+  }else{
+    TAS.ui.toast('Opened “'+item.title+'”. Carry on where you left off.','good');
+  }
+}
+function applyTree(item){
+  adoptContent(item.data);
+  loadedTreeId=item.id; savedRunId=null;
+  path=[]; collected=[]; terminal=null; hushed={};
+  var t=document.getElementById('noticeTxt');
+  if(t&&DISC.bar) t.textContent=DISC.bar;
+  guideBuilt=false;
+  stopReveal(); stopUnwind(); clearCelebration();
+  build();
+  view.s=1; focusFrontier();
+  setSaveLabel('Save','Keep this path on your account and come back to it later');
+  TAS.ui.toast('Showing your saved tree: “'+item.title+'”.','good');
+}
+
+/* /?run=<id> reopens a saved path · /?tree=<id> previews a saved tree
+   · &document=1 turns the reopened path straight into a document, which is
+   how "Make a document" on the work page gets a result rendered by the one
+   piece of code that knows how to render one. */
+function openFromUrl(){
+  if(!haveAccounts()) return false;
+  var q;
+  try{ q=new URLSearchParams(location.search); }catch(e){ return false; }
+  var runId=q.get('run'), treeId=q.get('tree'), wantDoc=q.get('document')==='1';
+  if(!runId&&!treeId) return false;
+  TAS.auth.ready().then(function(s){
+    if(!s.user){
+      TAS.auth.requireSignIn('<b>That is saved on an account.</b> Sign in to open it.').then(function(u){
+        if(u) openFromUrl();
+      });
+      return;
+    }
+    if(runId){
+      TAS.store.get('runs',runId).then(function(item){
+        applyRun(item);
+        if(wantDoc) saveDocument();
+      },function(err){ TAS.ui.report(err,'open that saved path'); });
+    }else{
+      TAS.store.get('trees',treeId).then(applyTree,function(err){
+        TAS.ui.report(err,'open that saved tree');
+      });
+    }
+  });
+  return true;
+}
+
+if(haveAccounts()){
+  document.getElementById('btnSavePath').addEventListener('click',savePath);
+  /* Signing out on one page must not leave another page implying the work is
+     still attached to an account. */
+  TAS.auth.on('signout',function(){
+    savedRunId=null;
+    setSaveLabel('Save','Keep this path on your account and come back to it later');
+  });
+  TAS.auth.on('change',function(){
+    paintKeepable();
+    /* the result panel is open at the moment someone signs in from it */
+    if(!sheet.hidden&&terminal) document.getElementById('sheetBody').innerHTML=resultHtml();
+  });
+  TAS.auth.ready().then(paintKeepable);
+}
+paintKeepable();
 
 /* ---------- start / reset ---------- */
 function start(){
@@ -2023,6 +2582,10 @@ function freshTree(){
   unwinding=false;
   hushed={};
   path=[]; collected=[]; terminal=null;
+  /* Start over begins a new path. The one on the account is left exactly as
+     it was saved — this is not an edit to it. */
+  savedRunId=null;
+  setSaveLabel('Save','Keep this path on your account and come back to it later');
   clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   railFill.style.width='0%';
@@ -2034,6 +2597,7 @@ function freshTree(){
 function reset(){
   stopUnwind();
   stopReveal();
+  stopCut();
   closeSheet();
   clearCelebration();
   var kids=Array.prototype.slice.call(nodesEl.children);
@@ -2051,10 +2615,10 @@ function reset(){
   var unwindFrom=view.ty, unwindTo=sr.height*0.34-rootTop*view.s;
   kids.forEach(function(el,i){
     unwindTimers.push(setTimeout(function(){
-      if(el.__inEdge) undrawEdge(el.__inEdge,step*2.4);
+      undrawLimb(el,Math.max(520,step*2.4));
       el.classList.add('entering','pre');
       /* every other limb, or a big tree turns into a machine gun */
-      if(i%2===0) sndUnwind(i);
+      if(i%2===0) sndUnwind(i>>1);
       /* ride the retreat back up. Chasing the lowest node still standing made
          the view lurch, because several limbs leave between frames near the
          end; easing from where the reader was to where the root sits keeps it
@@ -2109,10 +2673,34 @@ applyView=function(){ _applyView(); paintParallax(); };
 /* A reader meeting this for the first time gets the guide before the tree;
    after that the guide is a button and the tree opens straight away. Closing
    the guide is what calls start(). */
+/* A link that carries saved work skips the guide: the reader is coming back
+   to something, not meeting the tool. The tree starts empty and the saved
+   path drops into it when the server answers. */
 (function(){
+  /* /?guide=1 opens the manual over the tree. It is how the Guide button on
+     the editor and the work page reaches this copy of it — the guide lives
+     here, with the behaviour it describes, and is not duplicated on the other
+     pages where it would quietly drift out of date. */
+  var wantGuide=false, wantWalk=false;
+  try{
+    var q=new URLSearchParams(location.search);
+    wantGuide=q.get('guide')==='1';
+    wantWalk=q.get('walk')==='1';
+  }catch(e){}
+  var fromLink=openFromUrl();
+  if(fromLink||wantGuide){
+    start();
+    if(wantGuide) openGuide();
+    return;
+  }
+  /* /?walk=1 replays the walkthrough over a tree that has already started */
+  if(wantWalk){ start(); openWalk(); return; }
+  /* A first-time reader is walked through the tool before it appears; the
+     last step's button is what starts it. Everyone else lands on question one.
+     The guide stays where it was — a manual, on a button, all session. */
   var seen=false;
-  try{ seen=localStorage.getItem(GUIDE_KEY)==='1'; }catch(e){}
-  if(seen) start(); else openGuide();
+  try{ seen=localStorage.getItem(WALK_KEY)==='1'||localStorage.getItem(GUIDE_KEY)==='1'; }catch(e){}
+  if(seen) start(); else openWalk();
 })();
 /* If the first measurement landed before the browser had sized the stage
    (webfont swap, restored window), re-centre once everything settles. */

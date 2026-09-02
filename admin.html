@@ -1,62 +1,45 @@
 <meta charset="utf-8">
 <title>TAS Tree Editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- the palette and the backdrop, shared with the other pages -->
+<link rel="stylesheet" href="theme.css">
 <style>
-:root{
-  --bg:#e5e8eb;
-  --surface:#f2f4f6; --surface-2:#e5e8eb;
-  --ink:#081b23; --muted:#4a5c66; --faint:#6f8290;
-  --accent:#2b4552; --accent-soft:#b8d0d8; --accent-ink:#2b4552;
-  --border:#c5ced4; --border-strong:#a6b4bd;
-  --risk:#a35f2c; --risk-bg:#f6e6d8; --risk-line:#c98150;
-  --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
-  --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
-  --on-accent:#e5e8eb;
-  --photo-op:.34;
-  --sky-top:#cfdde3;
-  --sky-mid:#dce3e7;
-  --sky-bot:#e5e8eb;
-  --cloud:rgba(242,244,246,.8);
-  --haze:rgba(229,232,235,.62);
-  --ridge-3:#cbd8de;
-  --ridge-2:#b3c6cf;
-  --ridge-1:#93aeba;
-  --mote:rgba(43,69,82,.42);
-  --amb:.5;
-  --display:"Morvi","Haettenschweiler","Arial Narrow",Impact,system-ui,sans-serif;
-  --sans:"Gotham Book","Gotham","Montserrat","Century Gothic","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --serif:"Marion",Georgia,"Iowan Old Style","Palatino Linotype",serif;
-  --track:.025em;
-  --sh1:0 1px 2px rgba(21,35,42,.05),0 6px 18px rgba(21,35,42,.06);
-  --sh2:0 2px 8px rgba(21,35,42,.09),0 18px 40px rgba(21,35,42,.13);
-  --ease:cubic-bezier(.22,.68,0,1);
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#081b23;
-    --surface:#11303d; --surface-2:#0d2530;
-    --ink:#e5e8eb; --muted:#a8bac4; --faint:#7d919d;
-    --accent:#b8d0d8; --accent-soft:#173a49; --accent-ink:#cfe3e9;
-    --border:#1e4150; --border-strong:#2d5768;
-    --risk:#dda06e; --risk-bg:#3a2716; --risk-line:#c98150;
-    --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
-    --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
-    --on-accent:#081b23;
-    --photo-op:.2;
-  --sky-top:#050f14;
-    --sky-mid:#07161d;
-    --sky-bot:#081b23;
-    --cloud:rgba(184,208,216,.07);
-    --haze:rgba(184,208,216,.05);
-    --ridge-3:#0c222c;
-    --ridge-2:#11303d;
-    --ridge-1:#173d4d;
-    --mote:rgba(184,208,216,.4);
-    --amb:.3;
-    --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
-    --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
-  }
-}
+/* The editor keeps an inspector down its right-hand side, so the sun's place
+   on the tree page — 64% across, in open sky — is behind a panel here. It sits
+   in the half that is actually canvas instead, and follows when the panel is
+   folded away. Everything else about the backdrop comes from theme.css. */
+.env .sun{left:34%}
+body.wide .env .sun{left:52%}
+@media (max-width:900px){ .env .sun{left:42%} }
+
+/* A .btn carries display:inline-flex, which outranks the user-agent rule for
+   [hidden] — so a hidden button sat in the toolbar anyway. Hidden means
+   hidden, whatever else an element is. The tree page learned this already. */
+[hidden]{display:none!important}
+
+/* ---------------------------------------------------------------------------
+   THE GATE
+   Sits over the editor rather than beside it: half an editor behind a notice
+   invites someone to try the half they can see.
+   ------------------------------------------------------------------------- */
+.gate{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+  padding:clamp(12px,4vw,32px);background:rgba(8,27,35,.72);backdrop-filter:blur(3px)}
+.gate[hidden]{display:none}
+.gcard{width:min(480px,100%);background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--sh2);padding:24px clamp(18px,4vw,28px)}
+.gcard .kk{font-family:var(--sans);font-size:9.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);display:block}
+.gcard h2{font-family:var(--display);font-weight:400;font-size:27px;margin:4px 0 12px;
+  line-height:1.1;text-transform:uppercase;letter-spacing:.02em;color:var(--ink)}
+.gcard p{margin:0 0 12px;font-size:14.5px;color:var(--muted);line-height:1.55}
+.gcard p b,.gcard p code{color:var(--ink)}
+.gcard code{font-family:var(--sans);font-weight:600;font-size:13px;background:var(--accent-soft);
+  color:var(--accent-ink);border-radius:5px;padding:1px 5px}
+.gcard .who{font-family:var(--sans);font-size:13px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin:0 0 13px;color:var(--ink);
+  overflow-wrap:anywhere}
+.gcard .grow2{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;align-items:center}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
@@ -72,69 +55,13 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
    slow cloud banks, and drifting air motes sit behind everything at low
    contrast so card text stays fully legible.
    ========================================================================= */
-.env{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:paint}
 
-/* sky wash */
-.env .sky{position:absolute;inset:0;
-  background:linear-gradient(to bottom,var(--sky-top) 0%,var(--sky-mid) 46%,var(--sky-bot) 100%)}
-
-/* slow cloud banks */
-.env .clouds span{position:absolute;display:block;border-radius:50%;
-  background:radial-gradient(ellipse 58% 46% at 50% 50%,var(--cloud) 0%,transparent 74%);
-  opacity:calc(var(--amb) * .78);will-change:transform}
 .env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
 .env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
 .env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
-@keyframes cloud1{0%{transform:translateX(-14vw)}50%{transform:translateX(118vw)}50.01%{transform:translateX(-70vw)}100%{transform:translateX(-14vw)}}
-@keyframes cloud2{0%{transform:translateX(-60vw)}100%{transform:translateX(108vw)}}
-@keyframes cloud3{0%{transform:translateX(-82vw)}100%{transform:translateX(100vw)}}
 
-/* the haze band the Act exists to clear */
-.env .haze{position:absolute;left:0;right:0;bottom:20%;height:26%;
-  background:linear-gradient(to bottom,transparent,var(--haze) 62%,transparent);
-  opacity:calc(var(--amb) * 1.15)}
-
-/* ridgelines, far to near */
-.env .ridges{position:absolute;left:0;right:0;bottom:0;width:100%;height:46vh;min-height:260px;display:block}
-.env .ridges path{transition:fill .4s}
-.env .ridges .r3{fill:var(--ridge-3)}
 .env .ridges .r2{fill:var(--ridge-2)}
 .env .ridges .r1{fill:var(--ridge-1)}
-
-/* drifting air motes */
-.env .motes span{position:absolute;bottom:2vh;display:block;width:2px;height:2px;border-radius:50%;
-  background:var(--mote);opacity:0;animation:rise linear infinite}
-@keyframes rise{
-  0%{transform:translateY(0) translateX(0);opacity:0}
-  18%{opacity:calc(var(--amb) * .45)}
-  78%{opacity:calc(var(--amb) * .3)}
-  100%{transform:translateY(-42vh) translateX(3vw);opacity:0}
-}
-.env .motes span:nth-child(1){left:11%;animation-duration:126s;animation-delay:0s}
-.env .motes span:nth-child(2){left:29%;animation-duration:148s;animation-delay:22s}
-.env .motes span:nth-child(3){left:44%;animation-duration:114s;animation-delay:47s}
-.env .motes span:nth-child(4){left:61%;animation-duration:158s;animation-delay:13s}
-.env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
-.env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}
-
-
-/* ---- optional photograph ----
-   Drop a file named land.jpg (or .png / .webp — see README) beside this page
-   and it becomes the horizon. Nothing here 404s loudly: if the file is absent
-   the background simply does not paint and the drawn ridgelines below show
-   through, so the page is complete either way.
-
-   The treatment is deliberate. The image is masked away toward the top, where
-   the cards live, desaturated toward the brand palette and held at low opacity,
-   so it can never compete with 13px text sitting on top of it. */
-.env .photo{position:absolute;inset:0;
-  background-image:url("land.jpg");background-size:cover;background-position:50% 76%;
-  opacity:var(--photo-op);filter:saturate(.5) contrast(.9) brightness(1.02);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%);
-  mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%)}
-/* pulls whatever the photo is toward the brand neutrals */
-.env .photo::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(to top,var(--sky-bot) 0%,transparent 55%)}
 
 /* ---- top bar ---- */
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
@@ -143,7 +70,7 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .brand .mk{flex:none;width:28px;height:28px;border-radius:8px;background:var(--accent);
   display:grid;place-items:center;color:var(--on-accent)}
 .brand .mk svg{width:16px;height:16px}
-.brand .kk{font-family:var(--sans);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block}
+.brand .kk{font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block}
 .brand h1{font-family:var(--display);font-weight:400;font-size:18px;margin:0;line-height:1.15;text-transform:uppercase;letter-spacing:.02em}
 .acts{display:flex;gap:6px;flex-wrap:wrap}
 .btn{border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:8px;
@@ -191,7 +118,7 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .qcard.risky .tag{color:var(--risk)}
 .qcard .ttl{font-family:var(--serif);font-weight:600;font-size:14.5px;line-height:1.25;display:block}
 .ocard .ttl{font-weight:650;font-size:13px;line-height:1.3;display:block}
-.ocard .meta{font-family:var(--sans);font-size:10px;color:var(--muted);margin-top:4px;display:block}
+.ocard .meta{font-family:var(--sans);font-size:11.5px;color:var(--muted);margin-top:4px;display:block}
 .ocard .meta b{color:var(--good);font-weight:600}
 .ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
 .qcard.orphan{border-style:dashed;opacity:.75}
@@ -268,7 +195,7 @@ body.wiring .qcard,body.wiring .ocard{cursor:crosshair}
 .edbar button.danger{color:var(--alert);border-color:var(--alert-line)}
 .edbar .spacer{flex:1}
 .edbar .done{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.qcard .badge,.ocard .badge{position:absolute;top:-8px;right:8px;font-family:var(--sans);font-size:9px;
+.qcard .badge,.ocard .badge{position:absolute;top:-8px;right:8px;font-family:var(--sans);font-size:10.5px;
   font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;
   background:var(--alert-line);color:#fff}
 .termcard{position:absolute;background:var(--good-bg);border:1.5px dashed var(--good-line);border-radius:11px;
@@ -319,7 +246,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
 .olist{display:grid;gap:8px;margin-top:6px}
 .oitem{border:1px solid var(--border);border-radius:9px;padding:9px 10px;background:var(--bg)}
 .oitem .top{display:flex;gap:7px;align-items:center;margin-bottom:6px}
-.oitem .n{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--accent);
+.oitem .n{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--accent);
   background:var(--accent-soft);border-radius:5px;padding:2px 6px;flex:none}
 .oitem .lbl{flex:1;font-weight:650;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -354,6 +281,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 
 <div class="env" aria-hidden="true">
   <div class="sky"></div>
+  <div class="sun"></div>
   <div class="photo"></div>
   <div class="clouds"><span></span><span></span><span></span></div>
   <div class="haze"></div>
@@ -378,8 +306,11 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
       <button class="btn" id="bImport" title="Paste an exported tree back in, replacing what is here">Import</button>
       <button class="btn" id="bExport" title="Download tree-data.js to hand your change to everyone else. Your own preview is already up to date.">Export…</button>
       <button class="btn danger" id="bReset" title="Throw away your edits and the saved draft, back to what the repo ships">Revert</button>
+      <button class="btn" id="bCloud" hidden title="Keep this tree on your account, or open one you saved earlier">My trees</button>
+      <button class="btn" id="bPublish" hidden title="Put what is on screen in front of every reader">Publish…</button>
       <button class="btn" id="bOpen" title="Open the reader's tree in a new tab — it reads your saved edits, so it shows exactly what you have now">Preview ↗</button>
       <button class="btn solid" id="bSave" title="Edits save on their own; this just forces it now and confirms">Save now</button>
+      <button class="btn" id="bOut" hidden title="Sign out of the editor">Sign out</button>
     </div>
   </header>
 
@@ -396,7 +327,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
         <button class="btn" id="zAll" title="Shrink the whole tree into view">◱</button>
         <button class="btn" id="zWide" title="Hide the side panel and give the tree the full width">⤡</button>
       </div>
-      <div class="tip" id="tip">Edits save as you go — <b>Preview</b> shows them · <b>Export</b> is only for publishing to others</div>
+      <div class="tip" id="tip">Edits save as you go — <b>Preview</b> shows them · <b>Publish</b> puts them in front of readers · <b>Export</b> hands them to the repo</div>
     </div>
 
     <aside class="side">
@@ -411,6 +342,18 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
   </div>
 </div>
 
+<!-- The gate. Covers the editor until the one account allowed into it is
+     signed in. Painted from api/auth/me, which is where ADMIN_EMAIL is read;
+     with no ADMIN_EMAIL configured there is no gate and this never shows. -->
+<div class="gate" id="gate" hidden>
+  <div class="gcard">
+    <span class="kk" id="gateKk">The editor</span>
+    <h2 id="gateTitle">Checking…</h2>
+    <div id="gateBody"></div>
+    <div class="grow2" id="gateActs"></div>
+  </div>
+</div>
+
 <dialog id="dlg">
   <div class="dh" id="dlgTitle">Export</div>
   <div class="db"><textarea id="dlgText" spellcheck="false"></textarea>
@@ -422,7 +365,17 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
   </div>
 </dialog>
 
+<!-- the canvas arithmetic the tree and the editor share -->
+<script src="view.js"></script>
 <script src="tree-data.js"></script>
+<!-- Accounts and saved trees. The editor works without it: the working copy
+     lives in this browser either way, and "My trees" then explains why it
+     cannot go any further than that. -->
+<script>/* the editor gates the whole page on one account, so it declines the
+     account chip: a "Sign in" button in a toolbar the page will not show you
+     until you have signed in is offering something already insisted on. */
+  window.TAS_CHIP=false;</script>
+<script src="account.js"></script>
 <script>
 "use strict";
 /* ===========================================================================
@@ -454,7 +407,6 @@ var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */
 try{ var raw=localStorage.getItem(DRAFT_KEY); if(raw) T=JSON.parse(raw); }catch(e){}
 /* a draft written before the disclaimer set was split still opens */
 normaliseCopy();
-
 
 var TERMINALS={END:'Result',END_NONTAS:'Non-TAS pathways'};
 function isTerminal(id){ return TERMINALS.hasOwnProperty(id); }
@@ -506,14 +458,8 @@ var view={tx:40,ty:30,s:.85};
    where the tree is smaller than the stage it simply centres. */
 var PAN_MARGIN=120;
 function clampView(){
-  var b=window.__box; if(!b) return;
-  var r=stage.getBoundingClientRect();
-  if(!r.width||!r.height) return;
-  var W=b.w*view.s, H=b.h*view.s, m=PAN_MARGIN;
-  var loX=r.width-m-W, hiX=m;
-  view.tx=(loX>hiX)?(r.width-W)/2:Math.min(hiX,Math.max(loX,view.tx));
-  var loY=r.height-m-H, hiY=m;
-  view.ty=(loY>hiY)?(r.height-H)/2:Math.min(hiY,Math.max(loY,view.ty));
+  if(!window.__box||!window.TASView) return;
+  TASView.clamp(view,stage.getBoundingClientRect(),window.__box,PAN_MARGIN);
 }
 function applyView(){
   clampView();
@@ -1470,11 +1416,9 @@ function fitAll(){
   applyView();
 }
 function zoomBy(k){
-  var r=stage.getBoundingClientRect();
-  var cx=r.width/2, cy=r.height/2;
-  var ns=Math.min(2,Math.max(.15,view.s*k));
-  var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
-  view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns; applyView();
+  if(!window.TASView) return;
+  TASView.zoom(view,stage.getBoundingClientRect(),k);
+  applyView();
 }
 document.getElementById('zIn').onclick=function(){ zoomBy(1.2); };
 document.getElementById('zOut').onclick=function(){ zoomBy(1/1.2); };
@@ -1514,6 +1458,374 @@ stage.addEventListener('wheel',function(e){
 window.addEventListener('pointercancel',function(){ autoPanStop(); });
 window.addEventListener('blur',function(){ autoPanStop(); });
 /* nothing to warn about: the draft is already written */
+
+/* ===========================================================================
+   SAVED TREES
+   The working copy still lives in this browser, and still saves itself there
+   — that has not changed, and the editor works with no account at all. What
+   an account adds is a copy that outlives this machine: a laptop that gets
+   replaced, a browser that gets cleared, a colleague who needs to pick the
+   work up from theirs.
+
+   The link between the two is one id, held in localStorage. Save again and it
+   updates the same saved tree rather than piling up copies; open a different
+   one and the link follows it.
+   ========================================================================= */
+var LINK_KEY='tas-tree-cloud';
+var link=null;
+try{ link=JSON.parse(localStorage.getItem(LINK_KEY)||'null'); }catch(e){}
+function setLink(v){
+  link=v;
+  try{
+    if(v) localStorage.setItem(LINK_KEY,JSON.stringify(v));
+    else localStorage.removeItem(LINK_KEY);
+  }catch(e){}
+  paintLink();
+}
+function paintLink(){
+  var b=document.getElementById('bCloud');
+  if(!b) return;
+  /* Saved trees are an account's, and an editor action besides: it appears for
+     whoever is through the gate, and not for a visitor stopped by it. */
+  b.hidden=!(window.TAS&&TAS.auth.canSave()&&TAS.auth.isAdmin());
+  if(!window.TAS){ b.textContent='My trees'; return; }
+  var s=TAS.auth.state;
+  if(!s.user){ b.textContent='My trees'; b.title='Sign in to keep this tree on an account'; return; }
+  b.textContent=link?'My trees ✓':'My trees';
+  b.title=link
+    ? 'Linked to “'+link.title+'” on your account — saving again updates it'
+    : 'This tree is only in this browser. Save a copy to your account.';
+}
+
+/* The shape /api stores: exactly what Export writes, minus the wrapper. */
+function currentData(){ return JSON.parse(JSON.stringify(T)); }
+function adoptFromAccount(item){
+  T=JSON.parse(JSON.stringify(item.data));
+  normaliseCopy();
+  sel=null;
+  try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(T)); }catch(e){}
+  markDirty(false);
+  setStatus('saved');
+  render(); fit();
+  setLink({id:item.id,title:item.title});
+  TAS.ui.toast('Opened “'+item.title+'”. It is now the working copy in this browser too.','good');
+}
+
+function cloudDialog(){
+  if(!window.TAS) return;
+  TAS.auth.ready().then(function(s){
+    if(!s.user){
+      TAS.auth.requireSignIn(
+        '<b>The editor works without an account</b> — your edits are already saved in this browser. ' +
+        'An account keeps a copy that survives this machine, and lets you open it from another one.'
+      ).then(function(u){ if(u) cloudDialog(); });
+      return;
+    }
+    var m=TAS.ui.modal({title:'My trees',kicker:'Saved on your account',wide:true});
+    var el=TAS.ui.el, esc2=TAS.ui.esc;
+    var nameF=TAS.ui.field({id:'tas-tree-name',label:'Name for a new copy',
+      value:'TAS tree — '+new Date().toLocaleDateString(),maxlength:160,
+      hint:'Used by Save as new. Renaming a saved tree is on its own row.'});
+    function draw(items){
+      m.body.innerHTML='';
+      m.foot.innerHTML='';
+      m.body.appendChild(TAS.ui.message(
+        link
+          ? 'This browser is working on <b>'+esc2(link.title)+'</b>. <b>Update it</b> writes what is on screen over the saved copy.'
+          : 'This tree is only in this browser. <b>Save as new</b> puts a copy on your account, and every later save updates that copy.',
+        link?'good':'warn'));
+      m.body.appendChild(nameF.wrap);
+      if(!items.length){
+        m.body.appendChild(el('p',{style:'font-size:13px;color:var(--muted);margin:0 0 12px',
+          text:'Nothing saved yet.'}));
+      }
+      items.forEach(function(it){
+        var isLinked=link&&link.id===it.id;
+        var row=el('div',{style:'display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;'+
+          'padding:10px 0;border-top:1px solid var(--border)'},[
+          el('div',{style:'flex:1;min-width:170px'},[
+            el('div',{style:'font-weight:650;font-size:14px;color:var(--ink)',
+              text:it.title+(isLinked?'  ·  open here':'')}),
+            el('div',{style:'font-size:11.5px;color:var(--faint)',
+              text:'updated '+new Date(it.updatedAt).toLocaleString()}),
+            it.note?el('div',{style:'font-size:12.5px;color:var(--muted);margin-top:4px',text:it.note}):null
+          ]),
+          el('button',{class:'tasa-b',type:'button',text:'Open',onclick:function(){
+            if(dirty&&!confirm('The working copy in this browser has unsaved differences.\n\n'
+              +'Opening a saved tree replaces it. Carry on?')) return;
+            TAS.store.get('trees',it.id).then(function(full){ m.close(null); adoptFromAccount(full); },
+              TAS.ui.report);
+          }}),
+          el('button',{class:'tasa-b'+(isLinked?' solid':''),type:'button',
+            text:isLinked?'Update it':'Overwrite',onclick:function(e){
+            var b=e.currentTarget; b.disabled=true;
+            TAS.store.update('trees',it.id,{data:currentData()}).then(function(item){
+              b.disabled=false;
+              setLink({id:item.id,title:item.title});
+              TAS.ui.toast('Saved to “'+item.title+'”.','good');
+              load();
+            },function(err){ b.disabled=false; TAS.ui.report(err,'save this tree'); });
+          }}),
+          el('button',{class:'tasa-b',type:'button',text:'Rename',onclick:function(e){
+            /* renamed in place rather than through a browser prompt, so the
+               name can be read against the list it has to be distinct from */
+            var box=e.currentTarget.parentNode.querySelector('div');
+            var input=el('input',{type:'text',value:it.title,maxlength:160,
+              style:'width:100%;box-sizing:border-box;font:inherit;font-size:14px;'+
+              'font-family:var(--sans);background:var(--bg);color:var(--ink);'+
+              'border:1px solid var(--accent);border-radius:8px;padding:6px 9px'});
+            box.innerHTML=''; box.appendChild(input);
+            var done=function(save){
+              if(!save){ load(); return; }
+              TAS.store.update('trees',it.id,{title:input.value}).then(function(item){
+                if(link&&link.id===item.id) setLink({id:item.id,title:item.title});
+                load();
+              },function(err){ TAS.ui.report(err); load(); });
+            };
+            input.addEventListener('keydown',function(ev){
+              if(ev.key==='Enter'){ ev.preventDefault(); done(true); }
+              if(ev.key==='Escape'){ ev.preventDefault(); done(false); }
+            });
+            input.addEventListener('blur',function(){ done(true); });
+            input.focus(); input.select();
+          }}),
+          el('button',{class:'tasa-b danger',type:'button',text:'Delete',onclick:function(){
+            TAS.store.remove('trees',it.id).then(function(){
+              if(link&&link.id===it.id) setLink(null);
+              TAS.ui.toast('Moved to Deleted — restore it under My work.',null);
+              load();
+            },TAS.ui.report);
+          }})
+        ]);
+        m.body.appendChild(row);
+      });
+      m.foot.appendChild(el('a',{class:'tasa-b',href:'/work#trees',text:'My work'}));
+      m.foot.appendChild(el('span',{class:'grow'}));
+      m.foot.appendChild(el('button',{class:'tasa-b',type:'button',text:'Close',
+        onclick:function(){ m.close(null); }}));
+      m.foot.appendChild(el('button',{class:'tasa-b solid',type:'button',text:'Save as new',
+        onclick:function(e){
+          var b=e.currentTarget;
+          b.disabled=true;
+          TAS.store.create('trees',{title:nameF.value()||('TAS tree — '+new Date().toLocaleDateString()),
+                                    data:currentData()}).then(function(item){
+            b.disabled=false;
+            setLink({id:item.id,title:item.title});
+            TAS.ui.toast('Saved to your account.','good');
+            load();
+          },function(err){ b.disabled=false; TAS.ui.report(err,'save this tree'); });
+        }}));
+    }
+    function load(){
+      TAS.store.list('trees').then(function(d){ draw(d.items||[]); },function(err){
+        m.body.innerHTML='';
+        m.body.appendChild(TAS.ui.message(TAS.ui.esc(err.message),'bad'));
+      });
+    }
+    load();
+  });
+}
+
+/* ===========================================================================
+   WHO MAY EDIT
+   ADMIN_EMAIL on the server names the one account allowed in here. The page
+   asks /api/auth/me, which answers `adminGate` (is there a gate at all) and
+   `admin` (are you through it), and paints one of four states: checking,
+   signed out, signed in as the wrong person, or in.
+
+   What this is honest about: /admin is a page the browser fetches like any
+   other, so this decides whether the editor is *presented*, not whether the
+   file can be read. A deployment that needs more than that puts Vercel
+   Deployment Protection in front of the project or drops admin.html from the
+   deploy — both are in the README.
+   ========================================================================= */
+function gateShow(kk,title,bodyHtml,acts){
+  var g=document.getElementById('gate');
+  document.getElementById('gateKk').textContent=kk;
+  document.getElementById('gateTitle').textContent=title;
+  document.getElementById('gateBody').innerHTML=bodyHtml;
+  var box=document.getElementById('gateActs');
+  box.innerHTML='';
+  (acts||[]).forEach(function(el){ box.appendChild(el); });
+  g.hidden=false;
+}
+function gateHide(){ document.getElementById('gate').hidden=true; }
+
+function paintGate(){
+  if(!window.TAS) return gateHide();
+  var st=TAS.auth.state;
+  var el=TAS.ui.el, esc2=TAS.ui.esc;
+  var out=document.getElementById('bOut');
+  if(out) out.hidden=!(st.user&&st.adminGate&&st.admin);
+
+  if(!st.ready){
+    gateShow('The editor','Checking…','<p>Asking who you are signed in as.</p>',[]);
+    return;
+  }
+  /* no gate configured, or nowhere to check against: the editor is open, the
+     way it was before accounts existed */
+  if(!st.adminGate){ gateHide(); return; }
+  if(st.admin){ gateHide(); return; }
+
+  if(!st.user){
+    gateShow('The editor','Sign in to edit',
+      '<p>This editor is limited to one account. Sign in with it and the tree opens for editing.</p>'
+      +'<p>The reader’s tree needs no account at all — only this page does.</p>',
+      [
+        el('button',{class:'btn solid',type:'button',text:'Sign in',onclick:function(){
+          TAS.auth.dialog({dismissable:true,guest:false,reason:'<b>The editor is limited to one account.</b> Sign in with it to open the tree for editing.'});
+        }})
+      ]);
+    return;
+  }
+  /* signed in, but not the account this editor belongs to */
+  gateShow('Not this account','The editor is someone else’s',
+    '<div class="who">Signed in as <b>'+esc2(st.user.email)+'</b></div>'
+    +'<p>This deployment limits the editor to one account, and that is not this one. Nothing is wrong with your account — it just is not the one that edits the tree.</p>'
+    +'<p>Sign in with the account that does.</p>',
+    [
+      el('button',{class:'btn solid',type:'button',text:'Sign in as someone else',onclick:function(e){
+        var b=e.currentTarget; b.disabled=true;
+        TAS.auth.signOut().then(function(){
+          b.disabled=false;
+          TAS.auth.dialog({dismissable:true,guest:false,reason:'<b>The editor is limited to one account.</b> Sign in with it to open the tree for editing.'});
+        });
+      }}),
+      el('a',{class:'btn',href:'/work',text:'My work'})
+    ]);
+}
+
+if(window.TAS){
+  document.getElementById('bOut').addEventListener('click',function(){
+    TAS.auth.signOut();
+  });
+  TAS.auth.on('change',paintGate);
+  TAS.auth.ready().then(paintGate);
+  paintGate();
+  document.getElementById('bCloud').addEventListener('click',cloudDialog);
+  document.getElementById('bPublish').addEventListener('click',publishDialog);
+  TAS.auth.on('change',paintPublish);
+  TAS.auth.ready().then(paintPublish);
+  TAS.auth.on('change',paintLink);
+  TAS.auth.ready().then(function(s){
+    paintLink();
+    /* /admin?tree=<id> — the link the work page hands you */
+    var want=null;
+    try{ want=new URLSearchParams(location.search).get('tree'); }catch(e){}
+    if(want){
+      if(!s.user){
+        TAS.auth.requireSignIn('<b>That tree is on an account.</b> Sign in to open it in the editor.')
+          .then(function(u){ if(u) TAS.store.get('trees',want).then(adoptFromAccount,TAS.ui.report); });
+      }else{
+        TAS.store.get('trees',want).then(adoptFromAccount,function(err){
+          TAS.ui.report(err,'open that tree');
+        });
+      }
+      return;
+    }
+    /* with a gate in front of the editor, a toast asking the same thing is
+       one nag too many — the gate is already the whole conversation */
+    if(!s.user&&!s.adminGate) TAS.auth.guestNudge(
+      'Your edits are saved in this browser only. Sign in to keep a copy on your account.');
+  });
+  TAS.auth.on('signin',function(){
+    paintLink();
+    /* the gate answers a signed-in visitor who is not the editor; a toast
+       about keeping trees would be talking past it */
+    if(!TAS.auth.isAdmin()) return;
+    if(!link) TAS.ui.toast('Signed in. Use “My trees” to keep this tree on your account.','good',
+      {ms:7000,action:'My trees',onAction:cloudDialog});
+  });
+  TAS.auth.on('signout',function(){ setLink(null); });
+}else{
+  document.getElementById('bCloud').hidden=true;
+}
+paintLink();
+
+/* ===========================================================================
+   PUBLISHING
+   Export writes a file for the repo, and that route still works — it is how a
+   change gets reviewed in a commit alongside everything else. This is the
+   other one: PUT /api/tree, and every reader has it on their next load.
+
+   The two are not rivals. Export is for a deployment whose content lives in
+   git; Publish is for a Tribe that needs a citation corrected this afternoon
+   without a developer. A deployment can use either, and the reader cannot
+   tell which was used — both end up as the same JSON in the same shape.
+   ========================================================================= */
+function publishDialog(){
+  if(!window.TAS) return;
+  var el=TAS.ui.el, esc2=TAS.ui.esc;
+  var m=TAS.ui.modal({title:'Publish this tree',kicker:'In front of every reader',wide:true});
+  var noteF=TAS.ui.field({id:'tas-pub-note',label:'What changed (optional)',maxlength:300,
+    hint:'Kept with the published copy. A line for whoever looks next.'});
+  var state=el('div',{style:'font-size:13px;color:var(--muted);margin:0 0 12px',text:'Checking…'});
+
+  function draw(pub){
+    m.body.innerHTML='';
+    var bad=checks().filter(function(c){return c.bad;});
+    m.body.appendChild(TAS.ui.message(
+      pub&&pub.published
+        ? 'A tree is published now, last updated <b>'+esc2(new Date(pub.publishedAt).toLocaleString())+'</b>'
+          +(pub.note?' — '+esc2(pub.note):'')+'. Publishing again replaces it.'
+        : 'Nothing is published yet, so readers are seeing <b>tree-data.js</b>, the file the repo ships. '
+          +'Publishing puts this working copy in front of them instead.',
+      pub&&pub.published?'good':null));
+    if(bad.length){
+      m.body.appendChild(TAS.ui.message(
+        '<b>'+bad.length+' problem'+(bad.length===1?'':'s')+' in this tree.</b> '
+        +esc2(bad.slice(0,4).map(function(b){return b.t;}).join(' · '))
+        +(bad.length>4?' …':'')+' The Checks tab lists them all. Publishing anyway puts them in front of readers.',
+        'bad'));
+    }
+    m.body.appendChild(noteF.wrap);
+    m.body.appendChild(el('p',{style:'font-size:12.5px;color:var(--faint);line-height:1.5;margin:0',
+      html:'A reader who is part-way down the tree keeps the version they started on and '
+        +'gets this one next time — the questions are not swapped under a decision in progress. '
+        +'Saved paths are unaffected: each one carries the tree it was answered against.'}));
+
+    m.foot.innerHTML='';
+    if(pub&&pub.published){
+      m.foot.appendChild(el('button',{class:'tasa-b danger',type:'button',text:'Withdraw',
+        title:'Unpublish, and let readers fall back to tree-data.js',
+        onclick:function(e){
+          var b=e.currentTarget; b.disabled=true;
+          TAS.api('/tree',{method:'DELETE'}).then(function(){
+            b.disabled=false;
+            TAS.ui.toast('Withdrawn. Readers fall back to the file the repo ships.',null);
+            load();
+          },function(err){ b.disabled=false; TAS.ui.report(err,'withdraw the published tree'); });
+        }}));
+    }
+    m.foot.appendChild(el('span',{class:'grow'}));
+    m.foot.appendChild(el('button',{class:'tasa-b',type:'button',text:'Cancel',
+      onclick:function(){ m.close(null); }}));
+    m.foot.appendChild(el('button',{class:'tasa-b solid',type:'button',
+      text:pub&&pub.published?'Replace what is published':'Publish',
+      onclick:function(e){
+        var b=e.currentTarget; b.disabled=true;
+        TAS.api('/tree',{method:'PUT',body:{data:currentData(),note:noteF.value()}}).then(function(){
+          b.disabled=false;
+          m.close(true);
+          TAS.ui.toast('Published. Every reader has it on their next load.','good',{ms:7000});
+          paintPublish();
+        },function(err){ b.disabled=false; TAS.ui.report(err,'publish this tree'); });
+      }}));
+  }
+  function load(){
+    m.body.innerHTML=''; m.body.appendChild(state);
+    TAS.api('/tree').then(draw,function(err){
+      m.body.innerHTML='';
+      m.body.appendChild(TAS.ui.message(TAS.ui.esc(err.message),'bad'));
+    });
+  }
+  load();
+}
+function paintPublish(){
+  var b=document.getElementById('bPublish');
+  if(!b) return;
+  b.hidden=!(window.TAS&&TAS.auth.canSave()&&TAS.auth.isAdmin());
+}
 
 render();
 fit();

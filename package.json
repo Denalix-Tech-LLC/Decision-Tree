@@ -1,0 +1,25 @@
+{
+  "name": "tas-decision-tree",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TAS Decision Tree — static reader and editor, with accounts and persistent storage behind /api.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node dev-server.mjs 8777",
+    "db:init": "node scripts/db-init.mjs",
+    "db:prune": "node scripts/db-prune.mjs",
+    "selftest": "node scripts/selftest.mjs",
+    "check": "node scripts/check-html.mjs",
+    "dev:local": "node dev-server.mjs 8777 --pglite"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11"
+  }
+}

@@ -12,3 +12,14 @@ decision-tree-prompt.md
 land.jpg
 land.png
 land.webp
+
+# secrets and local database settings
+.env
+.env.local
+.env.*.local
+
+# a crash dump from a Windows grep, not part of the project
+*.stackdump
+
+# a local development database, made by npm run dev:local
+.pglite
