@@ -2,10 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "tas-preview",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["serve.py", "8777"],
-      "port": 8777
+      "name": "tas-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "dev-server.mjs",
+        "8778",
+        "--pglite"
+      ],
+      "port": 8778
     }
   ]
 }
