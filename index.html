@@ -905,6 +905,7 @@ var GUIDE=[
    question box, and prose between the reader and either one is in the way. */
 var CCOPY={
   lead:`<p>Book a time, or just ask — whichever suits the question.</p>`,
+  leadNoCal:`<p>Ask whatever you need to. Whoever maintains this tool answers it.</p>`,
   counsel:`<p><b>Tribal legal counsel and Tribal leadership come before EPA.</b> A TAS request
     needs a jurisdictional showing, and EPA provides that showing to neighbouring state and local
     air agencies — so counsel should read what the Tribe is about to assert before anyone outside
@@ -2249,7 +2250,7 @@ function mailText(){
 }
 
 function renderContact(){
-  var h=CCOPY.lead;
+  var h=haveCalendly()?CCOPY.lead:CCOPY.leadNoCal;
 
   h+='<section class="gsec"><h4>Ask a question</h4>'
    +'<label class="cfield"><span>What would you like to know?</span>'
@@ -2270,14 +2271,17 @@ function renderContact(){
   h+='<section class="gsec"><h4>Book a time</h4>';
   if(haveCalendly()){
     h+='<div class="calbox" id="calBox"><div class="calask">'
-     +'<p class="cpick">Calendly shows real availability. Anything you have typed above is '
-     +'carried across, so you will not have to write it twice.</p>'
-     +'<button class="btn solid" id="calShow">Show the calendar</button>'
+     +'<p class="cpick">Calendly shows real availability, and carries across anything you '
+     +'have typed above. It is a service outside the Tribe.</p>'
      +'<a class="btn" id="calTab" href="'+esc(calUrl(false))+'" target="_blank" rel="noopener">New tab</a>'
      +'</div><div id="calFrame"></div></div>';
   }else{
-    h+='<p class="cpick">No scheduling link is set up on this deployment yet, so the question '
-     +'above is the way through. Whoever maintains the tool can add one at <code>/admin</code>.</p>';
+    /* Said plainly rather than left as an empty heading. A reader needs to know
+       the question box is the only way through; whoever deployed the tool needs
+       to know why, and where to fix it. */
+    h+='<p class="cpick">There is no scheduling link on this deployment, so the question above '
+     +'is the way through. To offer a calendar here, paste a Calendly event link into '
+     +'<b>Content \u2192 Contact</b> at <code>/admin</code>.</p>';
   }
   h+='</section>';
 
@@ -2285,6 +2289,12 @@ function renderContact(){
   h+='<section class="gsec">'+CCOPY.counsel+CCOPY.privacy+'</section>';
 
   contactBody.innerHTML=h;
+  /* The frame goes up with the panel. It was behind a Show button, on the
+     reasoning that nobody who came to type a question should load a
+     third-party page uninvited — but pressing Contact IS the invitation, and
+     a calendar nobody can see is not a scheduling feature. The note beside it
+     says whose service it is. */
+  if(haveCalendly()) mountCal();
   renderContactFoot();
 }
 
@@ -2319,10 +2329,6 @@ function mountCal(){
   f.setAttribute('title','Book a time \u2014 Calendly');
   f.setAttribute('loading','lazy');
   slot.appendChild(f);
-  /* the button has done its job; the New tab link stays, because a frame that
-     will not load on some networks is no reason to lose the other way in */
-  var b=document.getElementById('calShow');
-  if(b) b.remove();
 }
 
 function openContact(){
@@ -2370,7 +2376,6 @@ function copyMail(btn){
 }
 contactEl.addEventListener('click',function(e){
   if(e.target.closest('[data-cclose]')){ closeContact(); return; }
-  if(e.target.closest('#calShow')){ mountCal(); return; }
   if(e.target.closest('#cSend')){ sendMail(); return; }
   var cp=e.target.closest('#cCopy');
   if(cp){ copyMail(cp); return; }

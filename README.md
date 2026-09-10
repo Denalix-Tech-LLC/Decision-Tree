@@ -69,8 +69,10 @@ long enough to push a `mailto` past what some clients accept. Nothing posts from
 slot list of its own, which was the wrong shape for the job: it could not see anyone's
 availability, so it only ever *proposed* a time by email and a reader could pick a slot that
 was already taken. Calendly knows. The frame is a plain `iframe` — no third-party script —
-and it is created only when the reader presses **Show the calendar**, so nobody who came to
-type a question loads a third-party page they did not ask for. Whatever they typed is
+and it goes up with the panel. It sat behind a **Show the calendar** button at first, on the
+reasoning that nobody who came to type a question should load a third-party page uninvited;
+pressing **Contact** is that invitation, and a calendar nobody can see is not a scheduling
+feature. The note beside the frame says whose service it is. Whatever they typed is
 carried in as a Calendly prefill (`name`, `email`, and `a1` for the event's first custom
 question), so the question does not have to be written twice. A **New tab** link sits beside
 it and stays after the frame mounts, because a frame that will not load on some networks is
