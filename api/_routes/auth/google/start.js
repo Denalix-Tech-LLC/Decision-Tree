@@ -3,15 +3,15 @@
    A browser navigation, not a fetch: this answers with a redirect to Google,
    having first written the one cookie that makes the callback trustworthy.
    ========================================================================= */
-import { route, redirect, errorPage, setCookie, isSecureRequest, queryOf } from '../../_lib/http.js';
+import { route, redirect, errorPage, setCookie, isSecureRequest, queryOf } from '../../../_lib/http.js';
 import {
   isGoogleEnabled,
   authorizeUrl,
   randomToken,
   packFlow,
   safeNext,
-} from '../../_lib/google.js';
-import { isConfigured } from '../../_lib/db.js';
+} from '../../../_lib/google.js';
+import { isConfigured } from '../../../_lib/db.js';
 
 export const FLOW_COOKIE = 'tas_oauth';
 

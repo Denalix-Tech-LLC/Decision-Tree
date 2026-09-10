@@ -5,9 +5,9 @@
    laptop, a conference-room desktop — and "am I still signed in over there"
    is otherwise unanswerable.
    ========================================================================= */
-import { json, route } from '../_lib/http.js';
-import { requireUser, endAllSessions } from '../_lib/auth.js';
-import { many } from '../_lib/db.js';
+import { json, route } from '../../_lib/http.js';
+import { requireUser, endAllSessions } from '../../_lib/auth.js';
+import { many } from '../../_lib/db.js';
 
 export default route({
   async GET(req, res) {

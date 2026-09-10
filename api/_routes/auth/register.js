@@ -1,5 +1,5 @@
 /* POST /api/auth/register — make an account and sign in with it. */
-import { json, readJson, route, str } from '../_lib/http.js';
+import { json, readJson, route, str } from '../../_lib/http.js';
 import {
   createUser,
   createSession,
@@ -9,7 +9,7 @@ import {
   recordAttempt,
   checkEmail,
   checkPassword,
-} from '../_lib/auth.js';
+} from '../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {

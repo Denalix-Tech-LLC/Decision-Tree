@@ -5,11 +5,11 @@
    A guest is not an error here: GET answers 200 with user:null, so the page
    can lay out its account chip without treating "not signed in" as a failure.
    ========================================================================= */
-import { json, readJson, route, str } from '../_lib/http.js';
-import { currentUser, requireUser, publicUser, signInMethods, adminGateOn, isAdminEmail } from '../_lib/auth.js';
-import { counts, LIMITS } from '../_lib/records.js';
-import { isConfigured, query } from '../_lib/db.js';
-import { isGoogleEnabled } from '../_lib/google.js';
+import { json, readJson, route, str } from '../../_lib/http.js';
+import { currentUser, requireUser, publicUser, signInMethods, adminGateOn, isAdminEmail } from '../../_lib/auth.js';
+import { counts, LIMITS } from '../../_lib/records.js';
+import { isConfigured, query } from '../../_lib/db.js';
+import { isGoogleEnabled } from '../../_lib/google.js';
 
 export default route({
   async GET(req, res) {

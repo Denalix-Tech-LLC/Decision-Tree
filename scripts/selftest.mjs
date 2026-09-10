@@ -20,6 +20,8 @@
    ========================================================================= */
 import { loadEnv } from './env.mjs';
 import crypto from 'node:crypto';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
 
 loadEnv();
 process.env.TAS_INSECURE_COOKIES = '1';
@@ -142,6 +144,72 @@ const SAMPLE_TREE = {
 let cleanupUsers = [];
 
 try {
+  /* ---- the two route resolvers agree -----------------------------------
+     Vercel allows twelve functions on this plan and the project has eighteen
+     endpoints, so production serves them all from one catch-all
+     (api/[...route].js) whose routing is a hand-written table of static
+     imports — it has to be static, or the bundler would not include the
+     route modules. The dev server instead walks api/_routes from disk, which
+     is what allows a route edit without a restart.
+
+     Two resolvers for one set of URLs can drift, and the way it shows up is
+     the worst kind: an endpoint that works on a laptop and 404s only once
+     deployed. So compare them here. */
+  console.log('\nRouting: the catch-all table matches the files on disk');
+  {
+    const { STATIC_ROUTES, ITEM_ROUTES, resolveRoute } = await import('../api/[...route].js');
+    const routesDir = path.join(process.cwd(), 'api', '_routes');
+
+    /* every route file under api/_routes, as the URL path it answers */
+    async function walk(dir, prefix) {
+      const out = [];
+      for (const e of await fsp.readdir(dir, { withFileTypes: true })) {
+        if (e.name.startsWith('_')) continue;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          out.push(...(await walk(full, prefix.concat(e.name))));
+          continue;
+        }
+        if (!/[.]m?js$/.test(e.name)) continue;
+        const base = e.name.replace(/[.]m?js$/, '');
+        out.push(base === 'index' ? prefix.join('/') : prefix.concat(base).join('/'));
+      }
+      return out;
+    }
+
+    const onDisk = (await walk(routesDir, [])).sort();
+    const inTable = Object.keys(STATIC_ROUTES)
+      .concat(Object.keys(ITEM_ROUTES).map((k) => k + '/[id]'))
+      .sort();
+
+    const missing = onDisk.filter((r) => !inTable.includes(r));
+    const extra = inTable.filter((r) => !onDisk.includes(r));
+    ok(
+      'every route file is in the catch-all table',
+      missing.length === 0,
+      missing.length ? 'not dispatched in production: ' + missing.join(', ') : ''
+    );
+    ok(
+      'the catch-all table has no route that no longer exists',
+      extra.length === 0,
+      extra.length ? 'in the table with no file: ' + extra.join(', ') : ''
+    );
+    ok(
+      'eighteen endpoints, one function',
+      onDisk.length === 18 && inTable.length === 18,
+      'on disk ' + onDisk.length + ', in table ' + inTable.length
+    );
+
+    /* the table resolves the shapes the client actually calls */
+    ok('a nested route resolves', !!resolveRoute(['auth', 'google', 'callback']));
+    ok('a collection resolves', !!resolveRoute(['trees']));
+    const item = resolveRoute(['trees', 'abc']);
+    ok('a record id lands in params', !!item && item.params.id === 'abc');
+    ok('an unknown path does not resolve', resolveRoute(['nope']) === null);
+    ok('a _lib path is not reachable', resolveRoute(['_lib', 'db']) === null);
+    ok('traversal is not reachable', resolveRoute(['..', 'secrets']) === null);
+  }
+
   console.log('\nHealth and guest access');
   {
     const r = await call(A.jar, '/api/health');

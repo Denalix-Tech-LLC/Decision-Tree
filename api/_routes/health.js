@@ -5,10 +5,10 @@
    still use it, and nothing can be saved. A monitor should read `storage`,
    not the status code.
    ========================================================================= */
-import { json, route } from './_lib/http.js';
-import { isConfigured, ensureSchema, rawQuery } from './_lib/db.js';
-import { SCHEMA_VERSION } from './_lib/schema.js';
-import { isGoogleEnabled } from './_lib/google.js';
+import { json, route } from '../_lib/http.js';
+import { isConfigured, ensureSchema, rawQuery } from '../_lib/db.js';
+import { SCHEMA_VERSION } from '../_lib/schema.js';
+import { isGoogleEnabled } from '../_lib/google.js';
 
 export default route({
   async GET(_req, res) {
