@@ -4,8 +4,8 @@
    password is that someone else may know the old one, and leaving their
    session alive defeats the change. `keepOtherSessions: true` opts out.
    ========================================================================= */
-import { json, readJson, route } from '../_lib/http.js';
-import { requireUser, changePassword, endAllSessions } from '../_lib/auth.js';
+import { json, readJson, route } from '../../_lib/http.js';
+import { requireUser, changePassword, endAllSessions } from '../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {

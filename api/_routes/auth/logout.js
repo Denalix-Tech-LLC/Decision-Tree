@@ -1,7 +1,7 @@
 /* POST /api/auth/logout — end this session. Signing out of a shared machine
    has to work even when the session is already gone, so this never fails. */
-import { json, route } from '../_lib/http.js';
-import { currentUser, endSession, clearSessionCookie } from '../_lib/auth.js';
+import { json, route } from '../../_lib/http.js';
+import { currentUser, endSession, clearSessionCookie } from '../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {

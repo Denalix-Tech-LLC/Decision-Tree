@@ -55,16 +55,37 @@ a callout points up at it reading *Worth a word with counsel*. Answering the que
 puts it back; cutting back to it raises it again. It keys off the `risky` flag in the
 data rather than a question id, so a tree edited at `/admin` gets the same behaviour on
 whatever it marks. Below 560px the callout goes and the colour stays, because the bar
-wraps there and the words would sit over the standing notice. It holds who to ask, a month picker
-and a slot list that compose a meeting request, and an optional scheduling link. The
-request opens in the reader's own mail program with the decision path attached if they
-want it; nothing is posted anywhere from the page.
+wraps there and the words would sit over the standing notice.
+
+The panel itself is two things and no more.
+
+**Ask a question.** One box for what the reader wants to know, their name and email so a
+reply can reach them, and a checkbox to attach the route they took — the same rows the
+print-out draws, so the two describe one route the same way. **Send question** opens their
+own mail program; **Copy** is there for a reader with no mail client registered, or a path
+long enough to push a `mailto` past what some clients accept. Nothing posts from the page.
+
+**Book a time.** Calendly does the scheduling. The panel used to carry a month picker and a
+slot list of its own, which was the wrong shape for the job: it could not see anyone's
+availability, so it only ever *proposed* a time by email and a reader could pick a slot that
+was already taken. Calendly knows. The frame is a plain `iframe` — no third-party script —
+and it goes up with the panel. It sat behind a **Show the calendar** button at first, on the
+reasoning that nobody who came to type a question should load a third-party page uninvited;
+pressing **Contact** is that invitation, and a calendar nobody can see is not a scheduling
+feature. The note beside the frame says whose service it is. Whatever they typed is
+carried in as a Calendly prefill (`name`, `email`, and `a1` for the event's first custom
+question), so the question does not have to be written twice. A **New tab** link sits beside
+it and stays after the frame mounts, because a frame that will not load on some networks is
+no reason to lose the other way in; its prefill keeps updating as the reader types, while the
+mounted frame is deliberately left alone — rebuilding it on a keystroke would reload
+Calendly under someone mid-booking.
 
 The five contact fields ship **empty**, and the panel says so plainly rather than
 naming anyone. Fill them in at `/admin` → **Content → Contact** and export before the
-tool is shared. Until an email address is set, the panel offers *Copy email text*
-instead of *Send request*. The scheduling link takes any URL — Calendly, Bookings,
-anything — and reveals a **Book a time** button when it is set.
+tool is shared. With no email address set, **Send question** stays disabled and *Copy* is the
+way through. With no `calendly` link set, the *Book a time* section says so and points at
+`/admin` rather than showing a dead button. Another scheduling service still works as a
+link; it just will not embed.
 
 ### Disclaimers
 
@@ -183,8 +204,10 @@ Every page is still a single self-contained file with inlined CSS and JS, and st
 makes no external requests. Two shared scripts sit beside them: `tree-data.js` (the
 content) and `account.js` (accounts, saved work, and the dialogs that explain them).
 
-The API is Vercel serverless functions under `/api`, written in plain Node ESM. One
-runtime dependency — `pg` — and no build step. Passwords are hashed with `scrypt` from
+The API is one Vercel serverless function, `api/[...route].js`, written in plain Node
+ESM. One runtime dependency — `pg` — and no build step. The eighteen endpoints live in
+`api/_routes/` and the catch-all dispatches to them — see **One function, eighteen
+endpoints** below for why. Passwords are hashed with `scrypt` from
 `node:crypto`; sessions are opaque random tokens in an `HttpOnly` cookie, stored as
 SHA-256 so a database dump cannot be replayed as a login. Google sign-in is the OAuth
 flow written out with `fetch`, not a library.
@@ -196,14 +219,17 @@ view.js                             the pan/zoom arithmetic the tree and the edi
 tree-data.js                        the content: questions, pathways, result copy
 account.js                          accounts and saved work, in the browser
 api/
-  health.js                         is storage there, and does the schema exist yet
-  tree.js                           the content readers are served: GET, and PUT to publish
-  auth/         register login logout me password sessions account
-  auth/google/  start callback unlink      sign in with Google, when configured
-  trees/ runs/ documents/           index.js (list, create), [id].js (read, change, delete)
+  [...route].js                     the only serverless function: dispatches the below
+  _routes/
+    health.js                       is storage there, and does the schema exist yet
+    tree.js                         the content readers are served: GET, and PUT to publish
+    auth/         register login logout me password sessions account
+    auth/google/  start callback unlink    sign in with Google, when configured
+    trees/ runs/ documents/         index.js (list, create), [id].js (read, change, delete)
   _lib/         db schema auth records crud http google
 dev-server.mjs                      static + functions locally, no Vercel CLI
-scripts/                            db:init  db:prune  selftest  check  admin-user
+scripts/                            db:init  db:prune  selftest  selftest:api  check
+                                    admin-user
 docs/                               notes that are not instructions
 ```
 
@@ -260,6 +286,43 @@ No build configuration is needed beyond `vercel.json` (clean URLs, security head
 `no-store` on `/api`, and `npm install --omit=dev` so the 27 MB WebAssembly Postgres
 used for local testing is not installed on every deploy). Vercel installs `pg` and
 turns each file under `api/` into a function; nothing else runs at deploy time.
+
+### One function, eighteen endpoints
+
+Vercel turns every file under `api/` into its own serverless function, and the Hobby
+plan allows twelve. This project has eighteen endpoints, so a deployment was refused
+outright:
+
+```
+No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan.
+```
+
+So there is one function. `api/[...route].js` is a catch-all that dispatches to the
+route modules, which moved to `api/_routes/` — the leading underscore is what keeps
+Vercel from counting them, the same convention `_lib/` already used. The URLs did not
+change, and neither did the route files beyond the depth of their `_lib` imports.
+
+The routing table in that file is written out by hand, and has to be. Vercel bundles a
+function by following its imports statically, so an `import()` of a computed path is
+invisible to it: the route modules would be left out of the bundle and every endpoint
+would 404 in production while working perfectly on a laptop. Every route is therefore a
+real static import.
+
+The dev server still resolves routes by walking `api/_routes` from disk, because that is
+what lets a route file be edited without a restart. Two resolvers for one set of URLs
+can drift, and the way it shows up is the worst kind — an endpoint that works locally
+and 404s only once deployed — so `npm run selftest` compares the table against the
+files and fails if either side grows a route the other has not heard of.
+
+`npm run selftest` runs both halves: `scripts/selftest.mjs` drives the dev server, then
+`scripts/catchall.mjs` (`npm run selftest:api`) serves the same API through the
+catch-all with `req.query` shaped the way the Vercel runtime shapes it, so the
+production dispatch is exercised rather than assumed.
+
+Raising the limit is the other fix: a Pro team lifts it and the eighteen files could go
+back where they were. One function is not a workaround for the plan so much as a
+reasonable shape for an API this size — every endpoint already shares `_lib`, so they
+share a bundle anyway.
 
 ### The database
 

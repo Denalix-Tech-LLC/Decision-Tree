@@ -4,10 +4,10 @@
    current password, and the literal word DELETE. The client asks for both in
    a dialog that names what is about to go and how much of it there is.
    ========================================================================= */
-import { bad, json, readJson, route } from '../_lib/http.js';
-import { requireUser, verifyPassword, deleteAccount, clearSessionCookie } from '../_lib/auth.js';
-import { one } from '../_lib/db.js';
-import { counts } from '../_lib/records.js';
+import { bad, json, readJson, route } from '../../_lib/http.js';
+import { requireUser, verifyPassword, deleteAccount, clearSessionCookie } from '../../_lib/auth.js';
+import { one } from '../../_lib/db.js';
+import { counts } from '../../_lib/records.js';
 
 export default route({
   async DELETE(req, res) {

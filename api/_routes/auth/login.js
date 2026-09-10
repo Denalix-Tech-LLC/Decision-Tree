@@ -1,5 +1,5 @@
 /* POST /api/auth/login — exchange email and password for a session cookie. */
-import { json, readJson, route, str } from '../_lib/http.js';
+import { json, readJson, route, str } from '../../_lib/http.js';
 import {
   authenticate,
   createSession,
@@ -7,7 +7,7 @@ import {
   attemptBuckets,
   throttle,
   recordAttempt,
-} from '../_lib/auth.js';
+} from '../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {

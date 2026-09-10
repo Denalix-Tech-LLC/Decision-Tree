@@ -7,12 +7,19 @@
      npm run dev            → http://localhost:8777
      node dev-server.mjs 3000
 
-   Route resolution matches Vercel's file conventions: /api/trees hits
-   api/trees/index.js, /api/trees/<id> hits api/trees/[id].js with the segment
-   in req.query.id, and anything under a directory starting with _ is not
-   routable. A route file is re-imported when anything under api/ changes, so
-   most edits show up on the next request; changing what a module in _lib
-   exports is the one case that needs a restart, and the server says so.
+   The routes live in api/_routes, out of the way of Vercel's one-function-
+   per-file rule (see api/[...route].js). Resolution here still follows the
+   file conventions: /api/trees hits api/_routes/trees/index.js, /api/trees/<id>
+   hits api/_routes/trees/[id].js with the segment in req.query.id.
+
+   This walks the directory rather than sharing the catch-all's import table,
+   because that is what lets a route file be edited without a restart: a route
+   is re-imported when anything under api/ changes. The cost is two ways of
+   resolving the same URLs, so scripts/selftest.mjs checks they agree and
+   fails if either grows a route the other has not heard of.
+
+   Changing what a module in _lib exports is the one case that needs a
+   restart, and the server says so.
 
    ========================================================================= */
 import http from 'node:http';
@@ -29,7 +36,7 @@ loadEnv();
 if (process.env.TAS_INSECURE_COOKIES === undefined) process.env.TAS_INSECURE_COOKIES = '1';
 
 const ROOT = process.cwd();
-const API = path.join(ROOT, 'api');
+const API = path.join(ROOT, 'api', '_routes');
 const ARGS = process.argv.slice(2);
 const PORT = parseInt(ARGS.find((a) => /^\d+$/.test(a)) || process.env.PORT || '8777', 10);
 /* --pglite runs a throwaway Postgres in this process, persisted in .pglite/,

@@ -452,32 +452,10 @@ body.running .hint{opacity:1}
   border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);text-decoration:none}
 .gtoc a:hover{border-color:var(--accent);color:var(--accent-ink)}
 
-/* ---------- contact: the calendar and its slots ---------- */
+/* ---------- contact: the scheduler and the question box ---------- */
 .cstep{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
   text-transform:uppercase;color:var(--accent);margin:16px 0 7px}
 .cstep:first-child{margin-top:0}
-.cal{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface-2)}
-.cnav{display:flex;align-items:center;gap:8px;margin-bottom:9px}
-.cnav .mon{flex:1;text-align:center;font-family:var(--serif);font-weight:600;font-size:15px}
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cdow{font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--muted);text-align:center;padding:2px 0 4px}
-.cday{border:1px solid transparent;background:var(--surface);border-radius:8px;padding:8px 0;font-size:13px;
-  font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
-  transition:border-color .15s,background .15s,color .15s}
-.cday.pad{background:none;pointer-events:none;visibility:hidden}
-.cday:disabled{color:var(--faint);opacity:.4;background:none;cursor:not-allowed}
-.cday:not(:disabled):hover{border-color:var(--accent)}
-.cday.today{box-shadow:inset 0 0 0 1px var(--border-strong)}
-.cday.sel{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.cday:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}
-.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
-.slot{border:1px solid var(--border-strong);background:var(--surface);border-radius:8px;padding:7px 4px;
-  font-size:12.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
-  transition:border-color .15s,background .15s,color .15s}
-.slot:hover{border-color:var(--accent);color:var(--accent-ink)}
-.slot.sel{background:var(--good);border-color:var(--good);color:var(--on-accent)}
-.slot:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}
 .cpick{font-size:13px;color:var(--muted);margin:9px 0 0}
 .cpick b{color:var(--ink);font-weight:650}
 .cwho{list-style:none;padding:0;margin:6px 0 8px;display:grid;gap:5px;font-size:13.5px}
@@ -489,6 +467,27 @@ body.running .hint{opacity:1}
 .copt input{margin:2px 0 0;width:16px;height:16px;flex:none;accent-color:var(--accent)}
 .copt .d{display:block;color:var(--muted);font-size:12.5px}
 
+/* the question box */
+.cfield{display:block;margin:0 0 11px}
+.cfield>span{display:block;font-family:var(--sans);font-weight:600;font-size:11.5px;
+  color:var(--muted);margin:0 0 4px}
+.cfield textarea,.cfield input{width:100%;font-family:var(--serif);font-size:14.5px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;padding:9px 11px;
+  line-height:1.5}
+.cfield textarea{min-height:96px;resize:vertical}
+.cfield textarea:focus-visible,.cfield input:focus-visible{outline:3px solid var(--accent-soft);
+  outline-offset:1px;border-color:var(--accent)}
+.ctwo{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media (max-width:520px){ .ctwo{grid-template-columns:1fr} }
+
+/* Calendly. The frame is only created when the reader asks for it, so nothing
+   third-party loads for someone who came to type a question — see mountCal(). */
+.calbox{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow:hidden}
+.calbox #calFrame:not(:empty){border-top:1px solid var(--border)}
+.calbox iframe{display:block;width:100%;height:660px;border:0;background:var(--surface-2)}
+@media (max-width:620px){ .calbox iframe{height:560px} }
+.calask{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:14px}
+.calask .cpick{margin:0;flex:1;min-width:180px}
 /* ---------- result sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:40}
 .sheet[hidden]{display:none}
@@ -869,7 +868,9 @@ var DISC={bar:'',guide:'',boundary:'',authority:'',result:'',print:'',cites:''};
 /* Who a reader reaches with a question. All five are blank in the repo: the
    Tribe deploying this tool fills them in at /admin (or here) before it is
    shared, and the contact panel says plainly when they are not yet set.
-   `calendly` takes any scheduling URL — Calendly, Bookings, anything. */
+   `calendly` takes the Calendly link for the event people should book: it
+   embeds in the Contact panel, carrying the reader's question in as a
+   prefill. Another scheduling service still works as a link. */
 var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
 
 /* ---------------------------------------------------------------------------
@@ -900,16 +901,20 @@ var GUIDE=[
    html:`<p><b>Contact</b> in the top bar reaches whoever maintains this tool — use it for a citation that looks wrong, a question that reads badly, or behaviour you did not expect.</p><p>For the decision itself, work with Tribal legal counsel and then your EPA Regional Office Tribal air lead, who can confirm scope and what a request needs. <b>Guide</b> in the top bar reopens this page at any time.</p>`}
 ];
 
-/* Contact panel copy. The meeting request is assembled by the picker below, so
-   only the prose around it lives here. */
+/* Contact panel copy. Short on purpose: the panel is a scheduler and a
+   question box, and prose between the reader and either one is in the way. */
 var CCOPY={
-  when:`<p>This tool sorts options; it cannot weigh them for your Tribe. It asks four questions, and your situation has more than four.</p><p>Take the question to a person whenever it touches:</p><ul><li><b>Jurisdiction or boundaries</b> — what area a showing would cover, and what it would leave out.</li><li><b>Review and challenge</b> — who will see your jurisdictional showing, who may comment on it, and who may challenge EPA's determination in court afterward.</li><li><b>A Council decision</b> — anything leadership will have to approve, fund, or defend.</li></ul><p>Also reach out if the route the tree drew does not match your situation. That usually means something real sits outside the four questions.</p>`,
-  own:`<p>Tribal legal counsel and Tribal leadership come before EPA, for a practical reason: a TAS request requires a jurisdictional showing, and EPA provides that showing to the appropriate governmental entities, including neighbouring state and local air agencies. Counsel should read what the Tribe is about to assert before anyone outside the Tribe does, and leadership should know it is going.</p><p>EPA Regional Tribal air staff can tell you a great deal about scope and process. Talk with them after counsel has weighed in. Nothing here substitutes for either conversation.</p>`,
-  whoIntro:`Questions about the tool, the answers you gave it, or what to put in front of Council go to:`,
-  whoTodo:`All four are placeholders. The Tribe deploying this tool replaces them with a real person before it is shared.`,
-  meet:`Three steps, and nothing is sent until the last one: pick a day, pick a time slot, then choose whether to include your decision path and send. The request opens in your own email program, already addressed and written, so you can change every word before it goes.`,
-  book:`<p>If your Tribe has configured a scheduling link, a <b>Book a time</b> button appears here and opens that calendar in a new tab, which shows real availability rather than proposing a slot. If no link is configured, this section is hidden and the email request above is the way through.</p>`,
-  after:`<p>The message leaves from your own email program, so a copy sits in your sent folder as your record of when you asked.</p><p>No one is monitoring a queue behind this tool. Air-program staff, counsel and Council calendars all move, so the slot you picked may have to shift and no turnaround is promised. If there is a deadline behind your question — a comment period closing, a Council packet due — put it in the first line and phone as well as email.</p><p>Sending this starts nothing with EPA and puts nothing on any record. It is a conversation inside the Tribe.</p>`
+  lead:`<p>Book a time, or just ask — whichever suits the question.</p>`,
+  leadNoCal:`<p>Ask whatever you need to. Whoever maintains this tool answers it.</p>`,
+  counsel:`<p><b>Tribal legal counsel and Tribal leadership come before EPA.</b> A TAS request
+    needs a jurisdictional showing, and EPA provides that showing to neighbouring state and local
+    air agencies — so counsel should read what the Tribe is about to assert before anyone outside
+    the Tribe does.</p>`,
+  whoTodo:`All of these are placeholders. The Tribe deploying this tool fills them in before it is
+    shared.`,
+  privacy:`<p>Nothing on this page is sent anywhere on its own. The question opens in your own
+    email program, so you can read and change every word before it goes; booking a time goes to
+    Calendly, which is a service outside the Tribe.</p>`
 };
 
 /* ---------------------------------------------------------------------------
@@ -1625,19 +1630,45 @@ function fit(){
   view.s=s; view.tx=(r.width-b.w*s)/2; view.ty=(r.height-b.h*s)/2;
   applyView();
 }
-/* Pan to keep the newest row in view. The zoom level is deliberately left
-   ALONE — the tree must never resize itself as it grows. Scale only ever
-   changes when the reader asks for it (+ / - / Fit, ctrl+wheel, pinch). */
+/* Frame the frontier: the question waiting to be answered AND the answers
+   fanned under it, which are the only things the reader can act on.
+
+   This used to aim at the question's top alone and cap ty at 30, which had
+   two costs. A tall card — the boundary-risk question, whose note runs to a
+   paragraph — put its own answers below the bottom edge: measured at 682px
+   against a 609px stage, so the row you had to click was off-screen. And
+   early on the cap pinned the tree to the top of the stage, so the reader got
+   the whole history with the live row squeezed underneath it.
+
+   The zoom level is still deliberately left ALONE. The tree must never resize
+   itself as it grows; scale changes only when the reader asks (+ / − / Fit,
+   ctrl+wheel, pinch). Focus here means what is in frame, not how big it is. */
 function focusFrontier(){
   var r=stage.getBoundingClientRect();
   if(!r.width) return;
   var target=nodesEl.querySelector('#resultNode')||nodesEl.querySelector('.tnode.q.active')||nodesEl.lastElementChild;
   if(!target) return;
-  var s=view.s;
-  var cx=parseFloat(target.style.left||0)+target.offsetWidth/2;
-  var cy=parseFloat(target.style.top||0);
-  view.tx=r.width/2-cx*s;
-  view.ty=Math.min(30,r.height*0.42-cy*s);
+  var s=view.s, pad=24;
+  var top=parseFloat(target.style.top||0);
+  var bottom=top+target.offsetHeight;
+  var id=target.dataset&&target.dataset.node;
+  if(id){
+    Array.prototype.forEach.call(
+      nodesEl.querySelectorAll('.tnode.opt[data-node="'+id+'"]'),
+      function(o){ bottom=Math.max(bottom,parseFloat(o.style.top||0)+o.offsetHeight); });
+  }
+  view.tx=r.width/2-(parseFloat(target.style.left||0)+target.offsetWidth/2)*s;
+  var gh=(bottom-top)*s;
+  if(gh+pad*2>=r.height){
+    /* the group is taller than the stage — a long note on a short window.
+       Reading order wins: show the question from its top and let the reader
+       come down to the answers. */
+    view.ty=pad-top*s;
+  }else{
+    /* a shade above centre, so the answers have room beneath and the question
+       this one followed from stays glimpsable above it */
+    view.ty=(r.height-gh)*0.42-top*s;
+  }
   applyView();
 }
 function zoomBy(k,cx,cy){
@@ -1893,6 +1924,11 @@ function printTree(){
    document is now two things: what the printer gets, and what "Save as
    document" keeps on the account for editing later. They must not drift — a
    reader who prints a saved document has to get the page they saw. */
+/* Month names for the print-out's date stamp. These used to live with the
+   contact panel's month picker; that picker is gone and Calendly does the
+   scheduling now, so they sit with the one thing that still needs them. */
+var MON=['January','February','March','April','May','June','July','August',
+         'September','October','November','December'];
 function printableHtml(){
   var v=terminal?verdict(terminal):{t:'TAS decision — in progress',s:'This path is not yet complete.'};
   var now=new Date();
@@ -2129,75 +2165,64 @@ document.getElementById('btnGuide').addEventListener('click',function(){
 
 /* ===========================================================================
    CONTACT
-   A month picker and a slot list that compose a message the reader sends from
-   their own mail program. Nothing here posts anywhere, and nothing leaves
-   until the reader presses send in their own client — so the panel is safe to
-   open mid-tree, which is when the boundary question makes people want it. A
-   scheduling link, if the Tribe has configured one, is offered alongside
-   rather than instead.
+   Two ways to reach a person, and nothing between the reader and either one:
+
+     Book a time     Calendly does the scheduling. The frame is only created
+                     when the reader asks for it, so nobody who came to type a
+                     question loads a third-party page they did not want. What
+                     they typed rides along as a Calendly prefill, so the
+                     question does not have to be written twice.
+     Ask a question  One box for what they want to know, and a Send that opens
+                     their own mail program. Nothing posts from this page.
+
+   This replaced a month picker and a slot list of the tool's own, which only
+   ever *proposed* a time by email \u2014 it could not see anyone's availability,
+   so a reader picked a slot that may already have been taken. Calendly knows.
    ========================================================================= */
 var contactEl=document.getElementById('contact');
 var contactBody=document.getElementById('contactBody');
 var contactFoot=document.getElementById('contactFoot');
 var contactFocus=null;
-var CAL={view:null,day:null,slot:null,path:true};
-var SLOTS=['9:00 am','9:30 am','10:00 am','10:30 am','11:00 am','11:30 am',
-           '1:00 pm','1:30 pm','2:00 pm','2:30 pm','3:00 pm','3:30 pm','4:00 pm'];
-var MON=['January','February','March','April','May','June','July','August',
-         'September','October','November','December'];
-var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var NLC=String.fromCharCode(10);
-function midnight(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
-function dayLabel(d){ return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()].slice(0,3)+' '+d.getFullYear(); }
-function calHtml(){
-  var v=CAL.view, today=midnight(new Date());
-  var first=new Date(v.getFullYear(),v.getMonth(),1);
-  var days=new Date(v.getFullYear(),v.getMonth()+1,0).getDate();
-  var atStart=(v.getFullYear()===today.getFullYear()&&v.getMonth()===today.getMonth());
-  var h='<div class="cal"><div class="cnav">'
-   +'<button class="btn icon sm" data-mon="-1" aria-label="Previous month" title="Previous month"'
-   +(atStart?' disabled':'')+'>&#8249;</button>'
-   +'<span class="mon">'+MON[v.getMonth()]+' '+v.getFullYear()+'</span>'
-   +'<button class="btn icon sm" data-mon="1" aria-label="Next month" title="Next month">&#8250;</button>'
-   +'</div><div class="cgrid">'
-   +DOW.map(function(d){ return '<div class="cdow">'+d.slice(0,2)+'</div>'; }).join('');
-  for(var p=0;p<first.getDay();p++) h+='<span class="cday pad"></span>';
-  for(var n=1;n<=days;n++){
-    var d=new Date(v.getFullYear(),v.getMonth(),n);
-    var wk=(d.getDay()===0||d.getDay()===6);
-    var past=d<today;
-    var sel=CAL.day&&CAL.day.getTime()===d.getTime();
-    h+='<button class="cday'+(sel?' sel':'')+(d.getTime()===today.getTime()?' today':'')+'"'
-     +' data-day="'+n+'"'+(past||wk?' disabled':'')
-     +' title="'+(past?'In the past':(wk?'Weekends are not offered':dayLabel(d)))+'"'
-     +(sel?' aria-pressed="true"':'')+'>'+n+'</button>';
+/* what the reader has typed, kept across a re-render of the foot */
+var ASK={q:'',name:'',email:'',path:true};
+
+function haveCalendly(){ return !!(CONTACT.calendly||'').trim(); }
+
+/* Calendly takes prefills as query params: name, email, and a1 for the first
+   custom question on the event. Appended without assuming the configured URL
+   has no query of its own. */
+function calUrl(embed){
+  var u=(CONTACT.calendly||'').trim();
+  if(!u) return '';
+  var p=[];
+  if(embed){
+    p.push('embed_type=Inline');
+    p.push('embed_domain='+encodeURIComponent(location.hostname||'localhost'));
+    p.push('hide_gdpr_banner=1');
   }
-  return h+'</div></div>';
+  if(ASK.name) p.push('name='+encodeURIComponent(ASK.name));
+  if(ASK.email) p.push('email='+encodeURIComponent(ASK.email));
+  if(ASK.q) p.push('a1='+encodeURIComponent(ASK.q.slice(0,900)));
+  if(!p.length) return u;
+  return u+(u.indexOf('?')<0?'?':'&')+p.join('&');
 }
-function slotHtml(){
-  if(!CAL.day) return '<p class="cpick">Pick a day above and the times open here.</p>';
-  return '<div class="cstep">Pick a time</div><div class="slots">'
-   +SLOTS.map(function(s){
-      return '<button class="slot'+(CAL.slot===s?' sel':'')+'" data-slot="'+s+'"'
-       +(CAL.slot===s?' aria-pressed="true"':'')+'>'+s+'</button>'; }).join('')
-   +'</div><p class="cpick">The message asks for the slot rather than booking it, '
-   +'so it is a proposal the other person can move.</p>';
-}
+
 function whoHtml(){
   function row(k,v,todo){
     return '<li><span class="k">'+k+'</span><span class="v'+(todo?' todo':'')+'">'+v+'</span></li>'; }
-  var h='<ul class="cwho">'
-   +row('Name',CONTACT.name?esc(CONTACT.name):'not filled in yet',!CONTACT.name)
-   +row('Role',CONTACT.role?esc(CONTACT.role):'not filled in yet',!CONTACT.role)
-   +row('Email',CONTACT.email
-        ?'<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>'
-        :'not filled in yet',!CONTACT.email)
-   +row('Phone',CONTACT.phone?esc(CONTACT.phone):'not filled in yet',!CONTACT.phone)
-   +'</ul>';
-  if(!CONTACT.name||!CONTACT.role||!CONTACT.email||!CONTACT.phone)
-    h+='<p class="cpick">'+CCOPY.whoTodo+'</p>';
+  var any=CONTACT.name||CONTACT.role||CONTACT.email||CONTACT.phone;
+  if(!any) return '<p class="cpick">'+CCOPY.whoTodo+'</p>';
+  var h='<ul class="cwho">';
+  if(CONTACT.name) h+=row('Name',esc(CONTACT.name));
+  if(CONTACT.role) h+=row('Role',esc(CONTACT.role));
+  if(CONTACT.email) h+=row('Email','<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>');
+  if(CONTACT.phone) h+=row('Phone',esc(CONTACT.phone));
+  h+='</ul>';
+  if(!CONTACT.email) h+='<p class="cpick">'+CCOPY.whoTodo+'</p>';
   return h;
 }
+
 /* The same rows the printout draws, as plain text, so a reader comparing the
    email against the print-out sees one route described one way. */
 function pathLines(){
@@ -2205,71 +2230,108 @@ function pathLines(){
   path.forEach(function(st){
     var n=NODES[st.node], a=n.a[st.ai];
     var g=(a.grants&&OUT[a.grants])?'  (+ '+OUT[a.grants].name+')':'';
-    out.push((n.short||n.tag||st.node)+' — '+(a.label||'')+g);
+    out.push((n.short||n.tag||st.node)+' \u2014 '+(a.label||'')+g);
   });
-  /* no ending yet means no Result row — never invent one */
+  /* no ending yet means no Result row \u2014 never invent one */
   if(terminal) out.push('Result: '+verdict(terminal).t);
   return out;
 }
+
 function mailText(){
-  var who=CONTACT.name||'[Name]';
-  var d=CAL.day?dayLabel(CAL.day):'[day]', t=CAL.slot||'[time]';
-  var line=CAL.path
-   ?'My answers from the tool are below, so you can see where this comes from.'
-   :'I have not included my answers from the tool — I would rather walk through them with you.';
-  var b='Hello '+who+','+NLC+NLC
-   +'I have worked through the TAS decision tool and would like to talk it over before this goes further.'+NLC+NLC
-   +'Day requested: '+d+NLC
-   +'Time requested: '+t+NLC
-   +'If that slot is taken, any comparable time that week works.'+NLC+NLC
-   +'What I would like to cover:'+NLC+'- [what you want to ask]'+NLC+NLC
-   +line+NLC;
-  if(CAL.path){
+  var b=(ASK.q||'').trim()+NLC;
+  if(ASK.path){
     var ls=pathLines();
-    b+=NLC+(ls.length?ls.join(NLC):'(no answers chosen yet)')+NLC;
+    if(ls.length) b+=NLC+'Where this comes from \u2014 my answers in the tool:'+NLC+ls.join(NLC)+NLC;
   }
-  b+=NLC+'Thank you,'+NLC+'[Your name], [Your role]'+NLC+'[Your phone]'+NLC;
-  return {subject:'TAS meeting request — '+d+', '+t,body:b};
+  b+=NLC+'\u2014'+NLC+(ASK.name||'[your name]');
+  if(ASK.email) b+=NLC+ASK.email;
+  b+=NLC+'Sent from the TAS Decision Tree.'+NLC;
+  return {subject:'TAS decision tool \u2014 a question',body:b};
 }
+
+function renderContact(){
+  var h=haveCalendly()?CCOPY.lead:CCOPY.leadNoCal;
+
+  h+='<section class="gsec"><h4>Ask a question</h4>'
+   +'<label class="cfield"><span>What would you like to know?</span>'
+   +'<textarea id="askQ" placeholder="For example: what would a jurisdictional showing have to cover for us?"'
+   +' aria-label="What would you like to know?">'+esc(ASK.q)+'</textarea></label>'
+   +'<div class="ctwo">'
+   +'<label class="cfield"><span>Your name</span>'
+   +'<input type="text" id="askName" autocomplete="name" value="'+esc(ASK.name)+'"></label>'
+   +'<label class="cfield"><span>Your email, so they can reply</span>'
+   +'<input type="email" id="askEmail" autocomplete="email" value="'+esc(ASK.email)+'"></label>'
+   +'</div>'
+   +'<label class="copt"><input type="checkbox" id="askPath"'+(ASK.path?' checked':'')+'>'
+   +'<span><b>Include my answers from the tree</b>'
+   +'<span class="d">The questions, what you chose, the pathways unlocked and the result.</span>'
+   +'</span></label>'
+   +'</section>';
+
+  h+='<section class="gsec"><h4>Book a time</h4>';
+  if(haveCalendly()){
+    h+='<div class="calbox" id="calBox"><div class="calask">'
+     +'<p class="cpick">Calendly shows real availability, and carries across anything you '
+     +'have typed above. It is a service outside the Tribe.</p>'
+     +'<a class="btn" id="calTab" href="'+esc(calUrl(false))+'" target="_blank" rel="noopener">New tab</a>'
+     +'</div><div id="calFrame"></div></div>';
+  }else{
+    /* Said plainly rather than left as an empty heading. A reader needs to know
+       the question box is the only way through; whoever deployed the tool needs
+       to know why, and where to fix it. */
+    h+='<p class="cpick">There is no scheduling link on this deployment, so the question above '
+     +'is the way through. To offer a calendar here, paste a Calendly event link into '
+     +'<b>Content \u2192 Contact</b> at <code>/admin</code>.</p>';
+  }
+  h+='</section>';
+
+  h+='<section class="gsec"><h4>Who this reaches</h4>'+whoHtml()+'</section>';
+  h+='<section class="gsec">'+CCOPY.counsel+CCOPY.privacy+'</section>';
+
+  contactBody.innerHTML=h;
+  /* The frame goes up with the panel. It was behind a Show button, on the
+     reasoning that nobody who came to type a question should load a
+     third-party page uninvited — but pressing Contact IS the invitation, and
+     a calendar nobody can see is not a scheduling feature. The note beside it
+     says whose service it is. */
+  if(haveCalendly()) mountCal();
+  renderContactFoot();
+}
+
 function renderContactFoot(){
-  var ready=!!(CAL.day&&CAL.slot), can=ready&&!!CONTACT.email;
-  var h='<button class="btn solid" id="cSend"'+(can?'':' disabled')+' title="'
-   +(!ready?'Pick a day and a time first'
+  var ready=!!(ASK.q||'').trim();
+  var h='<button class="btn solid" id="cSend"'+(ready&&CONTACT.email?'':' disabled')+' title="'
+   +(!ready?'Write your question first'
      :(CONTACT.email?'Opens this in your own email program'
-                    :'No email address is filled in yet — copy the text instead'))
-   +'">Send request</button>'
+                    :'No email address is set up yet \u2014 copy the text instead'))
+   +'">Send question</button>'
    +'<button class="btn" id="cCopy"'+(ready?'':' disabled')+' title="'
-   +(ready?'Copy the message to paste into your own email':'Pick a day and a time first')
-   +'">Copy email text</button>';
-  if(CAL.day||CAL.slot) h+='<button class="btn" id="cClear">Clear</button>';
-  if(CONTACT.calendly) h+='<button class="btn" id="cBook">Book a time</button>';
-  h+='<span class="grow"></span><span class="fnote">'
-   +(ready?'Ready: <b>'+esc(dayLabel(CAL.day))+'</b>, '+esc(CAL.slot)
-          :'Pick a day, then a time. Nothing is sent until you press send in your own email program.')
+   +(ready?'Copy it to paste wherever you like':'Write your question first')
+   +'">Copy</button>'
+   +'<button class="btn" data-cclose="1">Back to the tree</button>'
+   +'<span class="grow"></span><span class="fnote">'
+   +(ready?'Nothing is sent until you press send in your own email program.'
+          :'Write a question, or book a time.')
    +'</span>';
   contactFoot.innerHTML=h;
 }
-function renderContact(){
-  var h='<section class="gsec"><h4>When to talk to a person</h4>'+CCOPY.when+'</section>'
-   +'<section class="gsec"><h4>Your own people first</h4>'+CCOPY.own+'</section>'
-   +'<section class="gsec"><h4>Who to contact</h4><p>'+CCOPY.whoIntro+'</p>'+whoHtml()+'</section>'
-   +'<section class="gsec"><h4>Request a meeting</h4><p>'+CCOPY.meet+'</p>'
-   +'<div class="cstep">Pick a day</div><div id="calWrap">'+calHtml()+'</div>'
-   +'<div id="slotWrap">'+slotHtml()+'</div>'
-   +'<label class="copt"><input type="checkbox" id="cPath"'+(CAL.path?' checked':'')+'>'
-   +'<span><b>Include my path</b>'
-   +'<span class="d">Adds the questions, answers, pathways and result to the email.</span></span>'
-   +'</label></section>';
-  if(CONTACT.calendly) h+='<section class="gsec"><h4>Book a time directly</h4>'+CCOPY.book+'</section>';
-  h+='<section class="gsec"><h4>After you send</h4>'+CCOPY.after+'</section>';
-  contactBody.innerHTML=h;
-  renderContactFoot();
+
+/* The Calendly frame is built here rather than in renderContact, so it is
+   never created for a reader who only wanted the question box. Once it is up
+   it is left alone: rebuilding it on every keystroke would reload Calendly
+   under someone in the middle of choosing a time. */
+function mountCal(){
+  var slot=document.getElementById('calFrame');
+  if(!slot||slot.dataset.mounted) return;
+  slot.dataset.mounted='1';
+  var f=document.createElement('iframe');
+  f.setAttribute('src',calUrl(true));
+  f.setAttribute('title','Book a time \u2014 Calendly');
+  f.setAttribute('loading','lazy');
+  slot.appendChild(f);
 }
-function redrawCal(){ var w=document.getElementById('calWrap'); if(w) w.innerHTML=calHtml(); }
-function redrawSlots(){ var w=document.getElementById('slotWrap'); if(w) w.innerHTML=slotHtml(); }
+
 function openContact(){
-  var base=CAL.view||new Date();
-  CAL.view=new Date(base.getFullYear(),base.getMonth(),1);
   contactFocus=document.activeElement;
   renderContact();
   contactEl.hidden=false;
@@ -2282,31 +2344,31 @@ function closeContact(){
   if(contactFocus&&contactFocus.focus) try{ contactFocus.focus({preventScroll:true}); }catch(e){}
 }
 function sendMail(){
-  if(!CONTACT.email||!CAL.day||!CAL.slot) return;
+  if(!CONTACT.email||!(ASK.q||'').trim()) return;
   var m=mailText();
   window.location.href='mailto:'+encodeURIComponent(CONTACT.email)
    +'?subject='+encodeURIComponent(m.subject)+'&body='+encodeURIComponent(m.body);
 }
 /* A long path can push a mailto past what some mail clients accept, and a
-   reader may have no mail client registered at all — so the text is always
+   reader may have no mail client registered at all \u2014 so the text is always
    available to carry across by hand. */
 function copyMail(btn){
-  if(!CAL.day||!CAL.slot) return;
+  if(!(ASK.q||'').trim()) return;
   var m=mailText();
   var txt='To: '+(CONTACT.email||'[email address]')+NLC+'Subject: '+m.subject+NLC+NLC+m.body;
   function done(){
     btn.textContent='Copied';
-    setTimeout(function(){ btn.textContent='Copy email text'; },1800);
+    setTimeout(function(){ btn.textContent='Copy'; },1800);
   }
   function fallback(){
     var ta=document.createElement('textarea');
     ta.value=txt; ta.setAttribute('readonly','');
     ta.style.position='fixed'; ta.style.top='-1000px';
     document.body.appendChild(ta); ta.select();
-    var ok=false;
-    try{ ok=document.execCommand('copy'); }catch(e){}
+    var okc=false;
+    try{ okc=document.execCommand('copy'); }catch(e){}
     document.body.removeChild(ta);
-    if(ok) done(); else btn.textContent='Could not copy';
+    if(okc) done(); else btn.textContent='Could not copy';
   }
   if(navigator.clipboard&&navigator.clipboard.writeText)
     navigator.clipboard.writeText(txt).then(done,fallback);
@@ -2314,30 +2376,24 @@ function copyMail(btn){
 }
 contactEl.addEventListener('click',function(e){
   if(e.target.closest('[data-cclose]')){ closeContact(); return; }
-  var m=e.target.closest('[data-mon]');
-  if(m){
-    CAL.view=new Date(CAL.view.getFullYear(),CAL.view.getMonth()+parseInt(m.dataset.mon,10),1);
-    redrawCal(); return;
-  }
-  var d=e.target.closest('[data-day]');
-  if(d){
-    CAL.day=new Date(CAL.view.getFullYear(),CAL.view.getMonth(),parseInt(d.dataset.day,10));
-    CAL.slot=null;
-    redrawCal(); redrawSlots(); renderContactFoot(); return;
-  }
-  var s=e.target.closest('[data-slot]');
-  if(s){ CAL.slot=s.dataset.slot; redrawSlots(); renderContactFoot(); return; }
   if(e.target.closest('#cSend')){ sendMail(); return; }
   var cp=e.target.closest('#cCopy');
   if(cp){ copyMail(cp); return; }
-  if(e.target.closest('#cClear')){
-    CAL.day=null; CAL.slot=null;
-    redrawCal(); redrawSlots(); renderContactFoot(); return;
-  }
-  if(e.target.closest('#cBook')){ window.open(CONTACT.calendly,'_blank','noopener'); return; }
+});
+contactEl.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='askQ') ASK.q=t.value;
+  else if(t.id==='askName') ASK.name=t.value;
+  else if(t.id==='askEmail') ASK.email=t.value;
+  else return;
+  /* the new-tab link carries the prefill live; the mounted frame is not
+     touched, so nobody loses a half-finished booking to a keystroke */
+  var tab=document.getElementById('calTab');
+  if(tab) tab.setAttribute('href',calUrl(false));
+  renderContactFoot();
 });
 contactEl.addEventListener('change',function(e){
-  if(e.target.id==='cPath') CAL.path=e.target.checked;
+  if(e.target.id==='askPath') ASK.path=e.target.checked;
 });
 document.getElementById('btnContact').addEventListener('click',openContact);
 document.getElementById('contactCue').addEventListener('click',function(){

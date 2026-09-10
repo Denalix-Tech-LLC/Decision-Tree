@@ -16,10 +16,10 @@
    rather than a missing step: `published: false` means the reader keeps
    whatever tree-data.js ships.
    ========================================================================= */
-import { json, noContent, readJson, route, str, bad } from './_lib/http.js';
-import { requireEditor } from './_lib/auth.js';
-import { cleanTreeData } from './_lib/records.js';
-import { one, isConfigured } from './_lib/db.js';
+import { json, noContent, readJson, route, str, bad } from '../_lib/http.js';
+import { requireEditor } from '../_lib/auth.js';
+import { cleanTreeData } from '../_lib/records.js';
+import { one, isConfigured } from '../_lib/db.js';
 
 const ROW = 'current';
 

@@ -14,16 +14,16 @@ import {
   isSecureRequest,
   parseCookies,
   queryOf,
-} from '../../_lib/http.js';
+} from '../../../_lib/http.js';
 import {
   isGoogleEnabled,
   exchangeCode,
   readIdToken,
   unpackFlow,
   safeNext,
-} from '../../_lib/google.js';
-import { findOrCreateGoogleUser, createSession, currentUser, linkGoogle } from '../../_lib/auth.js';
-import { isConfigured } from '../../_lib/db.js';
+} from '../../../_lib/google.js';
+import { findOrCreateGoogleUser, createSession, currentUser, linkGoogle } from '../../../_lib/auth.js';
+import { isConfigured } from '../../../_lib/db.js';
 import { FLOW_COOKIE } from './start.js';
 
 function clearFlow(req, res) {

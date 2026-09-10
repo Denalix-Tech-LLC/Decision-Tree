@@ -4,8 +4,8 @@
    deleted account with extra steps, and deleting is a decision someone should
    make on purpose, in the dialog that says what goes with it.
    ========================================================================= */
-import { json, route } from '../../_lib/http.js';
-import { requireUser, unlinkGoogle, signInMethods } from '../../_lib/auth.js';
+import { json, route } from '../../../_lib/http.js';
+import { requireUser, unlinkGoogle, signInMethods } from '../../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {
