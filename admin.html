@@ -400,7 +400,7 @@ var CONTACT_FIELDS=[
   ['role','Role or title',''],
   ['email','Email','Without this the Contact panel can only offer \u201ccopy the text\u201d.'],
   ['phone','Phone',''],
-  ['calendly','Scheduling link','Any URL \u2014 Calendly, Bookings, anything. Fill it in and a Book a time button appears.']
+  ['calendly','Calendly event link','The Calendly link for the event people should book \u2014 e.g. https://calendly.com/your-name/30min. It embeds in the Contact panel, and whatever the reader typed in the question box is carried into it as a prefill. Another scheduling service still works as a link, it just will not embed.']
 ];
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
 var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */

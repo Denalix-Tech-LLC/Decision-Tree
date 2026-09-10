@@ -55,16 +55,35 @@ a callout points up at it reading *Worth a word with counsel*. Answering the que
 puts it back; cutting back to it raises it again. It keys off the `risky` flag in the
 data rather than a question id, so a tree edited at `/admin` gets the same behaviour on
 whatever it marks. Below 560px the callout goes and the colour stays, because the bar
-wraps there and the words would sit over the standing notice. It holds who to ask, a month picker
-and a slot list that compose a meeting request, and an optional scheduling link. The
-request opens in the reader's own mail program with the decision path attached if they
-want it; nothing is posted anywhere from the page.
+wraps there and the words would sit over the standing notice.
+
+The panel itself is two things and no more.
+
+**Ask a question.** One box for what the reader wants to know, their name and email so a
+reply can reach them, and a checkbox to attach the route they took — the same rows the
+print-out draws, so the two describe one route the same way. **Send question** opens their
+own mail program; **Copy** is there for a reader with no mail client registered, or a path
+long enough to push a `mailto` past what some clients accept. Nothing posts from the page.
+
+**Book a time.** Calendly does the scheduling. The panel used to carry a month picker and a
+slot list of its own, which was the wrong shape for the job: it could not see anyone's
+availability, so it only ever *proposed* a time by email and a reader could pick a slot that
+was already taken. Calendly knows. The frame is a plain `iframe` — no third-party script —
+and it is created only when the reader presses **Show the calendar**, so nobody who came to
+type a question loads a third-party page they did not ask for. Whatever they typed is
+carried in as a Calendly prefill (`name`, `email`, and `a1` for the event's first custom
+question), so the question does not have to be written twice. A **New tab** link sits beside
+it and stays after the frame mounts, because a frame that will not load on some networks is
+no reason to lose the other way in; its prefill keeps updating as the reader types, while the
+mounted frame is deliberately left alone — rebuilding it on a keystroke would reload
+Calendly under someone mid-booking.
 
 The five contact fields ship **empty**, and the panel says so plainly rather than
 naming anyone. Fill them in at `/admin` → **Content → Contact** and export before the
-tool is shared. Until an email address is set, the panel offers *Copy email text*
-instead of *Send request*. The scheduling link takes any URL — Calendly, Bookings,
-anything — and reveals a **Book a time** button when it is set.
+tool is shared. With no email address set, **Send question** stays disabled and *Copy* is the
+way through. With no `calendly` link set, the *Book a time* section says so and points at
+`/admin` rather than showing a dead button. Another scheduling service still works as a
+link; it just will not embed.
 
 ### Disclaimers
 

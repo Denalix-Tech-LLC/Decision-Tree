@@ -96,8 +96,9 @@ var DISC={
 };
 /* Who a reader reaches from the Contact panel. Blank in the repo on purpose:
    the panel says plainly that these are not set yet rather than inventing a
-   person. `calendly` takes any scheduling URL and reveals a Book a time
-   button when it is filled in. */
+   person. `calendly` takes the Calendly link for the event people should
+   book: it embeds in the Contact panel and carries the reader's question
+   into it as a prefill. Another scheduling service still works as a link. */
 var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
 
   var DATA={NODES:NODES,OUT:OUT,NONTAS:NONTAS,CRITERIA:CRITERIA,NEXT:NEXT,LINKS:LINKS,
