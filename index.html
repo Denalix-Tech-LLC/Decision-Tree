@@ -1625,19 +1625,45 @@ function fit(){
   view.s=s; view.tx=(r.width-b.w*s)/2; view.ty=(r.height-b.h*s)/2;
   applyView();
 }
-/* Pan to keep the newest row in view. The zoom level is deliberately left
-   ALONE — the tree must never resize itself as it grows. Scale only ever
-   changes when the reader asks for it (+ / - / Fit, ctrl+wheel, pinch). */
+/* Frame the frontier: the question waiting to be answered AND the answers
+   fanned under it, which are the only things the reader can act on.
+
+   This used to aim at the question's top alone and cap ty at 30, which had
+   two costs. A tall card — the boundary-risk question, whose note runs to a
+   paragraph — put its own answers below the bottom edge: measured at 682px
+   against a 609px stage, so the row you had to click was off-screen. And
+   early on the cap pinned the tree to the top of the stage, so the reader got
+   the whole history with the live row squeezed underneath it.
+
+   The zoom level is still deliberately left ALONE. The tree must never resize
+   itself as it grows; scale changes only when the reader asks (+ / − / Fit,
+   ctrl+wheel, pinch). Focus here means what is in frame, not how big it is. */
 function focusFrontier(){
   var r=stage.getBoundingClientRect();
   if(!r.width) return;
   var target=nodesEl.querySelector('#resultNode')||nodesEl.querySelector('.tnode.q.active')||nodesEl.lastElementChild;
   if(!target) return;
-  var s=view.s;
-  var cx=parseFloat(target.style.left||0)+target.offsetWidth/2;
-  var cy=parseFloat(target.style.top||0);
-  view.tx=r.width/2-cx*s;
-  view.ty=Math.min(30,r.height*0.42-cy*s);
+  var s=view.s, pad=24;
+  var top=parseFloat(target.style.top||0);
+  var bottom=top+target.offsetHeight;
+  var id=target.dataset&&target.dataset.node;
+  if(id){
+    Array.prototype.forEach.call(
+      nodesEl.querySelectorAll('.tnode.opt[data-node="'+id+'"]'),
+      function(o){ bottom=Math.max(bottom,parseFloat(o.style.top||0)+o.offsetHeight); });
+  }
+  view.tx=r.width/2-(parseFloat(target.style.left||0)+target.offsetWidth/2)*s;
+  var gh=(bottom-top)*s;
+  if(gh+pad*2>=r.height){
+    /* the group is taller than the stage — a long note on a short window.
+       Reading order wins: show the question from its top and let the reader
+       come down to the answers. */
+    view.ty=pad-top*s;
+  }else{
+    /* a shade above centre, so the answers have room beneath and the question
+       this one followed from stays glimpsable above it */
+    view.ty=(r.height-gh)*0.42-top*s;
+  }
   applyView();
 }
 function zoomBy(k,cx,cy){
