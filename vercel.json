@@ -3,6 +3,12 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "installCommand": "npm install --omit=dev --no-audit --no-fund",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api?route=$1"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
