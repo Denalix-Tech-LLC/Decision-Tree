@@ -44,13 +44,24 @@ export class DbUnconfigured extends Error {
 let pool = null;
 let ready = null; /* a promise, so concurrent first requests wait on one init */
 
-function connectionString() {
-  return (
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    ''
-  );
+/* Which variable wins, in order. Exported because scripts/db-check.mjs has to
+   test the string the app will actually use: a checker looking at a different
+   variable than the app is a checker that passes while production is down. */
+export const URL_VARS = ['DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL'];
+
+export function connectionString() {
+  for (const k of URL_VARS) {
+    if (process.env[k]) return process.env[k];
+  }
+  return '';
+}
+
+/* Which one it came from, for anything that has to explain itself. */
+export function connectionSource() {
+  for (const k of URL_VARS) {
+    if (process.env[k]) return k;
+  }
+  return null;
 }
 
 export function isConfigured() {

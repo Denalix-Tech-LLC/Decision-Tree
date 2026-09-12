@@ -23,14 +23,40 @@ loadEnv();
 const arg = process.argv.slice(2).find((a) => /^postgres(ql)?:\/\//i.test(a));
 if (arg) process.env.DATABASE_URL = arg;
 
-const URL_STR = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+/* The app's own precedence, imported rather than copied: a checker that looks
+   at a different variable than the app is a checker that passes while
+   production is down. */
+const { connectionString, connectionSource, URL_VARS } = await import('../api/_lib/db.js');
+
+const URL_STR = connectionString();
 if (!URL_STR) {
   console.error(
     '\nNo connection string.\n\n' +
       '  npm run db:check -- "postgres://user:pass@host:6543/postgres?sslmode=require"\n\n' +
-      'or put DATABASE_URL in .env beside package.json. See .env.example.\n'
+      'or set one of ' +
+      URL_VARS.join(', ') +
+      ' in .env beside package.json.\nSee .env.example.\n'
   );
   process.exit(2);
+}
+
+/* Vercel's integrations inject several of these at once, and one of them is
+   deliberately NOT pooled. Say which one is in play, and flag the trap. */
+if (!arg) {
+  const present = URL_VARS.filter((k) => process.env[k]);
+  console.log('\nWhere this came from');
+  console.log('  using     ' + connectionSource());
+  if (present.length > 1) console.log('  also set  ' + present.slice(1).join(', '));
+  const unpooled = ['DATABASE_URL_UNPOOLED', 'POSTGRES_URL_NON_POOLING'].filter(
+    (k) => process.env[k]
+  );
+  if (unpooled.length) {
+    console.log(
+      '  note      ' +
+        unpooled.join(', ') +
+        ' is set too. That one is the direct,\n            unpooled connection — do not point DATABASE_URL at it.'
+    );
+  }
 }
 
 let u;

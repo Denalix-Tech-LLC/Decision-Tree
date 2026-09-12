@@ -324,14 +324,41 @@ back where they were. One function is not a workaround for the plan so much as a
 reasonable shape for an API this size — every endpoint already shares `_lib`, so they
 share a bundle anyway.
 
-### Turning on accounts: Supabase, step by step
+### Turning on accounts
 
 Accounts, sign-up and sign-in are already written and tested — what a fresh deployment
-lacks is somewhere to put them. Until `DATABASE_URL` is set the account chip reads **No
-saving**, which is the tool being honest rather than broken: everything else works, and
-nothing can be kept.
+lacks is somewhere to put them. Until a connection string is set, the account chip reads
+**No saving**, which is the tool being honest rather than broken: everything else works,
+and nothing can be kept.
 
-Any Postgres does. Supabase's free tier is the shortest route.
+Any Postgres does. Two routes, and the first needs no account you do not already have.
+
+#### Route A — from Vercel, no new signup
+
+Vercel's dashboard → your project → **Storage** → **Create** a Postgres database (the
+marketplace offers Neon; the free tier is enough). Connect it to the project and Vercel
+sets the environment variables itself — no connection string to copy, no password to
+handle, and it gives you the pooled one by default.
+
+The code reads whichever of these turns up, in this order:
+
+```
+DATABASE_URL  >  POSTGRES_URL  >  POSTGRES_PRISMA_URL
+```
+
+which covers both the Neon marketplace integration and the older Vercel Postgres one.
+
+One trap: those integrations also set `DATABASE_URL_UNPOOLED` (or
+`POSTGRES_URL_NON_POOLING`). That is the **direct** connection, for migrations and long
+jobs. Never point `DATABASE_URL` at it — if you do, serverless will open a connection
+per instance and exhaust the server. `npm run db:check` says so if it sees one set.
+
+Then set `ADMIN_EMAIL` in the same place (see below), and **redeploy** — environment
+variables do not apply to deployments that already exist.
+
+#### Route B — Supabase
+
+Only if you would rather hold the database yourself.
 
 **1. Make the database.** [supabase.com](https://supabase.com) → New project. Save the database
 password it gives you — it is shown once.
