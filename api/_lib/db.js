@@ -49,19 +49,39 @@ let ready = null; /* a promise, so concurrent first requests wait on one init */
    variable than the app is a checker that passes while production is down. */
 export const URL_VARS = ['DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL'];
 
-export function connectionString() {
-  for (const k of URL_VARS) {
-    if (process.env[k]) return process.env[k];
-  }
-  return '';
+/* Every storage integration also writes a direct, unpooled twin of its URL,
+   meant for migrations. Pointing serverless at that one opens a connection per
+   instance and exhausts the server, so it is never a candidate. */
+const UNPOOLED = /(UNPOOLED|NON_?POOLING|DIRECT)/i;
+
+/* Vercel's integrations offer a Custom Prefix, which writes STORAGE_URL or
+   MYDB_URL instead — names the list above cannot know, and choosing one in the
+   dashboard used to end with the tool insisting it had no storage. So after
+   the known names, take any variable that actually holds a postgres URL.
+   Sorted, so which one wins is deterministic rather than dependent on the
+   order the platform happened to set them in. */
+function discovered() {
+  return (
+    Object.keys(process.env)
+      .filter((k) => !URL_VARS.includes(k) && !UNPOOLED.test(k))
+      .filter((k) => /^postgres(ql)?:\/\//i.test(String(process.env[k] || '')))
+      .sort()[0] || null
+  );
 }
 
-/* Which one it came from, for anything that has to explain itself. */
+/* Which variable the connection came from. Exported because anything that has
+   to explain itself — db-check, the logs — should name it rather than leave
+   someone guessing which of five the platform set. */
 export function connectionSource() {
   for (const k of URL_VARS) {
     if (process.env[k]) return k;
   }
-  return null;
+  return discovered();
+}
+
+export function connectionString() {
+  const k = connectionSource();
+  return k ? process.env[k] : '';
 }
 
 export function isConfigured() {

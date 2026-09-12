@@ -74,6 +74,49 @@ console.log('\nTLS: sslFor() must survive a ?sslmode= in the connection string')
   );
 }
 
+/* ---- 1b. which variable the connection comes from ----------------------- */
+/* Vercel's storage integrations offer a Custom Prefix — STORAGE_URL, MYDB_URL —
+   and also write an unpooled twin meant for migrations. Picking the twin would
+   open a connection per serverless instance and exhaust the server. */
+console.log('\nConfig: finding the right variable among the ones a platform sets');
+{
+  const saved = { ...process.env };
+  const clear = () => {
+    for (const k of Object.keys(process.env)) {
+      if (/^(DATABASE|POSTGRES|STORAGE|MYDB)/.test(k)) delete process.env[k];
+    }
+  };
+  const { connectionSource, connectionString } = await import('../api/_lib/db.js?vars');
+
+  clear();
+  process.env.DATABASE_URL = 'postgres://u:p@a/db';
+  process.env.POSTGRES_URL = 'postgres://u:p@b/db';
+  ok('DATABASE_URL wins when several are set', connectionSource() === 'DATABASE_URL');
+
+  clear();
+  process.env.POSTGRES_PRISMA_URL = 'postgres://u:p@c/db?pgbouncer=true';
+  ok('POSTGRES_PRISMA_URL alone is found', connectionSource() === 'POSTGRES_PRISMA_URL');
+
+  clear();
+  process.env.DATABASE_URL = ''; /* the empty one a project may already carry */
+  process.env.STORAGE_URL = 'postgres://u:p@pooled/db';
+  process.env.STORAGE_URL_UNPOOLED = 'postgres://u:p@direct/db';
+  process.env.STORAGE_URL_NON_POOLING = 'postgres://u:p@direct2/db';
+  ok('a custom prefix is found', connectionSource() === 'STORAGE_URL', String(connectionSource()));
+  ok('the unpooled twin is never chosen', !/direct/.test(connectionString()), connectionString());
+
+  clear();
+  process.env.MYDB_URL_UNPOOLED = 'postgres://u:p@direct/db';
+  ok('an unpooled variable alone is not used', connectionSource() === null, String(connectionSource()));
+
+  clear();
+  process.env.SOME_OTHER_URL = 'https://example.com';
+  ok('a non-postgres URL is ignored', connectionSource() === null, String(connectionSource()));
+
+  clear();
+  for (const [k, v] of Object.entries(saved)) process.env[k] = v;
+}
+
 /* ---- 2. a refused connect at a cold start ------------------------------- */
 /* ensureSchema memoises its promise. If connect() rejects and the memo is not
    cleared, every later query on that warm instance awaits the same dead
