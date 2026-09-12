@@ -72,6 +72,32 @@ export function isConfigured() {
    signed by a chain Node does not carry, so verification is off unless
    PGSSLMODE=verify-full is set deliberately. A plain local server on
    localhost needs no TLS at all. */
+/* node-postgres parses the connection string AFTER applying the config
+   object, and a `sslmode` in the string replaces whatever `ssl` we passed:
+
+     ?sslmode=require + ssl:{rejectUnauthorized:false}  ->  {}   (verify on)
+     ?sslmode=require + ssl:false                       ->  {}   (PGSSL=off ignored)
+
+   pg also treats `require` as an alias for `verify-full`, and says so in a
+   runtime warning. Every managed provider hands out a URL with sslmode in it,
+   so this quietly forced certificate verification on against chains Node does
+   not carry — SELF_SIGNED_CERT_IN_CHAIN, on the pooler, at the first request.
+
+   The parameter is therefore removed from the string and the decision left to
+   sslFor(), which still reads the ORIGINAL url so sslmode=disable keeps
+   working. Only the query is touched; the userinfo, where the password lives,
+   is never re-encoded. */
+export function withoutSslMode(url) {
+  const i = url.indexOf('?');
+  if (i < 0) return url;
+  const base = url.slice(0, i);
+  const kept = url
+    .slice(i + 1)
+    .split('&')
+    .filter((p) => p && !/^sslmode=/i.test(p));
+  return kept.length ? base + '?' + kept.join('&') : base;
+}
+
 function sslFor(url) {
   if (process.env.PGSSL === 'off') return false;
   if (/^postgres(ql)?:\/\/[^/]*@?(localhost|127\.0\.0\.1|\[::1\])(:|\/)/i.test(url)) return false;
@@ -85,14 +111,18 @@ export function getPool() {
   if (!url) throw new DbUnconfigured();
   if (!pool) {
     pool = new Pool({
-      connectionString: url,
+      connectionString: withoutSslMode(url),
       ssl: sslFor(url),
       max: 1,
       idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 8_000,
+      /* These have to fit INSIDE the function's own budget, which is 10s on
+         Vercel's Hobby plan. Longer than that and the platform kills the
+         request first: the reader gets a 504 with a platform page instead of
+         the tool's own 503 and its "your work has not been saved". */
+      connectionTimeoutMillis: 4_000,
       /* Client side, enforced by pg itself, so it holds on every kind of
          connection. This is the timeout that is actually guaranteed. */
-      query_timeout: 12_000,
+      query_timeout: 7_000,
       application_name: 'tas-decision-tree',
     });
     /* There is deliberately no server-side statement_timeout on the pool.
@@ -116,10 +146,22 @@ export function getPool() {
    per request. */
 export async function ensureSchema() {
   if (ready) return ready;
-  ready = (async () => {
+  const attempt = (async () => {
     const p = getPool();
-    const client = await p.connect();
+    /* connect() is inside the try on purpose. It used to sit outside, so a
+       refused connection — pooler at max clients, Supavisor restarting, a DNS
+       blip — rejected the memo below without ever reaching the catch that
+       clears it. Every later query on that warm instance then awaited the same
+       dead promise without opening a socket, for as long as Vercel kept the
+       instance alive. */
+    let client = null;
     try {
+      client = await p.connect();
+      /* A client checked out by hand has no error listener: pg-pool attaches
+         one only while the client is idle in the pool. Without this, a
+         connection the pooler drops mid-transaction reaches an EventEmitter
+         with no listener and Node takes the whole instance down with it. */
+      client.on('error', (e) => console.error('[db] client error:', e.message));
       /* One transaction start to finish: the lock, the DDL and the bookkeeping
          all land on the same backend, and the lock goes when the transaction
          does whether it commits or rolls back. There is no unlock to forget,
@@ -150,18 +192,29 @@ export async function ensureSchema() {
       );
       await client.query('commit');
     } catch (err) {
-      try {
-        await client.query('rollback');
-      } catch {
-        /* the connection is already gone; the transaction died with it */
+      if (client) {
+        try {
+          await client.query('rollback');
+        } catch {
+          /* the connection is already gone; the transaction died with it */
+        }
       }
-      ready = null; /* a failed init must be retried, not cached */
       throw err;
     } finally {
-      client.release();
+      /* Handing back a client whose transaction may still be open would give
+         the next caller a poisoned connection, so a failure releases it with
+         the error and pg-pool discards it. */
+      if (client) client.release();
     }
   })();
-  return ready;
+  ready = attempt;
+  /* Clear the memo on ANY rejection, including one from connect(), and clear
+     it against this exact attempt so a later successful init is not undone by
+     an older failure landing late. */
+  attempt.catch(() => {
+    if (ready === attempt) ready = null;
+  });
+  return attempt;
 }
 
 export async function query(text, params) {
@@ -188,20 +241,31 @@ export async function many(text, params) {
 export async function tx(fn) {
   await ensureSchema();
   const client = await getPool().connect();
+  /* Same reason as ensureSchema: while a client is checked out, nothing else
+     is listening for its errors, and an unheard 'error' event is fatal. */
+  client.on('error', (e) => console.error('[db] client error:', e.message));
+  let broken = null;
   try {
     await client.query('begin');
     const out = await fn(client);
     await client.query('commit');
     return out;
   } catch (err) {
+    broken = err;
     try {
       await client.query('rollback');
+      /* the rollback got through, so the connection is clean to reuse */
+      broken = null;
     } catch {
-      /* the connection is already gone; the transaction died with it */
+      /* Either the connection is gone, or the rollback timed out behind a
+         statement still running on the server — query_timeout does not cancel
+         that statement, so the transaction may still be open. Either way this
+         connection is not safe to hand to the next caller. */
     }
     throw err;
   } finally {
-    client.release();
+    /* release(err) makes pg-pool destroy the client instead of pooling it */
+    client.release(broken || undefined);
   }
 }
 
