@@ -14,7 +14,8 @@
     "selftest": "node scripts/selftest.mjs && node scripts/catchall.mjs",
     "check": "node scripts/check-html.mjs",
     "dev:local": "node dev-server.mjs 8777 --pglite",
-    "selftest:api": "node scripts/catchall.mjs"
+    "selftest:api": "node scripts/catchall.mjs",
+    "db:check": "node scripts/db-check.mjs"
   },
   "dependencies": {
     "pg": "^8.13.0"

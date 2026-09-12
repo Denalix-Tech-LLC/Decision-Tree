@@ -324,7 +324,99 @@ back where they were. One function is not a workaround for the plan so much as a
 reasonable shape for an API this size — every endpoint already shares `_lib`, so they
 share a bundle anyway.
 
+### Turning on accounts: Supabase, step by step
+
+Accounts, sign-up and sign-in are already written and tested — what a fresh deployment
+lacks is somewhere to put them. Until `DATABASE_URL` is set the account chip reads **No
+saving**, which is the tool being honest rather than broken: everything else works, and
+nothing can be kept.
+
+Any Postgres does. Supabase's free tier is the shortest route.
+
+**1. Make the database.** [supabase.com](https://supabase.com) → New project. Save the database
+password it gives you — it is shown once.
+
+**2. Take the *pooler* connection string.** Project Settings → Database → Connection
+string → **Transaction pooler**. It looks like this:
+
+```
+postgresql://postgres.abcdefghijklm:PASSWORD@aws-0-eu-west-2.pooler.supabase.com:6543/postgres
+```
+
+Not the one labelled *Direct connection*. That host is IPv6-only, which Vercel's
+functions generally cannot reach, and it gives one connection per instance with no
+pooling — serverless will exhaust it. The give-away is the shape: a pooler user is
+`postgres.<project-ref>`, a direct one is plain `postgres`.
+
+**3. Try it before you deploy.**
+
+```bash
+npm run db:check -- "postgresql://postgres.abc:PASSWORD@aws-0-eu-west-2.pooler.supabase.com:6543/postgres"
+```
+
+It reports what the string points at, creates the schema, counts what is there, and
+names the cause when nothing answers — DNS, a refused password, the wrong pooler user,
+an IPv6-only host — instead of leaving you with "connection failed". It never prints the
+password.
+
+**4. Put it in Vercel.** Project → Settings → Environment Variables, for **Production**
+(and Preview, if accounts should work on preview deployments too):
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | the pooler string from step 2 |
+| `ADMIN_EMAIL` | the one address allowed to edit the tree |
+
+**5. Redeploy.** Environment variables do not apply to deployments that already exist,
+so nothing changes until a new one is built. The chip goes from *No saving* to *Sign in*,
+and `/api/auth/me` starts answering `"storage": "ready"`.
+
+Attaching a Postgres from Vercel's own Storage tab works too and sets the variables for
+you — the code reads `DATABASE_URL`, `POSTGRES_URL` or `POSTGRES_PRISMA_URL`, whichever
+turns up.
+
+#### Set ADMIN_EMAIL in the same breath
+
+This is the one that bites. With no database there are no accounts, so nobody can edit
+anything and the gate never comes up. The moment a database is attached, that changes:
+registration is open to anyone, and `PUT /api/tree` publishes the tree **every reader
+sees**. Its only gate is `ADMIN_EMAIL`.
+
+```
+ok   with no ADMIN_EMAIL there is no gate
+ok   and everyone signed in may edit
+```
+
+So without it, anyone on the internet can sign up and rewrite what Council is shown. Set
+it with `DATABASE_URL`, not after. With it set, the gate holds — *the named account is
+the editor, another signed-in account is not, and a guest is not*. A comma-separated
+list is accepted for a handover; one address is the intent.
+
+`/admin` itself is the same sign-in. There is no second login: the editor is the account
+named in `ADMIN_EMAIL`, signing in through the same chip as everyone else. Anyone else
+who reaches the page is told the editor is limited to one account.
+
+#### What survives a transaction pooler
+
+A transaction pooler hands each transaction whichever backend is free, so nothing that
+depends on session state can be relied on between statements. Two things follow, both
+already done, and both of which fail *only in production* if got wrong:
+
+- **The schema lock is transaction scoped.** `pg_advisory_lock` is session scoped: taken
+  outside an explicit transaction, the lock, the DDL and the unlock can each land on a
+  different backend — no mutual exclusion, and the lock strands on whichever backend
+  took it. `ensureSchema()` uses `pg_advisory_xact_lock` inside one transaction, which
+  stays on one backend and releases itself at commit.
+- **No unusual startup parameters.** A pooler refuses the whole connection over one it
+  does not recognise, and node-postgres sends `statement_timeout` in the startup packet.
+  The pool does not set it; `query_timeout` (client side, always works) is the guarantee,
+  and the schema transaction sets `SET LOCAL statement_timeout` where it matters.
+
+The session pooler on port 5432 keeps session state and also works. The transaction
+pooler suits serverless better.
+
 ### The database
+
 
 One environment variable, `DATABASE_URL`, set under **Project → Settings → Environment
 Variables** for Production (and Preview, if you want accounts on preview deployments).
