@@ -1425,7 +1425,13 @@
            has — there is simply no account here to show. */
         chip.appendChild(icon(ICON_NOSAVE));
         chip.appendChild(el('span', { text: 'No saving' }));
-        chip.title = 'This deployment has no storage — nothing can be saved to an account';
+        /* Which of the two it is matters to whoever has to fix it, and the
+           dialog already tells them apart. A database that is merely down is
+           not a deployment without one. */
+        chip.title =
+          state.storage === 'unconfigured'
+            ? 'This deployment has no storage — nothing can be saved to an account'
+            : 'The database did not answer — saving is unavailable right now';
       } else {
         chip.appendChild(icon(ICON_SIGNIN));
         chip.appendChild(el('span', { text: 'Sign in' }));
