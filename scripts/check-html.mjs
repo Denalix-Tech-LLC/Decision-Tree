@@ -53,8 +53,35 @@ for (const f of ['account.js', 'tree-data.js', 'view.js']) {
   }
 }
 
+/* ---- escaping ------------------------------------------------------------
+   A page that interpolates esc() into an HTML attribute needs an esc() that
+   escapes quotes. index.html had one that did not, while writing its output
+   into value="..." and href="..." — so a reader typing a double quote into
+   their own name in the contact form closed the attribute and got a live
+   event handler onto the input. There were three copies of esc() and they
+   disagreed; there is one definition now, in account.js, and the pages take
+   it from there. This is what stops a fourth one appearing. */
+for (const page of pages) {
+  const src = fs.readFileSync(page, 'utf8');
+  const inAttr = [...src.matchAll(/[a-z-]+="'\s*\+\s*esc\(/gi)].length;
+  if (!inAttr) continue;
+
+  const strict =
+    /window\.TAS\.ui\.esc/.test(src) /* delegates to the one definition */ &&
+    /&quot;/.test(src); /* and its fallback escapes quotes too */
+  if (strict) {
+    console.log(`  ${page.padEnd(18)} esc() is quote-safe (${inAttr} attribute use(s))`);
+  } else {
+    bad++;
+    console.error(
+      `  ${page}: esc() output goes into ${inAttr} HTML attribute(s) but esc() does not escape quotes.\n` +
+        `    Use the shared one: var esc = (window.TAS && window.TAS.ui && window.TAS.ui.esc) || function(s){...&quot;...}`
+    );
+  }
+}
+
 if (bad) {
-  console.error(`\n${bad} block(s) failed to parse.`);
+  console.error(`\n${bad} problem(s) found.`);
   process.exit(1);
 }
-console.log('\nAll page scripts parse.');
+console.log('\nAll page scripts parse, and escaping is quote-safe where it reaches attributes.');

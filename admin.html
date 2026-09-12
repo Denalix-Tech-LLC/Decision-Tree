@@ -1025,7 +1025,17 @@ function addPort(card,dir,qid,ai){
   }
   return pt;
 }
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* ONE definition of what escaping means, in account.js, which every page
+   loads before this script runs. There used to be three, and they disagreed:
+   this page's escaped neither quotes nor null, while its output goes into
+   value="..." and href="..." in the contact panel — so a reader typing a
+   double quote into their own name got a live event handler onto the input.
+   The fallback is for account.js being absent, which these pages are built to
+   survive, and it is the strict text rather than a fourth variant. */
+var esc = (window.TAS && window.TAS.ui && window.TAS.ui.esc) || function(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+};
 function select(s){ sel=s; render(); }
 stage.onclick=function(){ if(sel){ sel=null; render(); } };
 
