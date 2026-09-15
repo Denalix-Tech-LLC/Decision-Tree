@@ -1,4 +1,5 @@
 /* ===========================================================================
+
    THE THEME
    The brand palette and the backdrop, in one file because three pages were
    carrying three copies of them. That is how the editor ended up without
@@ -15,6 +16,21 @@
 
    Loaded with <link> ahead of each page's <style>, so page rules win.
    ========================================================================= */
+
+/* ---------- the base every page shares ----------
+   index.html, admin.html and work.html each stated these three, identically.
+   Identical in all three is the only safe case to lift: this file loads before
+   a page's own <style>, so a rule only two of them carried would from here
+   newly apply to the third, which is a restyle rather than a consolidation.
+   The chrome that genuinely differs between the pages — .bar, .brand, button
+   sizing, the editor's denser toolbar — deliberately stays in the pages. */
+*{box-sizing:border-box}
+/* A .btn carries display:inline-flex, which outranks the user-agent rule for
+   [hidden], so a hidden button sits in the toolbar anyway. Hidden means
+   hidden, whatever else an element is. */
+[hidden]{display:none!important}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
 
 :root{
   /* ---- BRAND PALETTE (from the brand guide) ----

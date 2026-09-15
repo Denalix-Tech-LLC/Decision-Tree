@@ -53,6 +53,41 @@ for (const f of ['account.js', 'tree-data.js', 'view.js']) {
   }
 }
 
+/* ---- CSS sanity ----------------------------------------------------------
+   Nothing here validates CSS, and a stylesheet does not fail loudly: an
+   unbalanced comment silently swallows the rules after it and the page simply
+   renders wrong. This exists because a block was pasted into the middle of
+   theme.css's own file comment, where the block's first comment terminator
+   closed the outer comment and turned the rest of that prose into
+   declarations. Writing this very comment reproduced the bug a second time,
+   in JavaScript, which is why no terminator appears in the text of it. */
+function cssBlocks(page) {
+  const src = fs.readFileSync(page, 'utf8');
+  return page.endsWith('.css')
+    ? [src]
+    : [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]);
+}
+
+for (const file of [...pages, 'theme.css'].filter((f) => fs.existsSync(f))) {
+  for (const [i, css] of cssBlocks(file).entries()) {
+    const label = file + (cssBlocks(file).length > 1 ? ` (style ${i + 1})` : '');
+    /* a nested /* is almost always a block pasted inside another comment */
+    const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const problems = [];
+    if (stripped.includes('/*')) problems.push('an unterminated /* comment');
+    if (stripped.includes('*/')) problems.push('a stray */ with no opening /*');
+    const opens = (stripped.match(/\{/g) || []).length;
+    const closes = (stripped.match(/\}/g) || []).length;
+    if (opens !== closes) problems.push(`${opens} { against ${closes} }`);
+    if (problems.length) {
+      bad++;
+      console.error(`  ${label}: ${problems.join(', ')}`);
+    } else {
+      console.log(`  ${label.padEnd(18)} css balanced (${opens} rules)`);
+    }
+  }
+}
+
 /* ---- escaping ------------------------------------------------------------
    A page that interpolates esc() into an HTML attribute needs an esc() that
    escapes quotes. index.html had one that did not, while writing its output
