@@ -33,10 +33,21 @@ process.env.PGSSL = 'off';
 const { getPool } = await import('../api/_lib/db.js');
 const catchAll = (await import('../api/[...route].js')).default;
 
+/* REWRITE=1 serves every request the way vercel.json's fallback rewrite does
+   — /api/(.*) to /api?route=$1 — so `route` arrives as one string with slashes
+   rather than the array a filesystem catch-all produces. Both shapes have to
+   dispatch identically, because on Vercel both happen: the catch-all takes the
+   paths it matches and the rewrite picks up the rest. */
+const AS_REWRITE = process.argv.includes('--rewrite') || process.env.REWRITE === '1';
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
-  const segments = url.pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
-  req.query = { ...Object.fromEntries(url.searchParams.entries()), route: segments };
+  const path = url.pathname.replace(/^\/api\/?/, '');
+  const segments = path.split('/').filter(Boolean);
+  req.query = {
+    ...Object.fromEntries(url.searchParams.entries()),
+    route: AS_REWRITE ? path : segments,
+  };
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks = [];
     for await (const c of req) chunks.push(c);
@@ -105,7 +116,13 @@ async function call(p, opts = {}) {
 const email = 'catchall-' + Date.now() + '@example.invalid';
 const userIds = [];
 
-console.log('\nEvery request dispatched by api/[...route].js\n');
+console.log(
+  '\nEvery request dispatched by ' +
+    (AS_REWRITE
+      ? "the vercel.json rewrite  (route arrives as 'auth/me')"
+      : 'the filesystem catch-all (route arrives as an array)') +
+    '\n'
+);
 try {
   {
     const r = await call('/api/health');

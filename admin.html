@@ -15,7 +15,6 @@ body.wide .env .sun{left:52%}
 /* A .btn carries display:inline-flex, which outranks the user-agent rule for
    [hidden] — so a hidden button sat in the toolbar anyway. Hidden means
    hidden, whatever else an element is. The tree page learned this already. */
-[hidden]{display:none!important}
 
 /* ---------------------------------------------------------------------------
    THE GATE
@@ -40,7 +39,6 @@ body.wide .env .sun{left:52%}
   overflow-wrap:anywhere}
 .gcard .grow2{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;align-items:center}
 
-*{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -60,8 +58,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
 .env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
 
-.env .ridges .r2{fill:var(--ridge-2)}
-.env .ridges .r1{fill:var(--ridge-1)}
 
 /* ---- top bar ---- */
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
@@ -78,7 +74,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
   cursor:pointer;transition:border-color .18s,color .18s,background .18s;white-space:nowrap}
 .btn:hover{border-color:var(--accent);color:var(--accent-ink)}
 .btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
-.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .btn.solid:hover{filter:brightness(1.08);color:var(--on-accent)}
 .btn.danger{color:var(--alert);border-color:var(--alert-line)}
 .btn.sm{padding:4px 8px;font-size:11.5px;border-radius:6px}
@@ -1025,7 +1020,17 @@ function addPort(card,dir,qid,ai){
   }
   return pt;
 }
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* ONE definition of what escaping means, in account.js, which every page
+   loads before this script runs. There used to be three, and they disagreed:
+   this page's escaped neither quotes nor null, while its output goes into
+   value="..." and href="..." in the contact panel — so a reader typing a
+   double quote into their own name got a live event handler onto the input.
+   The fallback is for account.js being absent, which these pages are built to
+   survive, and it is the strict text rather than a fourth variant. */
+var esc = (window.TAS && window.TAS.ui && window.TAS.ui.esc) || function(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+};
 function select(s){ sel=s; render(); }
 stage.onclick=function(){ if(sel){ sel=null; render(); } };
 

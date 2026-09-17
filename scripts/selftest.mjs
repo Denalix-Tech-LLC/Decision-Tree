@@ -442,6 +442,45 @@ try {
 
   console.log('\nSign in with Google');
   {
+    /* Where to go after signing in is attacker-controllable: an open redirect
+       on a sign-in route is how a phishing page borrows this domain, since the
+       victim sees a real Google consent screen and a real callback on this
+       site before landing somewhere else, signed in. */
+    const { safeNext } = await import('../api/_lib/google.js');
+    const escapes = (v) => {
+      const out = safeNext(v);
+      return (
+        /^[a-z][a-z0-9+.-]*:/i.test(out) ||
+        out.startsWith('//') ||
+        out.includes('\\') ||
+        !out.startsWith('/') ||
+        /[ -]/.test(out)
+      );
+    };
+    const payloads = [
+      '//evil.com',
+      'https://evil.com',
+      'https:/evil.com',
+      '/\\evil.com',
+      '\\\\evil.com',
+      '////evil.com',
+      'javascript:alert(1)',
+      'data:text/html,<script>alert(1)</script>',
+      '/\t/evil.com',
+      '/\n//evil.com' /* would otherwise reach a Location header as a newline */,
+      'x'.repeat(400),
+    ];
+    ok(
+      'no "next" gets off this site',
+      payloads.every((p) => !escapes(p)),
+      payloads.filter(escapes).join(' | ')
+    );
+    ok(
+      'and a real destination survives',
+      ['/', '/work', '/admin', '/work?tab=trees', '/admin#q1'].every((p) => safeNext(p) === p)
+    );
+  }
+  {
     /* Not configured: the button must not be offered, and the routes must say
        so rather than half-starting a flow. */
     delete process.env.GOOGLE_CLIENT_ID;

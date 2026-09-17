@@ -5,11 +5,9 @@
 <link rel="stylesheet" href="theme.css">
 <style>
 
-*{box-sizing:border-box}
 /* A .btn carries display:inline-flex, which outranks the user-agent rule for
    [hidden] — so the Result button sat in the bar before there was a result.
    Hidden means hidden, whatever else an element is. */
-[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -129,7 +127,6 @@ a{color:var(--accent-ink)}
   transition:border-color .18s,color .18s,transform .12s,box-shadow .18s;white-space:nowrap}
 .btn:hover{border-color:var(--accent);color:var(--accent-ink);transform:translateY(-1px);box-shadow:var(--sh1)}
 .btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px;border-color:var(--accent)}
-.btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .btn.solid:hover{color:var(--on-accent);filter:brightness(1.07)}
 .btn.icon{padding:7px 9px}
 .btn svg{width:14px;height:14px;flex:none}
@@ -453,9 +450,6 @@ body.running .hint{opacity:1}
 .gtoc a:hover{border-color:var(--accent);color:var(--accent-ink)}
 
 /* ---------- contact: the scheduler and the question box ---------- */
-.cstep{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
-  text-transform:uppercase;color:var(--accent);margin:16px 0 7px}
-.cstep:first-child{margin-top:0}
 .cpick{font-size:13px;color:var(--muted);margin:9px 0 0}
 .cpick b{color:var(--ink);font-weight:650}
 .cwho{list-style:none;padding:0;margin:6px 0 8px;display:grid;gap:5px;font-size:13.5px}
@@ -1045,7 +1039,17 @@ var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)
 function canAnimate(){ return !document.hidden; }
 function motionScale(){ return reduce?0.6:1; }
 var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* ONE definition of what escaping means, in account.js, which every page
+   loads before this script runs. There used to be three, and they disagreed:
+   this page's escaped neither quotes nor null, while its output goes into
+   value="..." and href="..." in the contact panel — so a reader typing a
+   double quote into their own name got a live event handler onto the input.
+   The fallback is for account.js being absent, which these pages are built to
+   survive, and it is the strict text rather than a fourth variant. */
+var esc = (window.TAS && window.TAS.ui && window.TAS.ui.esc) || function(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+};
 /* Keep the tree on screen. Panning used to be unbounded, so a scroll or drag
    could carry the canvas into empty space with nothing to navigate back by.
    The tree is now held so it always overlaps the stage, with a small margin of
