@@ -1667,9 +1667,30 @@ function paintGate(){
     gateShow('The editor','Checking…','<p>Asking who you are signed in as.</p>',[]);
     return;
   }
-  /* no gate configured, or nowhere to check against: the editor is open, the
-     way it was before accounts existed */
-  if(!st.adminGate){ gateHide(); return; }
+  /* No gate configured. With no database that is the right answer and always
+     was: there are no accounts, so there is nobody to gate against, and the
+     editor stays open the way it did before accounts existed.
+
+     With storage READY that reasoning has gone. Accounts exist, anyone can
+     register, and publishing reaches every reader gated on ADMIN_EMAIL and
+     nothing else — so an editor that opens without asking is a deployment
+     someone forgot to finish, not a mode. It still opens, because refusing
+     would lock out whoever has to fix it, but it no longer does so quietly. */
+  if(!st.adminGate){
+    if(st.storage==='ready'){
+      gateShow('The editor','This editor is unprotected',
+        '<p>Anyone who reaches this page can edit the tree, and anyone who registers an '
+        +'account can publish it to every reader. There is a database here, so accounts '
+        +'are real — what is missing is the setting that says whose editor this is.</p>'
+        +'<p>Set <b>ADMIN_EMAIL</b> to that address wherever <b>DATABASE_URL</b> is set, '
+        +'then redeploy. The gate comes up by itself.</p>',
+        [
+          el('button',{class:'btn solid',type:'button',text:'Edit anyway',onclick:gateHide})
+        ]);
+      return;
+    }
+    gateHide(); return;
+  }
   if(st.admin){ gateHide(); return; }
 
   if(!st.user){
