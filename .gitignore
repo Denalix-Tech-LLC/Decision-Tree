@@ -8,10 +8,11 @@ node_modules
 *.doc
 decision-tree-prompt.md
 
-# a horizon photo is a local choice, not something the repo ships
-land.jpg
-land.png
-land.webp
+# The horizon photograph used to be ignored, on the reasoning that it was a
+# local choice rather than something the repo ships. It is a deliberate part
+# of the design now, so it has to be committed — an ignored file is not on the
+# deployment, and the page would fall back to the drawn ridgelines there while
+# looking right on the machine that chose it.
 
 # secrets and local database settings
 .env

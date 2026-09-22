@@ -51,7 +51,7 @@
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --gold:#dec26a;
   --on-accent:#e5e8eb; --amb:.5;
-  --photo-op:.34;
+  --photo-op:.2;
   /* ---- THE SUNSET ----
      The backdrop is a sunset: cool dusk overhead, mauve, then the sun's
      band and gold at the horizon, with the ridges darkening as they come
@@ -90,7 +90,7 @@
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --gold:#dec26a;
     --on-accent:#081b23; --amb:.3;
-    --photo-op:.2;
+    --photo-op:.12;
     --sky-top:#06121a; --sky-mid:#242330; --sky-bot:#5a4030;
     --cloud:rgba(201,129,80,.10); --haze:rgba(201,129,80,.07);
     --ridge-3:#32312d; --ridge-2:#132831; --ridge-1:#0a1219;
@@ -112,7 +112,7 @@
   --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
   --gold:#dec26a;
   --on-accent:#081b23; --amb:.3;
-  --photo-op:.2;
+  --photo-op:.12;
   --sky-top:#06121a; --sky-mid:#242330; --sky-bot:#5a4030;
   --cloud:rgba(201,129,80,.10); --haze:rgba(201,129,80,.07);
   --ridge-3:#32312d; --ridge-2:#132831; --ridge-1:#0a1219;
@@ -182,6 +182,10 @@
   100%{transform:translateY(-42vh) translateX(3vw);opacity:0}
 }
 
+/* How strongly the photograph shows through. Kept low on purpose: this sits
+   under 13px legal text, and a horizon that competes with it is a horizon that
+   costs someone a citation. --photo-op is the one knob — raise it if the
+   picture dropped in is paler than the one this was tuned for. */
 .env .photo{position:absolute;inset:0;
   background-image:url("land.jpg");background-size:cover;background-position:50% 76%;
   opacity:var(--photo-op);filter:saturate(.62) sepia(.14) contrast(.9) brightness(1.02);

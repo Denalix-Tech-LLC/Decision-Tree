@@ -1739,7 +1739,19 @@ function relayout(){
     var q=nodesEl.querySelector('.tnode.q');
     var stale=q&&Math.abs(q.offsetWidth-questionW())>1;
     if(stale){ stopReveal(); build(); focusFrontier(); }
-    else fit();
+    /* This used to call fit(), which scales to the WHOLE tree. Since one of
+       the things that calls relayout is pointerup on the stage, every pan
+       ended by shrinking the tree — and further each time, because the tree it
+       was fitting had grown another row:
+
+         answer, pan  1.00 -> 0.73 -> 0.66 -> 0.50 -> 0.40
+
+       By the fourth question the reader was looking at their whole history in
+       miniature instead of the question in front of them. Re-clamping keeps
+       the tree on screen without touching what the reader set: the scale is
+       theirs, and it changes only when they ask (+ / - / Fit, ctrl+wheel,
+       pinch), which is what focusFrontier has always promised. */
+    else applyView();
   },140);
 }
 /* Watched rather than listened for. A window resize event is not the only way
