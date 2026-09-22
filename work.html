@@ -8,7 +8,6 @@
 /* The work page shows the backdrop behind a column of text rather than behind
    a canvas, so its ridges are held back to half strength and kept shorter.
    Everything else about it comes from theme.css. */
-.env .ridges{height:min(46vh,420px);min-height:0;opacity:.5}
 
 html{height:100%}
 body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--serif);
@@ -139,13 +138,7 @@ a{color:var(--accent-ink)}
 </style>
 
 <div class="env" aria-hidden="true">
-  <div class="sky"></div>
-  <div class="sun"></div>
-  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
-    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
-    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
-    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
-  </svg>
+  <div class="photo"></div>
 </div>
 
 <div class="shell">

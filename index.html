@@ -35,9 +35,6 @@ a{color:var(--accent-ink)}
 /* and the light it throws along the horizon, wider and much fainter */
 
 /* slow cloud banks */
-.env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
-.env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
-.env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
 
 /* the haze band the Act exists to clear */
 
@@ -569,12 +566,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   .tnode.entering{transition:opacity .4s linear!important}
   .tnode.entering.slow{transition:opacity .55s linear!important}
   .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
-  .env .ridges{transform:none!important}
-  .env .clouds span,.env .motes span{animation:none!important}
   .env .bloom,.env .sparks,.env .flash{display:none!important}
   .tnode.result.arrived{animation:none!important}
   .doc{animation:none!important}
-  .env .motes span{opacity:.5!important}
   .btn:hover,.tnode:hover{transform:none!important}
 }
 
@@ -602,17 +596,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 </style>
 
 <div class="env" aria-hidden="true">
-  <div class="sky"></div>
-  <div class="sun"></div>
   <div class="photo"></div>
-  <div class="clouds"><span></span><span></span><span></span></div>
-  <div class="haze"></div>
-  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
-    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
-    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
-    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
-  </svg>
-  <div class="motes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 </div>
 
 <div class="shell">
@@ -2714,28 +2698,16 @@ setSound(AUDIO.on);
 
 /* ===========================================================================
    DEPTH INTERACTIONS
-   Parallax on the ridge layers, and a slight tilt of interactive nodes toward
-   the pointer. Both are pure transform writes on rAF-free paths so they stay
-   cheap, and both are inert when the reader prefers reduced motion.
-   ========================================================================= */
-var ridgeEl=document.querySelector('.env .ridges');
-var ridgePaths=ridgeEl?ridgeEl.querySelectorAll('path'):[];
-/* far ridges shift least — the standard parallax reading of distance */
-var PARALLAX=[0.018,0.038,0.066];
-function paintParallax(){
-  if(reduce||!ridgePaths.length) return;
-  for(var i=0;i<ridgePaths.length;i++){
-    var k=PARALLAX[i]||0.03;
-    ridgePaths[i].setAttribute('transform','translate('+(view.tx*k).toFixed(2)+','+(view.ty*k*0.35).toFixed(2)+')');
-  }
-}
-var _applyView=applyView;
-applyView=function(){ _applyView(); paintParallax(); };
+   There used to be parallax here, shifting the three ridge layers against each
+   other as the canvas moved — the standard reading of distance. The ridges
+   were a drawn stand-in for a horizon and a photograph replaced them, so the
+   parallax went with them; a single flat image has no layers to separate, and
+   sliding it against the page would only announce that it is a backdrop.
 
-/* Deliberately NO pointer tilt on the cards. Rotating a node rotates the
+   Still deliberately NO pointer tilt on the cards. Rotating a node rotates the
    label the reader is in the middle of reading, and this audience cannot be
-   handed soft type. Depth here comes from the receding not-taken plane and
-   from backdrop parallax — neither of which touches text the reader needs. */
+   handed soft type. Depth comes from the receding not-taken plane instead —
+   which touches no text the reader needs. */
 
 /* The tree runs the moment the page loads. This script is the last thing in
    the document, so the stage is already laid out and focusFrontier() can

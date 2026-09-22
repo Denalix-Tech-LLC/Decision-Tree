@@ -50,8 +50,7 @@
   --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#e5e8eb; --amb:.5;
-  --photo-op:.2;
+  --on-accent:#e5e8eb;  --photo-op:.2;
   /* ---- THE SUNSET ----
      The backdrop is a sunset: cool dusk overhead, mauve, then the sun's
      band and gold at the horizon, with the ridges darkening as they come
@@ -59,11 +58,7 @@
      neutral, as the other tints are. The sun itself is brighter than the
      palette allows, because it is a light source rather than a surface —
      the same exception the arrival bloom already takes. */
-  --sky-top:#cadae0; --sky-mid:#ddc6d2; --sky-bot:#e1d3a4;
-  --cloud:rgba(241,226,196,.62); --haze:rgba(226,199,178,.55);
-  --ridge-3:#ddc9bd; --ridge-2:#d8b2c2; --ridge-1:#80697d;
-  --mote:rgba(163,95,44,.42);
-  --sky-glow:#d6af96; --sun-core:rgba(255,247,224,.98); --sun-halo:rgba(222,194,106,.62); --sun-op:.9; --halo:#efe6dc;
+  --sky-glow:#d6af96; --sun-core:rgba(255,247,224,.98); --sun-halo:rgba(222,194,106,.62);--halo:#efe6dc;
   /* ---- BRAND TYPE ----
      Real families first, then the closest system stand-ins, because this page
      makes no external requests. Self-host Morvi / Gotham / Marion / Dongra as
@@ -89,13 +84,8 @@
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --gold:#dec26a;
-    --on-accent:#081b23; --amb:.3;
-    --photo-op:.12;
-    --sky-top:#06121a; --sky-mid:#242330; --sky-bot:#5a4030;
-    --cloud:rgba(201,129,80,.10); --haze:rgba(201,129,80,.07);
-    --ridge-3:#32312d; --ridge-2:#132831; --ridge-1:#0a1219;
-    --mote:rgba(222,194,106,.4);
-    --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42); --sun-op:.8; --halo:#12202a;
+    --on-accent:#081b23;    --photo-op:.12;
+    --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
     --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
     --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
   }
@@ -111,13 +101,8 @@
   --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
   --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#081b23; --amb:.3;
-  --photo-op:.12;
-  --sky-top:#06121a; --sky-mid:#242330; --sky-bot:#5a4030;
-  --cloud:rgba(201,129,80,.10); --haze:rgba(201,129,80,.07);
-  --ridge-3:#32312d; --ridge-2:#132831; --ridge-1:#0a1219;
-  --mote:rgba(222,194,106,.4);
-  --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42); --sun-op:.8; --halo:#12202a;
+  --on-accent:#081b23;  --photo-op:.12;
+  --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
   --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
   --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
 }
@@ -130,57 +115,20 @@
    ========================================================================= */
 .env{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:paint}
 
-.env .sky{position:absolute;inset:0;
-  background:linear-gradient(to bottom,var(--sky-top) 0%,var(--sky-mid) 38%,
-    var(--sky-glow) 74%,var(--sky-bot) 100%)}
 
-.env .sun{position:absolute;left:64%;bottom:16vh;width:min(28vmin,250px);height:min(28vmin,250px);
-  transform:translate(-50%,50%);border-radius:50%;opacity:var(--sun-op);
-  /* The centre sits on the near ridgeline, so the disc is half-taken by it and
-     the bright core clears the silhouette. Drop it lower and the ridge eats the
-     whole sun; the horizon then just glows, which is not the same picture. */
-  background:radial-gradient(circle at 50% 50%,
-    var(--sun-core) 0%,var(--sun-core) 30%,var(--sun-halo) 46%,transparent 74%);
-  filter:blur(1px)}
 
-.env .sun::after{content:'';position:absolute;left:50%;top:50%;width:330%;height:150%;
-  transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(ellipse 50% 50% at 50% 50%,var(--sun-halo) 0%,transparent 70%);
-  opacity:.34}
 
-.env .clouds span{position:absolute;display:block;border-radius:50%;
-  background:radial-gradient(ellipse 58% 46% at 50% 50%,var(--cloud) 0%,transparent 74%);
-  opacity:calc(var(--amb) * .78);will-change:transform}
 
-@keyframes cloud1{0%{transform:translateX(-14vw)}50%{transform:translateX(118vw)}50.01%{transform:translateX(-70vw)}100%{transform:translateX(-14vw)}}
 
-@keyframes cloud2{0%{transform:translateX(-60vw)}100%{transform:translateX(108vw)}}
 
-@keyframes cloud3{0%{transform:translateX(-82vw)}100%{transform:translateX(100vw)}}
 
-.env .haze{position:absolute;left:0;right:0;bottom:20%;height:26%;
-  background:linear-gradient(to bottom,transparent,var(--haze) 62%,transparent);
-  opacity:calc(var(--amb) * 1.15)}
 
-.env .ridges{position:absolute;left:0;right:0;bottom:0;width:100%;height:46vh;min-height:260px;display:block}
 
-.env .ridges path{transition:fill .4s}
 
-.env .ridges .r3{fill:var(--ridge-3)}
 
-.env .ridges .r2{fill:var(--ridge-2)}
 
-.env .ridges .r1{fill:var(--ridge-1)}
 
-.env .motes span{position:absolute;bottom:2vh;display:block;width:2px;height:2px;border-radius:50%;
-  background:var(--mote);opacity:0;animation:rise linear infinite}
 
-@keyframes rise{
-  0%{transform:translateY(0) translateX(0);opacity:0}
-  18%{opacity:calc(var(--amb) * .45)}
-  78%{opacity:calc(var(--amb) * .3)}
-  100%{transform:translateY(-42vh) translateX(3vw);opacity:0}
-}
 
 /* How strongly the photograph shows through. Kept low on purpose: this sits
    under 13px legal text, and a horizon that competes with it is a horizon that
@@ -193,17 +141,8 @@
   mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%)}
 
 .env .photo::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(to top,var(--sky-bot) 0%,transparent 55%)}
+  /* was var(--sky-bot), back when a painted sky sat under this. The
+     photograph melts into the page colour instead, so its lower edge is not a
+     line across the screen. */
+  background:linear-gradient(to top,var(--bg) 0%,transparent 55%)}
 
-/* On a phone the ridgeline sits proportionally higher, and a sun at the
-   desktop's height ended up behind it with only its faint outer edge showing.
-   It moves right, out of the way of the cards, and keeps the height that
-   clears the silhouette. */
-@media (max-width:560px){ .env .sun{left:72%} }
-
-.env .motes span:nth-child(1){left:11%;animation-duration:126s;animation-delay:0s}
-.env .motes span:nth-child(2){left:29%;animation-duration:148s;animation-delay:22s}
-.env .motes span:nth-child(3){left:44%;animation-duration:114s;animation-delay:47s}
-.env .motes span:nth-child(4){left:61%;animation-duration:158s;animation-delay:13s}
-.env .motes span:nth-child(5){left:76%;animation-duration:132s;animation-delay:63s}
-.env .motes span:nth-child(6){left:91%;animation-duration:142s;animation-delay:36s}

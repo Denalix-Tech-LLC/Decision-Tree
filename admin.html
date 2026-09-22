@@ -8,9 +8,6 @@
    on the tree page — 64% across, in open sky — is behind a panel here. It sits
    in the half that is actually canvas instead, and follows when the panel is
    folded away. Everything else about the backdrop comes from theme.css. */
-.env .sun{left:34%}
-body.wide .env .sun{left:52%}
-@media (max-width:900px){ .env .sun{left:42%} }
 
 /* A .btn carries display:inline-flex, which outranks the user-agent rule for
    [hidden] — so a hidden button sat in the toolbar anyway. Hidden means
@@ -54,9 +51,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
    contrast so card text stays fully legible.
    ========================================================================= */
 
-.env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
-.env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
-.env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
 
 
 /* ---- top bar ---- */
@@ -275,17 +269,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 </style>
 
 <div class="env" aria-hidden="true">
-  <div class="sky"></div>
-  <div class="sun"></div>
   <div class="photo"></div>
-  <div class="clouds"><span></span><span></span><span></span></div>
-  <div class="haze"></div>
-  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
-    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
-    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
-    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
-  </svg>
-  <div class="motes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 </div>
 
 <div class="shell">
