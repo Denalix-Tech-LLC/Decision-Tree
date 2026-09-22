@@ -142,6 +142,6 @@
    it: the header, the notice strip, the hint pill and every card paint their
    own opaque background, so text has never sat on the photograph. */
 .env .photo{position:absolute;inset:0;
-  background-image:url("land.jpg");background-size:cover;background-position:50% 62%;
+  background-image:url("land.jpg");background-size:cover;background-position:50% 56%;
   opacity:var(--photo-op);filter:saturate(.88) contrast(1.04)}
 
