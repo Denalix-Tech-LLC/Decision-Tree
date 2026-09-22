@@ -132,21 +132,16 @@
 
 /* How strongly the photograph shows through. --photo-op is the one knob.
 
-   These numbers were set when a drawn sky, clouds and three ridgelines sat
-   behind the picture and it only had to tint them; at that strength, with the
-   scene removed, the page went white. The photograph is the backdrop now, so
-   it carries itself: no brightening, most of its colour left in, and the mask
-   holding it back only where the top bar meets it rather than across two
-   thirds of the screen. */
+   It used to be masked away toward the top and washed out toward the bottom,
+   handing itself over to a painted sky at one end and a drawn ridgeline at the
+   other. With neither of those on the page those two fades read as exactly
+   what they were — a pale bar across the top of the canvas and another across
+   the foot — so the picture runs edge to edge now.
+
+   That costs nothing in legibility, because the fades were never what carried
+   it: the header, the notice strip, the hint pill and every card paint their
+   own opaque background, so text has never sat on the photograph. */
 .env .photo{position:absolute;inset:0;
   background-image:url("land.jpg");background-size:cover;background-position:50% 62%;
-  opacity:var(--photo-op);filter:saturate(.88) contrast(1.04);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 72%,transparent 99%);
-  mask-image:linear-gradient(to top,#000 0%,#000 72%,transparent 99%)}
-
-/* A short wash at the very foot of the screen, so the picture meets the
-   bottom edge rather than stopping at it. It used to run up 55% of the
-   viewport, which is most of what turned the page white. */
-.env .photo::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(to top,var(--bg) 0%,transparent 16%)}
+  opacity:var(--photo-op);filter:saturate(.88) contrast(1.04)}
 
