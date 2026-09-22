@@ -50,7 +50,7 @@
   --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#e5e8eb;  --photo-op:.2;
+  --on-accent:#e5e8eb;  --photo-op:.66;
   /* ---- THE SUNSET ----
      The backdrop is a sunset: cool dusk overhead, mauve, then the sun's
      band and gold at the horizon, with the ridges darkening as they come
@@ -84,7 +84,7 @@
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --gold:#dec26a;
-    --on-accent:#081b23;    --photo-op:.12;
+    --on-accent:#081b23;    --photo-op:.3;
     --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
     --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
     --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
@@ -101,7 +101,7 @@
   --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
   --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#081b23;  --photo-op:.12;
+  --on-accent:#081b23;  --photo-op:.3;
   --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
   --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
   --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
@@ -130,19 +130,23 @@
 
 
 
-/* How strongly the photograph shows through. Kept low on purpose: this sits
-   under 13px legal text, and a horizon that competes with it is a horizon that
-   costs someone a citation. --photo-op is the one knob — raise it if the
-   picture dropped in is paler than the one this was tuned for. */
-.env .photo{position:absolute;inset:0;
-  background-image:url("land.jpg");background-size:cover;background-position:50% 76%;
-  opacity:var(--photo-op);filter:saturate(.62) sepia(.14) contrast(.9) brightness(1.02);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%);
-  mask-image:linear-gradient(to top,#000 0%,#000 34%,transparent 78%)}
+/* How strongly the photograph shows through. --photo-op is the one knob.
 
+   These numbers were set when a drawn sky, clouds and three ridgelines sat
+   behind the picture and it only had to tint them; at that strength, with the
+   scene removed, the page went white. The photograph is the backdrop now, so
+   it carries itself: no brightening, most of its colour left in, and the mask
+   holding it back only where the top bar meets it rather than across two
+   thirds of the screen. */
+.env .photo{position:absolute;inset:0;
+  background-image:url("land.jpg");background-size:cover;background-position:50% 62%;
+  opacity:var(--photo-op);filter:saturate(.88) contrast(1.04);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 72%,transparent 99%);
+  mask-image:linear-gradient(to top,#000 0%,#000 72%,transparent 99%)}
+
+/* A short wash at the very foot of the screen, so the picture meets the
+   bottom edge rather than stopping at it. It used to run up 55% of the
+   viewport, which is most of what turned the page white. */
 .env .photo::after{content:'';position:absolute;inset:0;
-  /* was var(--sky-bot), back when a painted sky sat under this. The
-     photograph melts into the page colour instead, so its lower edge is not a
-     line across the screen. */
-  background:linear-gradient(to top,var(--bg) 0%,transparent 55%)}
+  background:linear-gradient(to top,var(--bg) 0%,transparent 16%)}
 
