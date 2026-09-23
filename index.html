@@ -221,6 +221,12 @@ a{color:var(--accent-ink)}
   border-radius:9px;background:var(--risk-bg);border:1px solid var(--risk-line);
   color:var(--ink);font-size:12.5px;line-height:1.4}
 .bubble .btxt{display:block}
+.bubble a,.onote a{color:var(--accent-ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+/* A note that belongs to one answer, shown once that answer is chosen: what
+   the reader should know about the route they just took. */
+.tnode .onote{display:block;margin-top:8px;padding:8px 10px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);color:var(--ink);
+  font-size:12px;font-weight:400;line-height:1.42}
 .bx{position:absolute;top:5px;right:5px;width:19px;height:19px;border-radius:50%;
   border:1px solid transparent;background:transparent;color:var(--risk);
   font-family:var(--sans);font-size:10px;line-height:1;cursor:pointer;padding:0;
@@ -527,6 +533,16 @@ body.running .hint{opacity:1}
 .mini{border:1px dashed var(--border-strong);border-radius:9px;padding:10px 11px;background:var(--surface)}
 .mini .mh{font-weight:650;font-size:13px;margin-bottom:2px}
 .mini .md{font-size:12.5px;color:var(--muted)}
+/* the way of implementing the reader picked, when the tree asked them */
+.mini.picked{border-style:solid;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mini .yc{font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.mini .pk{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);
+  text-transform:uppercase;margin:9px 0 2px;color:var(--good)}
+.mini .pk.con{color:var(--risk)}
+.mini .pl{margin:0;padding-left:17px;font-size:12.5px;line-height:1.42}
+.mini .pl li{margin:2px 0}
+.card p a,.card .pl a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
 .sx{font-family:var(--sans);font-weight:600;font-size:11.5px;background:var(--accent-soft);color:var(--accent-ink);border-radius:6px;padding:3px 7px}
 .check{list-style:none;padding:0;margin:6px 0 0}
@@ -592,6 +608,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     break-inside:avoid;page-break-inside:avoid}
   #printOut .pd p{margin:0 0 5pt} #printOut .pd ul{margin:5pt 0}
   #printOut .ptree{display:block;max-width:520px;margin:6pt 0 10pt;break-inside:avoid;page-break-inside:avoid}
+  /* a link cannot be clicked on paper, so the address is printed after it */
+  #printOut a{color:inherit;text-decoration:none}
+  #printOut a[href^="http"]::after{content:" (" attr(href) ")";font-size:8.5pt;word-break:break-all}
 }
 </style>
 
@@ -858,15 +877,15 @@ var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
    ------------------------------------------------------------------------- */
 var GUIDE=[
   {h:`What this tool is for`,
-   html:`<p>This tool helps you think through whether your Tribe should seek <b>treatment in the same manner as a state</b> (TAS, commonly "treated as a state") under the Tribal Authority Rule, <code>40 CFR Part 49</code>, EPA's rule implementing Clean Air Act <code>§301(d)</code> — and if so, for which Clean Air Act sections.</p><p>You answer four questions: whether any jurisdictional boundaries are disputed and how you would proceed; how many emission sources are in your jurisdiction; whether outside sources affect your air; and whether you have the capacity to run a program. The tree grows as you answer and shows the routes that follow.</p><p>The decision itself belongs to Tribal leadership, Council and Tribal legal counsel. The limits of this tool are set out in the notice on this page and in the bar above the tree.</p>`},
+   html:`<p>This tool helps you think through whether your Tribe should seek <b>treatment in the same manner as a state</b> (TAS, commonly "treated as a state") under the Tribal Authority Rule, <code>40 CFR Part 49</code>, EPA's rule implementing Clean Air Act <code>§301(d)</code> — and if so, for which Clean Air Act sections.</p><p>You answer four questions: whether any jurisdictional boundaries are disputed and how you would proceed; how many emission sources are in your jurisdiction and, if there are many, how you would implement Clean Air Act programs; whether outside sources affect your air; and whether you have the capacity to run a program. The tree grows as you answer and shows the routes that follow.</p><p>The decision itself belongs to Tribal leadership, Council and Tribal legal counsel. The limits of this tool are set out in the notice on this page and in the bar above the tree.</p>`},
   {h:`Moving around the canvas`,
    html:`<p>Drag anywhere on the background to move the canvas. A scroll wheel or a two-finger trackpad swipe moves it too — scrolling pans rather than zooms, so the tree does not change size by accident. Hold <code>shift</code> while scrolling to move sideways.</p><p>To zoom, hold <code>ctrl</code> (or <code>cmd</code> on a Mac) while scrolling, pinch on a touchscreen, or use <b>+</b> and <b>−</b> at the bottom right. <b>Fit</b> frames the whole tree at once.</p><p>Panning is held so that part of the tree always stays on screen.</p>`},
   {h:`Answering, and changing your mind`,
    html:`<p>One question is active at a time, with its answers fanned beneath it. Click an answer and the tree grows: the line to the next question draws itself, the question fades in, then its options arrive one at a time. You can also press the number of an option on the active question, or move between cards with <code>Tab</code> and choose with <code>Enter</code>.</p><p>Answers you did not take stay on the canvas, greyed and pushed slightly out of focus, so the whole decision stays visible. <b>Click a greyed answer and the tree re-routes down that branch instead</b> — useful for showing Council what the other choice would have led to.</p><p>Every question you have already answered carries a small <b>x</b>. Clicking it cuts the tree back to that question and reopens it with all its options live; everything that grew below it comes away, because it no longer follows from your answers.</p><p><b>Start over</b> in the top bar withdraws the tree, deepest limb first, and returns you to question one. Each choice plays a short tone; the <b>Sound</b> button turns that off.</p>`},
   {h:`What the pathways mean`,
-   html:`<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. There are four:</p><ul><li><b>Regulatory TAS</b> — the route to running your own permitting, inspection and enforcement program for sources in your jurisdiction, once EPA approves the program itself.</li><li><b>Targeted Regulatory TAS</b> — the same route for a narrower program aimed at one local problem, such as smoke from open burning.</li><li><b>Participatory TAS</b> — a formal role as a neighbouring government: notice of and comment on nearby plans and permits, and a route to ask EPA to act on sources outside your jurisdiction.</li><li><b>Capacity building</b> — ways to move toward TAS while you build staff and expertise, rather than waiting until they are in place.</li></ul><p>Pathways accumulate and are not exclusive. Many sources <i>and</i> a wish for a say in nearby permits finishes with both Regulatory and Participatory. A pathway stays unlocked unless you change the answer that unlocked it.</p><p>A pathway is a direction to consider, not a finding of eligibility. EPA decides eligibility against the four criteria at <code>40 CFR §49.6</code>, which the result panel lists. Part 49 also does not open every Clean Air Act provision to Tribes — <code>§49.4</code> lists the provisions for which Tribes are not treated as states, including implementation-plan submittal deadlines and the sanctions tied to them.</p>`},
+   html:`<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. There are four:</p><ul><li><b>Regulatory TAS</b> — the route to running your own permitting, inspection and enforcement program for sources in your jurisdiction, once EPA approves the program itself.</li><li><b>Targeted Regulatory TAS</b> — the same route for a narrower program aimed at one local problem, such as smoke from open burning.</li><li><b>Administrative TAS</b> — a formal role as a neighbouring government: notice of and comment on nearby plans and permits, and a route to ask EPA to act on sources outside your jurisdiction.</li><li><b>Capacity building</b> — ways to move toward TAS while you build staff and expertise, rather than waiting until they are in place.</li></ul><p>Pathways accumulate and are not exclusive. Many sources <i>and</i> a wish for a say in nearby permits finishes with both Regulatory and Administrative. A pathway stays unlocked unless you change the answer that unlocked it.</p><p>A pathway is a direction to consider, not a finding of eligibility. EPA decides eligibility against the four criteria at <code>40 CFR §49.6</code>, which the result panel lists. Part 49 also does not open every Clean Air Act provision to Tribes — <code>§49.4</code> lists the provisions for which Tribes are not treated as states, including implementation-plan submittal deadlines and the sanctions tied to them.</p>`},
   {h:`What you get at the end`,
-   html:`<p>When you reach an ending, light rises behind the ridgelines and a <b>Result</b> button appears in the top bar. The panel slides over the canvas; the tree stays as you left it behind it. Close it with <b>Back to the tree</b> or <code>escape</code>.</p><p>The panel holds:</p><ul><li>a headline naming the pathway, or combination, your answers point to, and a sentence on why;</li><li>the Clean Air Act sections to consider seeking, and the pathways unlocked;</li><li>a <b>boundary-risk note</b>, when a boundary answer came up — read it in full there;</li><li>one card per unlocked pathway, with the sections to seek under it;</li><li>the options that need no TAS at all — inherent Tribal authority, <code>§103</code> grants, monitoring, education, indoor-air and radon work;</li><li>the four eligibility criteria at <code>40 CFR §49.6</code>, and what a request must contain under <code>§49.7</code>;</li><li>next steps, and links to EPA's pages on the Tribal Authority Rule.</li></ul><p>One point to carry into any discussion: TAS eligibility is a threshold status. Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it.</p>`},
+   html:`<p>When you reach an ending, light rises behind the ridgelines and a <b>Result</b> button appears in the top bar. The panel slides over the canvas; the tree stays as you left it behind it. Close it with <b>Back to the tree</b> or <code>escape</code>.</p><p>The panel holds:</p><ul><li>a headline naming the pathway, or combination, your answers point to, and a sentence on why;</li><li>the Clean Air Act sections to consider seeking, and the pathways unlocked;</li><li>a <b>boundary-risk note</b>, when a boundary answer came up — read it in full there;</li><li>one card per unlocked pathway, with the sections to seek under it — for Regulatory TAS, the pros and cons of writing your own programs against taking delegation of the federal ones;</li><li>what your capacity answer means for a TAS request, with a link to EPA's Peacock memo;</li><li>the options that need no TAS at all — inherent Tribal authority, <code>§103</code> grants, monitoring, education, indoor-air and radon work;</li><li>the four eligibility criteria at <code>40 CFR §49.6</code>, and what a request must contain under <code>§49.7</code>;</li><li>next steps, and links to EPA's pages on the Tribal Authority Rule.</li></ul><p>One point to carry into any discussion: TAS eligibility is a threshold status. Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it.</p>`},
   {h:`The printed document`,
    html:`<p><b>Print</b> at the top of the result panel prints the result or saves it as a PDF, depending on what you choose in your browser's print dialog.</p><p>It opens with a drawing of the route you took — each question, the answer chosen, the pathway it unlocked, and the result — then the written sections: the recommended pathways with their sections, the non-TAS options, the eligibility criteria, next steps, references, and the standing notice. Someone who was not at the screen can read it and see both what the tool pointed to and how you got there.</p><p><b>Confirm every section number against the current Clean Air Act and 40 CFR Part 49 before anyone relies on it.</b> Sections are amended and renumbered, and this is not an official EPA product.</p>`},
   {h:`Changing the content`,
@@ -997,6 +1016,23 @@ var QW=330, OW=196, HGAP=18, VGAP=54;
    question with two answers stays wide on a phone; one with five narrows.
    Everything is still the same fan, on every screen. */
 var OW_MIN=92, EDGE=14;
+/* Notes in the tree are plain text, written in the editor by people who
+   should not need to know HTML. The one link they need is to the people
+   behind the tool, so "contact us" becomes that link wherever a note says it. */
+function noteHtml(t){
+  return esc(t).replace(/\bcontact us\b/gi,function(m){ return '<a href="#" data-open-contact>'+m+'</a>'; });
+}
+/* Any "contact us" link, in a note, a result card or content from the editor,
+   opens the Contact panel. Caught on the way down, so the card it sits on
+   neither reopens its question nor starts a pan. */
+['pointerdown','click'].forEach(function(type){
+  document.addEventListener(type,function(e){
+    var l=e.target&&e.target.closest&&e.target.closest('[data-open-contact]');
+    if(!l) return;
+    e.stopPropagation();
+    if(type==='click'){ e.preventDefault(); openContact(); }
+  },true);
+});
 function stageW(){
   var r=stage.getBoundingClientRect();
   return r.width||document.documentElement.clientWidth||960;
@@ -1109,7 +1145,7 @@ function build(){
     }
     qEl.innerHTML='<span class="tag">'+esc(n.tag)+'</span><span class="ttl">'+esc(n.q)+'</span>'
       +(n.note&&answered===null&&!hushed[id]
-        ?'<span class="bubble"><span class="btxt">'+esc(n.note)+'</span>'
+        ?'<span class="bubble"><span class="btxt">'+noteHtml(n.note)+'</span>'
          +'<button type="button" class="bx" aria-label="Dismiss this note">&#10005;</button></span>'
         :'');
     var bx=qEl.querySelector('.bx');
@@ -1160,7 +1196,9 @@ function build(){
       oEl.style.width=ow+'px';
       oEl.dataset.node=id; oEl.dataset.ai=String(ai);
       oEl.innerHTML='<span class="ttl">'+esc(a.label)+'</span>'
+        +(a.hint?'<span class="sub">'+esc(a.hint)+'</span>':'')
         +(a.grants?'<span class="sub">unlocks '+esc(OUT[a.grants].name)+'</span>':'')
+        +(a.note&&answered===ai?'<span class="onote">'+noteHtml(a.note)+'</span>':'')
         +(answered===null?'<span class="kb">'+(ai+1)+'</span>':'');
       oEl.setAttribute('tabindex','0'); oEl.setAttribute('role','button');
       oEl.setAttribute('aria-label',a.label
@@ -1785,20 +1823,37 @@ function verdict(kind){
   if(kind==='END_NONTAS') return {t:'A non-TAS pathway fits best right now',
     s:'You can protect your air and build capacity without TAS, and revisit once the boundary question is resolved.'};
   var reg=collected.indexOf('regulatory')>=0,tgt=collected.indexOf('targeted')>=0,par=collected.indexOf('participatory')>=0;
-  if(reg&&par) return {t:'Regulatory + Participatory TAS',s:'You have sources to manage and reasons to influence what happens next door — seek both roles. They are not mutually exclusive.'};
-  if(tgt&&par) return {t:'Targeted + Participatory TAS',s:'A focused program at home, plus a formal voice in the decisions made around you.'};
+  if(reg&&par) return {t:'Regulatory + Administrative TAS',s:'You have sources to manage and reasons to influence what happens next door — seek both roles. They are not mutually exclusive.'};
+  if(tgt&&par) return {t:'Targeted + Administrative TAS',s:'A focused program at home, plus a formal voice in the decisions made around you.'};
   if(reg) return {t:'Regulatory TAS',s:'Become the primary implementing authority for the air-pollution sources in your jurisdiction.'};
   if(tgt) return {t:'Targeted Regulatory TAS',s:'A focused program can address your specific local air-quality issue.'};
-  if(par) return {t:'Participatory (good-neighbour) TAS',s:'Get a formal, early voice in the state and local decisions that affect your air quality.'};
+  if(par) return {t:'Administrative (good-neighbour) TAS',s:'Get a formal, early voice in the state and local decisions that affect your air quality.'};
   return {t:'TAS may offer limited near-term benefit',s:'With few sources and no outside concern, non-TAS programs may serve you now — but the option stays open as things change.'};
 }
-function boundaryPick(){
-  var b=null,d=null;
+/* The answer given at the boundary-risk question, or null when the path never
+   reached one. "Disputed" and "not sure" each have their own such question, so
+   it is found by being risky rather than by id. Reaching one is what the
+   boundary card keys on: it used to test whether the first answer's short
+   form began with "No", and "Not sure" does. */
+function boundaryAnswer(){
+  var d=null;
   path.forEach(function(p){
-    if(p.node==='q1') b=NODES.q1.a[p.ai].short;
-    if(p.node==='q1b') d=NODES.q1b.a[p.ai].short;
+    var n=NODES[p.node];
+    if(n&&n.risky&&n.a[p.ai]) d=n.a[p.ai];
   });
-  return {b:b,d:d};
+  return d;
+}
+/* The chosen answer at a question, or -1. */
+function pickAt(id){
+  for(var i=0;i<path.length;i++) if(path[i].node===id) return path[i].ai;
+  return -1;
+}
+function prosCons(x){
+  function list(k,cls,items){
+    return items&&items.length?'<div class="pk'+cls+'">'+k+'</div><ul class="pl">'
+      +items.map(function(t){ return '<li>'+t+'</li>'; }).join('')+'</ul>':'';
+  }
+  return list('Pros','',x.pros)+list('Cons',' con',x.cons);
 }
 function chipsHtml(a){ return '<div class="chips">'+a.map(function(s){return '<span class="sx">'+esc(s)+'</span>';}).join('')+'</div>'; }
 function checksHtml(a){ return '<ul class="check">'+a.map(function(c){
@@ -1807,13 +1862,37 @@ function outCard(k,kind){
   var o=OUT[k];
   var h='<div class="card '+kind+'"><div class="rk">'+esc(o.name)+'</div><h4>'+esc(o.title)+'</h4>';
   if(o.body) h+='<p class="m">'+o.body+'</p>';
-  if(o.options) h+='<div class="two">'+o.options.map(function(x){return '<div class="mini"><div class="mh">'+x.h+'</div><div class="md">'+x.d+'</div></div>';}).join('')+'</div>';
+  if(o.options){
+    var pick=o.chooser?pickAt(o.chooser):-1;
+    h+='<div class="two">'+o.options.map(function(x,i){
+      return '<div class="mini'+(i===pick?' picked':'')+'">'
+        +(i===pick?'<div class="yc">Your choice</div>':'')
+        +'<div class="mh">'+x.h+'</div>'+(x.d?'<div class="md">'+x.d+'</div>':'')
+        +prosCons(x)+'</div>';
+    }).join('')+'</div>';
+  }
   if(o.checks) h+=checksHtml(o.checks);
   if(o.sections) h+='<p class="m" style="margin:9px 0 0">Sections you may seek:</p>'+chipsHtml(o.sections);
   return h+'</div>';
 }
+/* What an answer adds to the full result, beyond the pathway it unlocks —
+   the capacity answers each say what TAS actually asks at this stage. The
+   boundary-risk answers are left out: their detail is in the boundary card. */
+function detailSteps(){
+  return path.filter(function(p){
+    var n=NODES[p.node];
+    return n&&!n.risky&&n.a[p.ai]&&n.a[p.ai].detail;
+  });
+}
+function answerDetails(){
+  return detailSteps().map(function(p){
+    var n=NODES[p.node],a=n.a[p.ai];
+    return '<div class="card soft"><div class="rk">'+esc(n.short||n.tag)+' · your answer</div>'
+      +'<h4>'+esc(a.label)+'</h4>'+a.detail+'</div>';
+  }).join('');
+}
 function resultHtml(){
-  var declined=terminal==='END_NONTAS', v=verdict(terminal), f=boundaryPick();
+  var declined=terminal==='END_NONTAS', v=verdict(terminal), bd=boundaryAnswer();
   var h='<p style="margin:0 0 4px;color:var(--muted)">'+esc(v.s)+'</p>';
   /* two short tiles give the bento its rhythm and answer the first two
      questions a reader actually has: how many sections, and how far in am I */
@@ -1826,12 +1905,9 @@ function resultHtml(){
   h+='<div class="card stat tile-half"><div class="rk">Pathways</div>'
    + '<div><div class="big">'+realPaths+'</div><div class="lbl">'
    + (realPaths===1?'recommended route':(realPaths?'complementary routes':'non-TAS route'))+'</div></div></div>';
-  if(f.b&&f.b.indexOf('No')!==0){
-    var ex=f.d==='Undisputed only'
-      ?'Applying over <b>undisputed areas only</b> is the lower-risk route you chose — be sure to affirm the excluded areas remain claimed.'
-      :(f.d==='Full area'?'You chose to proceed over the <b>full claimed area</b> — have counsel prepare for a possible challenge.':'');
+  if(bd){
     h+='<div class="card danger"><div class="rk">Keep in view</div><h4>Your boundary showing is open to others</h4>'
-      +DISC.boundary+(ex?'<p>'+ex+'</p>':'')+'</div>';
+      +DISC.boundary+(bd.detail||'')+'</div>';
   }
   var real=collected.filter(function(x){return x!=='capacity';});
   if(!declined){
@@ -1840,6 +1916,7 @@ function resultHtml(){
     if(!real.length) h+='<div class="card soft"><div class="rk">Worth knowing</div><h4>You have strong options without TAS today</h4>'
       +'<p class="m">With little source activity and no outside concern right now, the non-TAS pathways below may meet your needs. TAS remains available whenever sources appear or priorities shift.</p></div>';
     if(collected.indexOf('capacity')>=0) h+=outCard('capacity','warn');
+    h+=answerDetails();
     /* the section chips above are what people paste into briefings, so the
        warning about them sits with them rather than only at the foot */
     if(real.length) h+='<p style="margin:0;font-size:12.5px;color:var(--muted)">Section numbers point '
@@ -1958,11 +2035,28 @@ function printableHtml(){
     collected.forEach(function(k){
       var o=OUT[k];
       h+='<p><b>'+esc(o.name)+' — '+esc(o.title)+'</b></p>';
-      if(o.options) h+='<ul>'+o.options.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+      if(o.options){
+        var pick=o.chooser?pickAt(o.chooser):-1;
+        h+='<ul>'+o.options.map(function(x,i){
+          var pc=function(k,items){ return items&&items.length?'<br>'+k+': '+items.join('; ')+'.':''; };
+          return '<li><b>'+x.h+'</b>'+(i===pick?' (your choice)':'')+(x.d?' — '+x.d:'')
+            +pc('Pros',x.pros)+pc('Cons',x.cons)+'</li>';
+        }).join('')+'</ul>';
+      }
       if(o.checks) h+='<ul>'+o.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
       if(o.sections) h+='<div>'+o.sections.map(function(s){return '<span class="psx">'+esc(s)+'</span>';}).join('')+'</div>';
     });
   }
+  /* the notes attached to answers — the boundary one, then the rest */
+  var bd=boundaryAnswer(), notes=[];
+  if(bd&&bd.detail) notes.push({h:'Boundary risk: '+(bd.short||bd.label),d:bd.detail});
+  detailSteps().forEach(function(p){
+    var n=NODES[p.node],a=n.a[p.ai];
+    notes.push({h:(n.short||n.tag)+': '+(a.short||a.label),d:a.detail});
+  });
+  if(notes.length) h+='<h3>About your answers</h3>'+notes.map(function(x){
+    return '<p><b>'+esc(x.h)+'</b></p>'+x.d;
+  }).join('');
   h+='<h3>Non-TAS options</h3><ul>'+NONTAS.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
   h+='<h3>The four eligibility criteria (40 CFR §§ 49.6 / 49.7)</h3><ul>'+CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
   h+='<h3>Next steps</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
@@ -2034,7 +2128,7 @@ var WALK=[
   {h:'Pathways, and what you get',
    art:'<svg viewBox="0 0 320 96" role="img" aria-label="Pathway labels above a result document">'
       +'<rect class="wchip" x="6" y="6" width="88" height="17" rx="5"/><text class="wchip-t" x="14" y="18">Regulatory TAS</text>'
-      +'<rect class="wchip" x="102" y="6" width="96" height="17" rx="5"/><text class="wchip-t" x="110" y="18">Participatory TAS</text>'
+      +'<rect class="wchip" x="102" y="6" width="96" height="17" rx="5"/><text class="wchip-t" x="110" y="18">Administrative TAS</text>'
       +'<rect class="wchip" x="206" y="6" width="76" height="17" rx="5"/><text class="wchip-t" x="214" y="18">Capacity</text>'
       +'<rect class="wq" x="86" y="34" width="148" height="56" rx="7"/>'
       +'<text class="wt on" x="97" y="51">Your result</text>'
