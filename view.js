@@ -20,7 +20,9 @@
   'use strict';
 
   var MIN = 0.15,
-    MAX = 2;
+    MAX = 2,
+    /* the most one wheel event may zoom by — a mouse notch, as it always was */
+    STEP = 1.12;
 
   /* Hold the canvas so part of the tree is always on screen. Panning used to
      be unbounded, and a scroll or a drag could carry the whole thing into
@@ -52,13 +54,19 @@
 
   /* Zoom about a point, keeping whatever is under that point under it. With
      no point given it is the middle of the stage, which is what a + or −
-     button means. */
-  function zoom(view, rect, k, cx, cy) {
+     button means.
+
+     `floor` is the smallest scale this zoom may take — see floorFor(). It
+     never pushes the scale UP: a reader already below it (Fit on a very tall
+     tree goes lower on purpose) can still zoom in smoothly from where they
+     are, and simply cannot go any further out. */
+  function zoom(view, rect, k, cx, cy, floor) {
     if (cx == null) {
       cx = rect.width / 2;
       cy = rect.height / 2;
     }
-    var ns = Math.min(MAX, Math.max(MIN, view.s * k));
+    var lo = floor == null ? MIN : Math.max(MIN, Math.min(floor, view.s));
+    var ns = Math.min(MAX, Math.max(lo, view.s * k));
     var wx = (cx - view.tx) / view.s,
       wy = (cy - view.ty) / view.s;
     view.s = ns;
@@ -75,5 +83,50 @@
     return Math.min(1, (rect.width - p * 2) / bounds.w, (rect.height - p * 2) / bounds.h);
   }
 
-  window.TASView = { clamp: clamp, zoom: zoom, scaleToFit: scaleToFit, MIN: MIN, MAX: MAX };
+  /* One wheel event, as a zoom factor.
+
+     A mouse wheel sends a few events per notch, each with a large deltaY. A
+     two-finger trackpad pinch arrives as ctrl+wheel too, but as dozens of
+     events each with a tiny one. Both pages used to apply a fixed 12% per
+     event, which is right for the mouse and wildly wrong for the trackpad:
+     a gentle pinch of twenty events is 0.89^20 = 0.10, so the tree was
+     flung to the floor by a gesture that meant "a little smaller".
+
+     Scaling by the size of the delta makes the gesture proportional to how
+     far the fingers move. Capping each event at STEP leaves a mouse notch
+     exactly where it was. deltaMode 1 is lines (Firefox), 2 is pages. */
+  function wheelFactor(e) {
+    var dy = e.deltaY || 0;
+    if (e.deltaMode === 1) dy *= 16;
+    else if (e.deltaMode === 2) dy *= 400;
+    var k = Math.exp(-dy * 0.01);
+    return Math.min(STEP, Math.max(1 / STEP, k));
+  }
+
+  /* The smallest scale worth zooming out to: the one that shows the whole
+     tree. Past that point nothing more comes into view — the cards only
+     shrink, into empty space — and that is where a pinch used to end.
+
+     Bounded on both sides. `lo` stops a very large tree from licensing a
+     floor too small to read; Fit is the way to see all of one of those, and
+     Fit sets the scale directly rather than zooming. `hi` lets a small tree
+     still be zoomed out a little, rather than refusing to move at all. */
+  function floorFor(rect, bounds, pad, lo, hi) {
+    var a = lo == null ? 0.3 : lo,
+      b = hi == null ? 0.75 : hi,
+      p = pad == null ? 40 : pad;
+    if (!rect || !bounds || !bounds.w || !bounds.h || !rect.width || !rect.height) return a;
+    var fit = Math.min((rect.width - p * 2) / bounds.w, (rect.height - p * 2) / bounds.h);
+    return Math.min(b, Math.max(a, fit));
+  }
+
+  window.TASView = {
+    clamp: clamp,
+    zoom: zoom,
+    scaleToFit: scaleToFit,
+    wheelFactor: wheelFactor,
+    floorFor: floorFor,
+    MIN: MIN,
+    MAX: MAX,
+  };
 })();

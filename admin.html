@@ -1406,7 +1406,8 @@ function fitAll(){
 }
 function zoomBy(k){
   if(!window.TASView) return;
-  TASView.zoom(view,stage.getBoundingClientRect(),k);
+  var r=stage.getBoundingClientRect();
+  TASView.zoom(view,r,k,null,null,TASView.floorFor(r,window.__box,40,0.2,0.75));
   applyView();
 }
 document.getElementById('zIn').onclick=function(){ zoomBy(1.2); };
@@ -1436,10 +1437,17 @@ stage.addEventListener('pointerup',function(e){
 stage.addEventListener('wheel',function(e){
   e.preventDefault();
   if(e.ctrlKey||e.metaKey){
-    var r=stage.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
-    var ns=Math.min(2,Math.max(.15,view.s*(e.deltaY<0?1.12:1/1.12)));
-    var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
-    view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns;
+    /* This used to carry its own copy of the zoom-about-a-point arithmetic
+       and its own limits, with the same fixed 12% step per event as the
+       reader's tree — which a trackpad pinch, arriving as dozens of tiny
+       ctrl+wheel events, turned into a plunge to the floor. Both pages go
+       through TASView now. The editor's floor sits lower than the reader's,
+       because seeing a whole tree at once is part of editing one. */
+    var r=stage.getBoundingClientRect();
+    if(window.TASView){
+      TASView.zoom(view,r,TASView.wheelFactor(e),e.clientX-r.left,e.clientY-r.top,
+        TASView.floorFor(r,window.__box,40,0.2,0.75));
+    }
   } else { view.tx-=e.deltaX; view.ty-=e.deltaY; }
   applyView();
 },{passive:false});

@@ -1659,9 +1659,16 @@ function focusFrontier(){
   }
   applyView();
 }
+/* Every zoom the reader makes — pinch, ctrl+wheel, the + and − buttons —
+   goes through here, and none of them may shrink the tree past the point
+   where the whole of it is already on screen. Beyond that nothing more comes
+   into view; the cards only get smaller. Fit is the exception, and is meant
+   to be: it sets the scale directly, because asking to see everything is
+   asking for exactly that. */
 function zoomBy(k,cx,cy){
   if(!window.TASView) return;
-  TASView.zoom(view,stage.getBoundingClientRect(),k,cx,cy);
+  var r=stage.getBoundingClientRect();
+  TASView.zoom(view,r,k,cx,cy,TASView.floorFor(r,bbox(),26,0.3,0.75));
   applyView();
 }
 var drag=null;
@@ -1684,8 +1691,12 @@ stage.addEventListener('wheel',function(e){
   /* Scrolling PANS the canvas. Only an explicit zoom gesture (ctrl/cmd+wheel,
      pinch, or the +/-/Fit buttons) is allowed to change the tree's size. */
   if(e.ctrlKey||e.metaKey){
+    /* ctrl+wheel is also what a two-finger trackpad pinch arrives as, in
+       dozens of tiny events. A fixed step per event flung the tree to the
+       floor on the gentlest pinch; the factor is proportional to the delta
+       now — see TASView.wheelFactor. */
     var r=stage.getBoundingClientRect();
-    zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX-r.left,e.clientY-r.top);
+    zoomBy(window.TASView?TASView.wheelFactor(e):1,e.clientX-r.left,e.clientY-r.top);
     return;
   }
   if(e.shiftKey){ view.tx-=e.deltaY; }
