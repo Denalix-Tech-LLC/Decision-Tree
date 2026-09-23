@@ -26,31 +26,28 @@ export default route({
     try {
       await ensureSchema();
       const r = await rawQuery('select v from schema_meta where k = $1', ['schema_version']);
-      /* Leaving ADMIN_EMAIL unset means "no gate", which is the right answer
-         for a deployment with no database: there are no accounts, so there is
-         nobody to gate against, and the editor stays open the way it did
-         before accounts existed.
-
-         With storage READY that reasoning is gone. Accounts exist, anyone can
-         register, and PUT /api/tree publishes to every reader gated on this
-         and nothing else — so the combination is a misconfiguration rather
-         than a mode, and it is the one that looks fine until someone rewrites
-         what a Council is shown. Say so where a monitor will see it. */
-      const unprotected = !adminGateOn();
+      /* With a database and no ADMIN_EMAIL, nobody is the editor: every
+         publish is refused (403 admin_unset) rather than left open to
+         whoever registers. That is safe, but it is a misconfiguration — the
+         site owner cannot publish either — so say so where a monitor will
+         see it. /api/auth/me tells any visitor the same thing, so nothing
+         here is news to an outsider. */
+      const unset = !adminGateOn();
+      if (unset) console.error('[health] ADMIN_EMAIL is not set; publishing is refused for everyone.');
       json(res, 200, {
-        ok: !unprotected,
+        ok: !unset,
         storage: 'ready',
         auth: { password: true, google: isGoogleEnabled() },
-        editor: unprotected ? 'open to any account' : 'one account',
+        editor: unset ? 'nobody: ADMIN_EMAIL is not set, so every publish is refused' : 'one verified account',
         schemaVersion: Number(r.rows[0]?.v || 0),
         expectedSchemaVersion: SCHEMA_VERSION,
         ms: Date.now() - started,
-        ...(unprotected
+        ...(unset
           ? {
               warning:
-                'ADMIN_EMAIL is not set, but there is a database. Anyone who registers ' +
-                'can publish the tree every reader sees. Set ADMIN_EMAIL alongside ' +
-                'DATABASE_URL and redeploy.',
+                'ADMIN_EMAIL is not set, but there is a database, so nobody can publish. ' +
+                'Set ADMIN_EMAIL alongside DATABASE_URL, redeploy, and verify that ' +
+                'address (sign in with Google as it, or run scripts/admin-user.mjs verify).',
               /* "It is in the dashboard" and "the function can see it" are
                  different things, and from outside they look the same. This
                  separates them without ever printing the address: either the

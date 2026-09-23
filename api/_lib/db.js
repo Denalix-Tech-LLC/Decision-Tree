@@ -23,6 +23,7 @@
        over one it does not recognise, so statement_timeout is applied after
        connect and allowed to fail.
    ========================================================================= */
+import fs from 'node:fs';
 import pg from 'pg';
 import { SCHEMA_SQL, SCHEMA_VERSION, MIGRATIONS } from './schema.js';
 
@@ -89,9 +90,8 @@ export function isConfigured() {
 }
 
 /* TLS: managed Postgres all speaks TLS, and its certificates are usually
-   signed by a chain Node does not carry, so verification is off unless
-   PGSSLMODE=verify-full is set deliberately. A plain local server on
-   localhost needs no TLS at all. */
+   signed by a chain Node does not carry, so verification is off unless it is
+   asked for — see sslFor(). A plain local server on localhost needs no TLS. */
 /* node-postgres parses the connection string AFTER applying the config
    object, and a `sslmode` in the string replaces whatever `ssl` we passed:
 
@@ -118,11 +118,98 @@ export function withoutSslMode(url) {
   return kept.length ? base + '?' + kept.join('&') : base;
 }
 
-function sslFor(url) {
-  if (process.env.PGSSL === 'off') return false;
-  if (/^postgres(ql)?:\/\/[^/]*@?(localhost|127\.0\.0\.1|\[::1\])(:|\/)/i.test(url)) return false;
-  if (/sslmode=disable/i.test(url)) return false;
-  if (process.env.PGSSLMODE === 'verify-full') return { rejectUnauthorized: true };
+/* The sslmode the URL itself asks for, read from the query only. Parsed by
+   hand rather than with new URL(), which throws on the unencoded characters
+   people really do paste into passwords. */
+function urlSslMode(url) {
+  const i = url.indexOf('?');
+  if (i < 0) return '';
+  const hit = url
+    .slice(i + 1)
+    .split('&')
+    .find((p) => /^sslmode=/i.test(p));
+  if (!hit) return '';
+  let v = hit.slice(8);
+  try {
+    v = decodeURIComponent(v);
+  } catch {
+    /* a malformed escape: compare it as written */
+  }
+  return v.trim().toLowerCase();
+}
+
+/* A root certificate to verify against. PGSSLROOTCERT is libpq's own name for
+   it, so a value that works with psql works here. It takes a path, or the PEM
+   text itself — Vercel has environment variables but no convenient place to
+   put a file — or "system", Node's own CA store, which libpq treats as a
+   request for verify-full and so does sslFor(). An explicit CA
+   that cannot be read is an error, not a shrug: falling back to no CA would
+   be the silent downgrade this exists to prevent. */
+function rootCert() {
+  const v = String(process.env.PGSSLROOTCERT || '').trim();
+  if (!v || v === 'system') return null;
+  if (/-----BEGIN CERTIFICATE-----/.test(v)) return v.replace(/\\n/g, '\n');
+  try {
+    return fs.readFileSync(v, 'utf8');
+  } catch (err) {
+    throw new Error('PGSSLROOTCERT is set but could not be read (' + err.code + ').');
+  }
+}
+
+let warnedConflict = false;
+
+/* How the connection does TLS. The default for a managed host is still
+   encryption WITHOUT certificate verification, for the reason above, and that
+   default is deliberately unchanged: it is what the production database is
+   known to accept, and a wrong guess here takes every account offline.
+
+   What changed is that asking for verification now always gets it. It used to
+   be that `?sslmode=verify-full` in the URL was stripped by withoutSslMode()
+   and never looked at again, so someone who asked for verification in the
+   one place every Postgres tool reads it got none, with no word said. Now:
+
+     verify-full  (in the URL or PGSSLMODE)  chain AND host name checked
+     verify-ca    (in the URL or PGSSLMODE)  chain checked, host name not
+     PGSSLROOTCERT=system                    verify-full, as in libpq
+     PGSSLROOTCERT set to a CA               verify-ca at least, as in libpq,
+                                             where a root cert upgrades require
+
+   A verification request wins over anything that would switch TLS off —
+   PGSSL=off, sslmode=disable, a localhost host — because a contradiction
+   between an explicit "verify" and an explicit "off" is safer resolved
+   loudly towards verifying than quietly towards plaintext. It is logged once.
+   Exported so the tests can check the decision without opening a socket. */
+export function sslFor(url) {
+  const modes = [urlSslMode(url), String(process.env.PGSSLMODE || '').trim().toLowerCase()];
+  const ca = rootCert();
+  const system = String(process.env.PGSSLROOTCERT || '').trim() === 'system';
+  const verify = modes.includes('verify-full') || system
+    ? 'verify-full'
+    : modes.includes('verify-ca') || ca
+      ? 'verify-ca'
+      : '';
+
+  const off =
+    process.env.PGSSL === 'off' ||
+    modes[0] === 'disable' ||
+    /^postgres(ql)?:\/\/[^/]*@?(localhost|127\.0\.0\.1|\[::1\])(:|\/)/i.test(url);
+
+  if (verify) {
+    if (off && !warnedConflict) {
+      warnedConflict = true;
+      console.warn(
+        '[db] TLS verification (' + verify + ') was asked for, and so was no TLS. ' +
+          'Verifying: remove one of the two to silence this.'
+      );
+    }
+    const ssl = { rejectUnauthorized: true };
+    if (ca) ssl.ca = ca;
+    /* verify-ca: the chain must be good, the name on it may differ — which is
+       what a pooler fronting a differently-named server needs. */
+    if (verify === 'verify-ca') ssl.checkServerIdentity = () => undefined;
+    return ssl;
+  }
+  if (off) return false;
   return { rejectUnauthorized: false };
 }
 
@@ -160,6 +247,12 @@ export function getPool() {
   return pool;
 }
 
+/* One shared function, so the listener added on checkout is the exact one
+   removed on release. */
+function logClientError(e) {
+  console.error('[db] client error:', e && e.message);
+}
+
 /* Create the schema if it is not there yet. Guarded by a Postgres advisory
    lock so two cold functions starting at once cannot both run the DDL, and
    memoised per instance so it costs one round trip per cold start, not one
@@ -175,13 +268,17 @@ export async function ensureSchema() {
        dead promise without opening a socket, for as long as Vercel kept the
        instance alive. */
     let client = null;
+    let broken = null;
     try {
       client = await p.connect();
       /* A client checked out by hand has no error listener: pg-pool attaches
          one only while the client is idle in the pool. Without this, a
          connection the pooler drops mid-transaction reaches an EventEmitter
          with no listener and Node takes the whole instance down with it. */
-      client.on('error', (e) => console.error('[db] client error:', e.message));
+      /* Removed again in the finally below: pg-pool hands the same client out
+         again and again, so a listener left behind on every checkout piles up
+         on a warm instance until Node warns about a leak. */
+      client.on('error', logClientError);
       /* One transaction start to finish: the lock, the DDL and the bookkeeping
          all land on the same backend, and the lock goes when the transaction
          does whether it commits or rolls back. There is no unlock to forget,
@@ -213,8 +310,11 @@ export async function ensureSchema() {
       await client.query('commit');
     } catch (err) {
       if (client) {
+        broken = err;
         try {
           await client.query('rollback');
+          /* the rollback got through, so the connection is clean to reuse */
+          broken = null;
         } catch {
           /* the connection is already gone; the transaction died with it */
         }
@@ -222,9 +322,12 @@ export async function ensureSchema() {
       throw err;
     } finally {
       /* Handing back a client whose transaction may still be open would give
-         the next caller a poisoned connection, so a failure releases it with
-         the error and pg-pool discards it. */
-      if (client) client.release();
+         the next caller a poisoned connection, so a failed rollback releases
+         it with the error and pg-pool discards it. */
+      if (client) {
+        client.off('error', logClientError);
+        client.release(broken || undefined);
+      }
     }
   })();
   ready = attempt;
@@ -263,7 +366,7 @@ export async function tx(fn) {
   const client = await getPool().connect();
   /* Same reason as ensureSchema: while a client is checked out, nothing else
      is listening for its errors, and an unheard 'error' event is fatal. */
-  client.on('error', (e) => console.error('[db] client error:', e.message));
+  client.on('error', logClientError);
   let broken = null;
   try {
     await client.query('begin');
@@ -284,7 +387,9 @@ export async function tx(fn) {
     }
     throw err;
   } finally {
-    /* release(err) makes pg-pool destroy the client instead of pooling it */
+    /* One listener per checkout, removed on the way out (see ensureSchema).
+       release(err) makes pg-pool destroy the client instead of pooling it. */
+    client.off('error', logClientError);
     client.release(broken || undefined);
   }
 }

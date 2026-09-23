@@ -16,9 +16,9 @@
    rather than a missing step: `published: false` means the reader keeps
    whatever tree-data.js ships.
    ========================================================================= */
-import { json, noContent, readJson, route, str, bad } from '../_lib/http.js';
+import { json, noContent, readJson, route, str, bad, tooLarge, jsonSize } from '../_lib/http.js';
 import { requireEditor } from '../_lib/auth.js';
-import { cleanTreeData } from '../_lib/records.js';
+import { cleanTreeData, servedTree, markCleaned, LIMITS } from '../_lib/records.js';
 import { one, isConfigured } from '../_lib/db.js';
 
 const ROW = 'current';
@@ -39,10 +39,39 @@ export default route({
       json(res, 200, { published: false, storage: 'ready' });
       return;
     }
+    /* Cleaned on the way out as well as on the way in — but only when the
+       row needs it. What this version's PUT stored is marked as cleaned by
+       this version of the filter, and is served as it is; anything else (a
+       tree published before the filter covered every string, or before the
+       filter was what it is now) is cleaned here, by the same validator PUT
+       uses, so there is one rule and no second copy of it. See servedTree
+       in records.js. If what is stored no longer passes at all, readers get
+       the shipped tree rather than an error, and the editor sees why on the
+       next Publish. */
+    let served;
+    try {
+      served = servedTree(row.data);
+    } catch (err) {
+      console.error('[api] the published tree no longer validates:', err && err.message);
+      json(res, 200, { published: false, storage: 'ready', invalid: true });
+      return;
+    }
+    if (!served.fresh) {
+      /* Store what was just served, marked, so the next reader does not pay
+         for cleaning it again. Only if the row still holds what was read: a
+         Publish in between always differs (it carries the mark), and wins.
+         Never at the cost of this response: a database that refuses the
+         write (full, say) still serves the cleaned tree. */
+      await one(`update site_tree set data = $2 where id = $1 and data = $3::jsonb`, [
+        ROW,
+        JSON.stringify(markCleaned(served.data)),
+        JSON.stringify(row.data),
+      ]).catch((err) => console.error('[api] could not store the re-cleaned tree:', err && err.message));
+    }
     json(res, 200, {
       published: true,
       storage: 'ready',
-      data: row.data,
+      data: served.data,
       note: row.note,
       publishedAt: row.published_at,
     });
@@ -54,6 +83,15 @@ export default route({
     /* The same validation a saved tree gets: every option has to point
        somewhere, because this one is going in front of readers. */
     const data = cleanTreeData(body.data);
+    /* And the same ceiling, measured after the filter (which can make a
+       string several times longer than it arrived): this row is sent to
+       every reader on every load, so its size is everyone's wait. */
+    const size = jsonSize(data);
+    if (size > LIMITS.trees.bytes) {
+      throw tooLarge(
+        `That tree is ${Math.round(size / 1024)} KB, over the ${Math.round(LIMITS.trees.bytes / 1024)} KB limit for a published tree.`
+      );
+    }
     const note = str(body.note, { max: 2000 });
     const row = await one(
       `insert into site_tree (id, data, note, published_by, published_at)
@@ -64,7 +102,7 @@ export default route({
              published_by = excluded.published_by,
              published_at = now()
        returning published_at`,
-      [ROW, JSON.stringify(data), note, user.id]
+      [ROW, JSON.stringify(markCleaned(data)), note, user.id]
     );
     json(res, 200, { published: true, publishedAt: row.published_at });
   },

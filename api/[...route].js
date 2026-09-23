@@ -2,11 +2,11 @@
    THE ONLY SERVERLESS FUNCTION
    Vercel turns every file under api/ into its own function, and the Hobby
    plan allows twelve. This project had eighteen routes, so a deployment was
-   refused outright.
+   refused outright. It has twenty now.
 
    The routes themselves did not need to change: they moved to api/_routes/,
    where the leading underscore keeps Vercel from counting them, and this
-   catch-all dispatches to them. One function, eighteen endpoints, and the
+   catch-all dispatches to them. One function, twenty endpoints, and the
    URLs the client calls are exactly what they were.
 
    Why the table below is written out by hand rather than resolved from disk:
@@ -44,6 +44,8 @@ import runsIndex from './_routes/runs/index.js';
 import runsItem from './_routes/runs/[id].js';
 import documentsIndex from './_routes/documents/index.js';
 import documentsItem from './_routes/documents/[id].js';
+import mediaIndex from './_routes/media/index.js';
+import mediaItem from './_routes/media/[hash].js';
 
 /* path after /api/ → handler */
 export const STATIC_ROUTES = {
@@ -62,13 +64,16 @@ export const STATIC_ROUTES = {
   trees: treesIndex,
   runs: runsIndex,
   documents: documentsIndex,
+  media: mediaIndex,
 };
 
-/* collections whose last segment is a record id, matching the [id].js files */
+/* collections whose last segment is a record id, matching the [param].js
+   files — [id] for saved work, [hash] for an uploaded image */
 export const ITEM_ROUTES = {
   trees: { param: 'id', handler: treesItem },
   runs: { param: 'id', handler: runsItem },
   documents: { param: 'id', handler: documentsItem },
+  media: { param: 'hash', handler: mediaItem },
 };
 
 /* Resolve the way the file tree would: an exact name wins, and only then does

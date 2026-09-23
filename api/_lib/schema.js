@@ -17,7 +17,7 @@
    edited in place.
    ========================================================================= */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 7;
 
 export const SCHEMA_SQL = `
 create table if not exists schema_meta (
@@ -150,6 +150,87 @@ export const MIGRATIONS = [
         published_by  uuid references users(id) on delete set null,
         published_at  timestamptz not null default now()
       );
+    `,
+  },
+  {
+    /* Uploaded images — today, only the backdrop photograph the editor picks
+       at /admin. Keyed by the SHA-256 of the bytes, so the same picture
+       uploaded twice is one row, and the URL of an image is a promise about
+       its content: /api/media/<hash> can be cached for a year because what it
+       names can never change. The bytes live in Postgres rather than a blob
+       store because this deployment has exactly one storage dependency and a
+       few hundred KB of photograph is not a reason to add a second.
+       `mime` is what the server sniffed from the bytes, never what the
+       uploader claimed. Deleting the account that uploaded one leaves the
+       image, because a published tree may still be showing it. */
+    key: '4-media',
+    sql: `
+      create table if not exists media (
+        hash        text primary key,
+        mime        text not null,
+        bytes       bytea not null,
+        size        integer not null,
+        created_by  uuid references users(id) on delete set null,
+        created_at  timestamptz not null default now()
+      );
+    `,
+  },
+  {
+    /* Whether the address on an account has been PROVEN, as opposed to typed.
+       Registration takes whatever address is entered and there is no mail
+       path to check it, so on its own users.email proves nothing — and
+       ADMIN_EMAIL used to hand the editor to whoever registered that address
+       first. Only two things set this: a Google sign-in whose ID token says
+       email_verified for that exact address, or scripts/admin-user.mjs run by
+       someone who already holds the database. Password registration never
+       does. Accounts that already carry a Google identity arrived through
+       Google (or were attached to it by their owner), so their address is
+       taken as proven here rather than asking every one of them to prove it
+       again. */
+    key: '5-email-verified',
+    sql: `
+      alter table users add column if not exists email_verified boolean not null default false;
+      update users set email_verified = true where google_sub is not null and email_verified = false;
+    `,
+  },
+  {
+    /* When this session last PROVED who it is — a password typed, a Google
+       round trip — as distinct from when it was created or last seen. A
+       sensitive change (a password, a sign-in method, closing the account,
+       signing other browsers out) needs either the password in the request
+       or a proof this recent, so a browser left signed in on a shared
+       machine is not all it takes. Null for sessions made before this
+       existed: they count as not recent, and one sign-in fixes that.
+       The (user_id, created_at) index serves the per-account cap, which
+       drops the oldest sessions beyond the newest twenty. */
+    key: '6-session-authed-at',
+    sql: `
+      alter table sessions add column if not exists authed_at timestamptz;
+      create index if not exists sessions_user_created_idx on sessions (user_id, created_at desc);
+    `,
+  },
+  {
+    /* A Google sign-in in flight. The browser holds only a random id in a
+       cookie; the state, nonce, destination and — for "attach Google to this
+       account" — the session that asked, live here, so none of it can be
+       forged or edited by whoever can write a cookie. The row is deleted by
+       the callback that uses it (single use) and expires after ten minutes.
+       id_hash is the SHA-256 of the cookie value, for the same reason
+       sessions store a hash: a dump of this table is not a set of live
+       flows. */
+    key: '7-oauth-flows',
+    sql: `
+      create table if not exists oauth_flows (
+        id_hash     text primary key,
+        state       text not null,
+        nonce       text not null,
+        next        text not null default '/',
+        link        boolean not null default false,
+        session_id  uuid,
+        created_at  timestamptz not null default now(),
+        expires_at  timestamptz not null
+      );
+      create index if not exists oauth_flows_expires_idx on oauth_flows (expires_at);
     `,
   },
 ];

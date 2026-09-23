@@ -34,14 +34,15 @@ try {
               where c.table_name = t.table_name and c.table_schema = 'public') as cols
        from information_schema.tables t
       where table_schema = 'public'
-        and table_name in ('users','sessions','auth_attempts','trees','runs','documents','schema_meta')
+        and table_name in ('users','sessions','auth_attempts','oauth_flows','trees','runs',
+                           'documents','site_tree','media','schema_meta')
       order by table_name`
   );
   const users = await rawQuery('select count(*)::int as n from users');
   console.log(`schema ready in ${Date.now() - started} ms (version ${SCHEMA_VERSION})`);
   for (const r of tables.rows) console.log(`  ${r.table_name.padEnd(15)} ${r.cols} columns`);
   console.log(`\n${users.rows[0].n} account${users.rows[0].n === 1 ? '' : 's'} registered.`);
-  if (tables.rows.length < 7) {
+  if (tables.rows.length < 10) {
     console.error('\nSome tables are missing. Check the role has CREATE on the public schema.');
     process.exitCode = 1;
   }

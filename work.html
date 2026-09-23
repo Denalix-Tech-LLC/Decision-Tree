@@ -5,10 +5,6 @@
 <link rel="stylesheet" href="theme.css">
 <style>
 
-/* The work page shows the backdrop behind a column of text rather than behind
-   a canvas, so its ridges are held back to half strength and kept shorter.
-   Everything else about it comes from theme.css. */
-
 html{height:100%}
 body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -190,9 +186,17 @@ a{color:var(--accent-ink)}
   </div>
 </div>
 
+<!-- The content, for its THEME alone, and the code that paints it: the
+     photograph behind this page is the one the editor chose for the tree. -->
+<script src="tree-data.js"></script>
+<script src="look.js"></script>
 <script src="account.js"></script>
 <script>
 "use strict";
+/* First, before anything that can stop this script: the backdrop does not
+   depend on an account, so a page that cannot load account.js still gets
+   the right photograph behind its explanation. */
+if(window.TAS_LOOK) TAS_LOOK.boot();
 /* ===========================================================================
    MY WORK
    Three lists and a document editor. Everything here goes through TAS.store,
@@ -216,15 +220,18 @@ if(!window.TAS){
 }
 var ui=TAS.ui, store=TAS.store, esc=ui.esc, el=ui.el;
 
-/* Whether to offer a way into the editor at all. With ADMIN_EMAIL set, the
-   editor belongs to one account; for everyone else a link to it leads to a
-   page that says so and nothing more, which is a worse answer than no link.
-   With no ADMIN_EMAIL configured this is true for anyone signed in, and the
-   page behaves as it did before the gate existed. */
+/* Whether to offer a way into the editor at all. The editor belongs to the
+   one account named in ADMIN_EMAIL, once its address is proven; for everyone
+   else a link to it leads to a page that says so and nothing more, which is
+   a worse answer than no link. With a database and no ADMIN_EMAIL nobody is
+   the editor, so nobody is offered the link. */
 function canEdit(){ return TAS.auth.isAdmin(); }
+/* The editor's own address before it is proven is not the editor yet, but the
+   editor page is where it is shown how to prove it, so the top-bar link stays
+   for that account. The server only says 'admin_unverified' to that address. */
 function showEditorLinks(){
   var nav=document.getElementById('navEditor');
-  if(nav) nav.hidden=!canEdit();
+  if(nav) nav.hidden=!(canEdit()||TAS.auth.state.adminReason==='admin_unverified');
 }
 var KINDS=[
   {key:'runs',   label:'Saved paths', title:'Saved paths',

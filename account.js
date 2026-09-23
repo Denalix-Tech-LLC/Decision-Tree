@@ -52,13 +52,47 @@
   }
 
   /* ---- errors ---------------------------------------------------------- */
-  function ApiError(status, code, message, fields) {
+  /* `extra` is the rest of the server's error body. Most of it is nothing, but
+     some refusals carry a hint a caller acts on — which way of proving "it is
+     still you" the server will accept, for one — and dropping it here would
+     leave every caller guessing from the sentence. */
+  function ApiError(status, code, message, fields, extra) {
     var e = new Error(message || code || 'Request failed');
     e.name = 'ApiError';
     e.status = status;
     e.code = code;
     if (fields) e.fields = fields;
+    if (extra) {
+      for (var k in extra) {
+        if (k !== 'error' && k !== 'message' && k !== 'fields' && !(k in e)) e[k] = extra[k];
+      }
+    }
     return e;
+  }
+
+  /* The codes a server uses to say "this change is sensitive, and this
+     session is not enough for it". Changing the password, attaching or
+     removing Google, signing other browsers out and closing the account can
+     all be refused until the person re-enters their password or signs in
+     again, so that a browser left signed in on a shared Council machine is
+     not all it takes. These are not "signed out" (auth_required): the session
+     is still good for everything else, and treating it as a sign-out would
+     throw away the page the person is on. A `reauth` field on the body is
+     read the same way, whatever the code, so a new wording on the server
+     does not fall through to a bare red toast. */
+  var REAUTH_CODES = {
+    reauth_required: 1,
+    reauthenticate: 1,
+    recent_auth_required: 1,
+    recent_login_required: 1,
+    fresh_session_required: 1,
+    session_too_old: 1,
+    stale_session: 1,
+    signin_required: 1,
+    password_required: 1,
+  };
+  function needsReauth(err) {
+    return !!err && (REAUTH_CODES[err.code] === 1 || !!err.reauth);
   }
 
   /* ---- fetch ----------------------------------------------------------- */
@@ -107,7 +141,7 @@
                     : 'The server returned ' + res.status + '.'
                 );
               }
-              throw ApiError(res.status, data.error, data.message, data.fields);
+              throw ApiError(res.status, data.error, data.message, data.fields, data);
             }
             return data;
           });
@@ -127,11 +161,21 @@
     /* which ways in this deployment offers, and which this account has */
     auth: { password: true, google: false },
     methods: null,
-    /* whether the editor at /admin is limited to one account, and whether
-       this is that account. With no ADMIN_EMAIL configured the gate is off
-       and admin comes back true for anyone signed in. */
+    /* Whether the editor at /admin is limited to one account (ADMIN_EMAIL),
+       and whether this is that account — named there AND with its address
+       proven. With a database and no ADMIN_EMAIL, nobody is the editor: the
+       server refuses every publish, so admin is false for everyone and
+       adminReason says 'admin_unset'. 'admin_unverified' is told only to the
+       editor's own address before it is proven, so the editor can show the
+       way to prove it rather than "this is someone else's". With no database
+       there are no accounts, and the editor stays open on local drafts. */
     adminGate: false,
     admin: false,
+    adminReason: null,
+    /* When this session stops counting as a recent sign-in (ISO time, or
+       null). Sensitive changes need one; attachGoogle() reads it to ask for
+       the password BEFORE leaving for Google rather than after bouncing back. */
+    recentAuthUntil: null,
     counts: null,
     limits: null,
   };
@@ -157,6 +201,8 @@
           methods: (data && data.methods) || null,
           adminGate: !!(data && data.adminGate),
           admin: !!(data && data.admin),
+          adminReason: (data && data.adminReason) || null,
+          recentAuthUntil: (data && data.recentAuthUntil) || null,
           counts: (data && data.counts) || null,
           limits: (data && data.limits) || null,
         });
@@ -167,6 +213,8 @@
           ready: true,
           user: null,
           admin: false,
+          adminReason: null,
+          recentAuthUntil: null,
           storage: err.code === 'storage_unavailable' || err.code === 'no_api' ? 'unconfigured' : 'unreachable',
         });
         return state;
@@ -214,7 +262,17 @@
       .catch(function () {})
       .then(function () {
         var was = state.user;
-        setState({ user: null, counts: null, admin: false, methods: null });
+        /* The gate's reason outlives the account ('admin_unset' is the
+           deployment's, and a guest is told it too); the rest was this
+           account's. */
+        setState({
+          user: null,
+          counts: null,
+          admin: false,
+          methods: null,
+          adminReason: state.adminReason === 'admin_unset' ? 'admin_unset' : null,
+          recentAuthUntil: null,
+        });
         events.emit('signout', was);
         return null;
       });
@@ -332,7 +390,6 @@
     '.tasa-menu button:hover,.tasa-menu a:hover{background:var(--surface-2);color:var(--accent-ink)}' +
     '.tasa-menu .tasa-n{margin-left:auto;font-size:11px;color:var(--faint)}' +
     '.tasa-menu hr{border:0;border-top:1px solid var(--border);margin:6px 2px}' +
-    '.tasa-menu .tasa-note{padding:7px 9px 8px;font-size:11.5px;color:var(--muted);line-height:1.45}' +
     /* dialog */
     '.tasa-ovl{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;' +
     'padding:clamp(10px,3vw,28px);font-family:var(--sans)}' +
@@ -488,10 +545,15 @@
   }
 
   /* ---- modal shell ----------------------------------------------------- */
+  /* One dialog at a time, except that `opts.stack` opens one over the
+     current one and hands control back to it on close. Confirming who you
+     are is that case: it interrupts a change being made in Account settings,
+     and closing the panel underneath would lose the change it interrupted. */
   var openModal = null;
   function modal(opts) {
     injectCss();
-    if (openModal) openModal.close();
+    var under = opts.stack ? openModal : null;
+    if (openModal && !opts.stack) openModal.close();
     var lastFocus = document.activeElement;
     var body = el('div', { class: 'tasa-bd' });
     var foot = el('div', { class: 'tasa-ft' });
@@ -534,6 +596,9 @@
       ]
     );
     function onKey(e) {
+      /* Every open dialog listens on the document, so only the top one may
+         answer: Escape over a stacked dialog closes that one, not both. */
+      if (openModal !== api2) return;
       if (e.key === 'Escape' && opts.dismissable !== false) {
         e.stopPropagation();
         api2.close('dismiss');
@@ -588,6 +653,9 @@
           );
         });
       },
+      isOpen: function () {
+        return !resolved;
+      },
       setTitle: function (t) {
         card.querySelector('.tasa-hd h3').textContent = t;
       },
@@ -596,7 +664,7 @@
         resolved = true;
         document.removeEventListener('keydown', onKey, true);
         if (ovl.parentNode) ovl.parentNode.removeChild(ovl);
-        if (openModal === api2) openModal = null;
+        if (openModal === api2) openModal = under && under.isOpen() ? under : null;
         if (lastFocus && lastFocus.focus) {
           try {
             lastFocus.focus({ preventScroll: true });
@@ -928,12 +996,253 @@
     });
   }
 
+  /* ---- proving it is still you ----------------------------------------- */
+  /* Set just before a Google round trip that is only there to confirm who
+     this is, so the page it lands back on reopens Account settings instead of
+     leaving the person to find their way back to the change they were making.
+     Per tab, and read only when Google says it signed someone in. */
+  var RESUME_KEY = 'tas-resume-account';
+
+  /* A server refused a sensitive change until the person proves again that
+     it is them. Show what the server said, in its words, and offer every way
+     through this account actually has: its password, or Google.
+
+     Re-entering the password signs in again, which gives this browser a new
+     session that is fresh by any measure the server uses. The password is
+     also handed back, so the caller can send it with the retried request for
+     a server that wants the proof in the request itself.
+
+     Resolves with { password } once confirmed; with null if the person
+     cancelled, or left for Google (the page reloads when they return). */
+  function confirmIdentity(err) {
+    injectCss();
+    var meth = state.methods || { password: true, google: false };
+    var canPassword = !!meth.password && !!(state.user && state.user.email);
+    var canGoogle = !!meth.google && !!(state.auth && state.auth.google);
+    /* The server may say which it wants. A request for a password is not
+       answered with a Google button, and "sign in again" takes either. */
+    if (err && err.reauth === 'password' && canPassword) canGoogle = false;
+    if (err && err.reauth === 'google' && canGoogle) canPassword = false;
+
+    var m = modal({ title: 'Confirm it is you', kicker: 'One more step', stack: true });
+    m.body.appendChild(
+      message(
+        esc((err && err.message) || 'This change needs you to confirm who you are first.'),
+        'warn'
+      )
+    );
+    var pending = false;
+    var pw = null;
+    var errBox = message('', 'bad');
+    errBox.hidden = true;
+
+    if (canPassword) {
+      /* The address rides along, unseen, so a password manager knows which
+         saved login to offer. */
+      m.body.appendChild(
+        el('input', {
+          type: 'email',
+          name: 'username',
+          autocomplete: 'username',
+          value: state.user.email,
+          hidden: true,
+          tabindex: '-1',
+          'aria-hidden': 'true',
+        })
+      );
+      pw = field({
+        id: 'tasa-re-pw',
+        label: 'Your password',
+        type: 'password',
+        autocomplete: 'current-password',
+        maxlength: 200,
+        hint: 'The one you sign in with as ' + state.user.email + '.',
+      });
+      m.body.appendChild(pw.wrap);
+    }
+    if (canGoogle) {
+      if (canPassword) {
+        m.body.appendChild(el('div', { class: 'tasa-or' }, [el('span', { text: 'or' })]));
+      }
+      var g = googleButton('Sign in again with Google');
+      g.addEventListener('click', function () {
+        try {
+          sessionStorage.setItem(RESUME_KEY, '1');
+        } catch (e) {}
+      });
+      m.body.appendChild(g);
+      m.body.appendChild(
+        el('div', {
+          class: 'tasa-hint',
+          text:
+            'Google brings you back to this page with Account settings open. Anything typed ' +
+            'there will need typing again.',
+        })
+      );
+    }
+    if (!canPassword && !canGoogle) {
+      /* Google-only, on a deployment where Google sign-in has since been
+         switched off: there is nothing to confirm with here, and signing in
+         afresh is the only way through. Say so rather than show a dead end. */
+      m.body.appendChild(
+        message(
+          'There is no way to confirm it here: this account signs in with Google, and Google ' +
+            'sign-in is not available on this deployment right now. Sign out and sign in again ' +
+            'once it is.',
+          null
+        )
+      );
+    }
+    m.body.appendChild(errBox);
+
+    m.foot.appendChild(
+      el('button', {
+        class: 'tasa-b',
+        type: 'button',
+        text: 'Cancel',
+        onclick: function () {
+          if (!pending) m.close(null);
+        },
+      })
+    );
+    m.foot.appendChild(el('span', { class: 'grow' }));
+
+    if (canPassword) {
+      var go = el('button', { class: 'tasa-b solid', type: 'button', text: 'Confirm and continue' });
+      var submit = function () {
+        if (pending) return;
+        var value = pw.value();
+        pw.setError('');
+        errBox.hidden = true;
+        if (!value) {
+          pw.setError('Enter your password.');
+          pw.input.focus();
+          return;
+        }
+        pending = true;
+        go.disabled = true;
+        go.textContent = 'Checking…';
+        /* Not signIn(): it is the same person, so nothing should react as if
+           someone new had arrived — no 'signin' event, no welcome toast. */
+        api('/auth/login', { method: 'POST', body: { email: state.user.email, password: value } })
+          .then(function () {
+            return refresh(true);
+          })
+          .then(
+            function () {
+              pending = false;
+              m.close({ password: value });
+            },
+            function (e) {
+              pending = false;
+              go.disabled = false;
+              go.textContent = 'Confirm and continue';
+              if (e.code === 'bad_credentials') {
+                pw.setError('That is not your password.');
+              } else {
+                errBox.textContent = e.message || 'That did not work.';
+                errBox.hidden = false;
+              }
+              pw.input.focus();
+            }
+          );
+      };
+      go.addEventListener('click', submit);
+      pw.input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submit();
+        }
+      });
+      m.foot.appendChild(go);
+      setTimeout(function () {
+        pw.input.focus();
+      }, 30);
+    } else if (!canGoogle) {
+      m.foot.appendChild(
+        el('button', {
+          class: 'tasa-b solid',
+          type: 'button',
+          text: 'Sign out',
+          onclick: function () {
+            m.close(null);
+            signOut().then(function () {
+              authDialog({});
+            });
+          },
+        })
+      );
+    }
+    return m.done.then(function (v) {
+      return v && typeof v === 'object' ? v : null;
+    });
+  }
+
+  /* Run a sensitive change. `run(password)` makes the request: first with no
+     password, and — if the server refuses it until the person proves who they
+     are — once more after they have, with the password they confirmed with
+     (null after a Google round trip, which never comes back to this call).
+     A second refusal is not asked about again: it goes to the caller like
+     any other error, so this can never loop.
+
+     Rejects with code 'reauth_cancelled' when the person backs out, which
+     callers treat as nothing having happened. */
+  function sensitive(run) {
+    return run(null).catch(function (err) {
+      if (!needsReauth(err)) throw err;
+      return confirmIdentity(err).then(function (proof) {
+        if (!proof) throw ApiError(0, 'reauth_cancelled', 'Nothing was changed.');
+        return run(proof.password || null);
+      });
+    });
+  }
+
+  /* Attaching Google is a sensitive change that happens by navigation, so a
+     refusal cannot come back as an error a fetch reads: the server sends the
+     browser back here with ?signin=reauth (see announceReturn). Rather than
+     make the person go out and bounce back, ask first when this session is
+     known not to be recent enough. The server still decides — a clock that
+     disagrees with it only means the bounce comes back as the fallback. */
+  function googleLinkHref() {
+    return (
+      '/api/auth/google/start?link=1&next=' +
+      encodeURIComponent(location.pathname + location.search + location.hash)
+    );
+  }
+  function recentlyAuthed() {
+    var t = state.recentAuthUntil ? Date.parse(state.recentAuthUntil) : NaN;
+    /* A margin for the round trip to /start, and for a clock a little ahead. */
+    return !isNaN(t) && t - Date.now() > 20000;
+  }
+  /* Confirm with the password, then go to Google to attach it. Only the
+     password is offered: the account has no Google yet to confirm with. */
+  function attachGoogle(text) {
+    return confirmIdentity({
+      code: 'reauth_required',
+      reauth: 'password',
+      message:
+        text ||
+        'Attaching a Google account adds a way into this one, so confirm who you are first. ' +
+          'Google opens straight after.',
+    }).then(function (proof) {
+      if (proof) location.assign(googleLinkHref());
+      return !!proof;
+    });
+  }
+
   /* ---- account panel --------------------------------------------------- */
-  function accountDialog() {
+  /* `opts.note`, when given, is shown at the top — how the panel says "you
+     are back from Google; make that change again now". */
+  function accountDialog(opts) {
+    opts = opts || {};
+    var note = opts.note || null;
     var m = modal({ title: 'Your account', kicker: 'Account', wide: true });
     function render() {
       m.body.innerHTML = '';
       m.foot.innerHTML = '';
+      /* Once: a later redraw (after saving a name, say) is not a return. */
+      if (note && state.user) m.body.appendChild(message(esc(note), 'good'));
+      note = null;
       if (!state.user) {
         m.body.appendChild(message('You are not signed in.', 'warn'));
         m.foot.appendChild(
@@ -1022,11 +1331,14 @@
         })
       );
       if (state.auth && state.auth.google && !meth.google) {
-        m.body.appendChild(googleButton('Attach a Google account'));
-        var linkA = m.body.lastChild;
-        linkA.href =
-          '/api/auth/google/start?link=1&next=' +
-          encodeURIComponent(location.pathname + location.search + location.hash);
+        var linkA = googleButton('Attach a Google account');
+        linkA.href = googleLinkHref();
+        linkA.addEventListener('click', function (e) {
+          if (recentlyAuthed()) return;
+          e.preventDefault();
+          attachGoogle();
+        });
+        m.body.appendChild(linkA);
         m.body.appendChild(
           el('p', {
             style: 'font-size:11.5px;color:var(--faint);margin:7px 0 14px;line-height:1.45',
@@ -1044,7 +1356,12 @@
               onclick: function (e) {
                 var b = e.currentTarget;
                 b.disabled = true;
-                api('/auth/google/unlink', { method: 'POST', body: {} }).then(
+                sensitive(function (password) {
+                  return api('/auth/google/unlink', {
+                    method: 'POST',
+                    body: password ? { password: password } : {},
+                  });
+                }).then(
                   function (d) {
                     b.disabled = false;
                     setState({ methods: d.methods });
@@ -1053,6 +1370,7 @@
                   },
                   function (err) {
                     b.disabled = false;
+                    if (err.code === 'reauth_cancelled') return;
                     toast(err.message, err.code === 'last_method' ? 'warn' : 'bad', { ms: 8000 });
                   }
                 );
@@ -1086,9 +1404,15 @@
               cur.setError('');
               np.setError('');
               b.disabled = true;
-              api('/auth/password', {
-                method: 'POST',
-                body: { current: cur.value(), password: np.value() },
+              /* The current password, when this account has one, is already
+                 the proof; a confirmation is only asked for when the server
+                 wants more than that, and what was confirmed with fills in
+                 for a blank "current" rather than replacing a typed one. */
+              sensitive(function (password) {
+                return api('/auth/password', {
+                  method: 'POST',
+                  body: { current: cur.value() || password || '', password: np.value() },
+                });
               }).then(
                 function () {
                   b.disabled = false;
@@ -1104,6 +1428,7 @@
                 },
                 function (err) {
                   b.disabled = false;
+                  if (err.code === 'reauth_cancelled') return;
                   var f = err.fields || {};
                   if (f.current) cur.setError(f.current);
                   if (f.password) np.setError(f.password);
@@ -1146,7 +1471,12 @@
             onclick: function (e) {
               var b = e.currentTarget;
               b.disabled = true;
-              api('/auth/sessions', { method: 'DELETE' }).then(
+              sensitive(function (password) {
+                return api(
+                  '/auth/sessions',
+                  password ? { method: 'DELETE', body: { password: password } } : { method: 'DELETE' }
+                );
+              }).then(
                 function () {
                   b.disabled = false;
                   toast('Every other browser has been signed out.', 'good');
@@ -1154,6 +1484,7 @@
                 },
                 function (err) {
                   b.disabled = false;
+                  if (err.code === 'reauth_cancelled') return;
                   toast(err.message, 'bad');
                 }
               );
@@ -1207,7 +1538,7 @@
 
   function closeAccountDialog() {
     var c = state.counts || {};
-    var m = modal({ title: 'Close this account', kicker: 'This cannot be undone' });
+    var m = modal({ title: 'Close this account', kicker: 'This cannot be undone', stack: true });
     m.body.appendChild(
       message(
         'Closing the account deletes it and <b>everything saved on it</b> — ' +
@@ -1219,9 +1550,31 @@
         'bad'
       )
     );
-    var pw = field({ id: 'tasa-del-pw', label: 'Your password', type: 'password', maxlength: 200 });
+    /* An account that signs in with Google only has no password to type, and
+       a field asking for one is a dead end. It is left out, and the server's
+       answer decides: when it wants proof, the confirmation step offers
+       Google instead. */
+    var meth = state.methods || { password: true, google: false };
+    var pw = meth.password
+      ? field({
+          id: 'tasa-del-pw',
+          label: 'Your password',
+          type: 'password',
+          autocomplete: 'current-password',
+          maxlength: 200,
+        })
+      : null;
     var word = field({ id: 'tasa-del-word', label: 'Type DELETE to confirm', maxlength: 20 });
-    m.body.appendChild(pw.wrap);
+    if (pw) m.body.appendChild(pw.wrap);
+    else {
+      m.body.appendChild(
+        message(
+          'This account signs in with Google, so there is no password to enter. You may be asked ' +
+            'to sign in with Google again before it goes.',
+          null
+        )
+      );
+    }
     m.body.appendChild(word.wrap);
     m.foot.appendChild(
       el('button', {
@@ -1241,25 +1594,42 @@
         text: 'Delete everything',
         onclick: function (e) {
           var b = e.currentTarget;
-          pw.setError('');
+          if (pw) pw.setError('');
           word.setError('');
+          /* Checked here as well as on the server so a missing DELETE is not
+             what sends someone round the confirm-it-is-you step first. */
+          if (word.value().trim().toUpperCase() !== 'DELETE') {
+            word.setError('Type DELETE to confirm.');
+            word.input.focus();
+            return;
+          }
           b.disabled = true;
-          api('/auth/account', {
-            method: 'DELETE',
-            body: { password: pw.value(), confirm: word.value() },
+          sensitive(function (password) {
+            return api('/auth/account', {
+              method: 'DELETE',
+              body: { password: (pw && pw.value()) || password || '', confirm: word.value() },
+            });
           }).then(
             function () {
-              setState({ user: null, counts: null });
+              setState({
+                user: null,
+                counts: null,
+                admin: false,
+                methods: null,
+                adminReason: state.adminReason === 'admin_unset' ? 'admin_unset' : null,
+                recentAuthUntil: null,
+              });
               events.emit('signout', null);
               m.close(true);
               toast('The account and everything on it has been deleted.', null, { ms: 9000 });
             },
             function (err) {
               b.disabled = false;
+              if (err.code === 'reauth_cancelled') return;
               var f = err.fields || {};
-              if (f.password) pw.setError(f.password);
+              if (f.password && pw) pw.setError(f.password);
               if (f.confirm) word.setError(f.confirm);
-              if (!f.password && !f.confirm) toast(err.message, 'bad');
+              if (!(f.password && pw) && !f.confirm) toast(err.message, 'bad', { ms: 8000 });
             }
           );
         },
@@ -1499,6 +1869,23 @@
      no caller has to guess at wording. */
   function report(err, what) {
     if (!err) return;
+    /* The person backed out of confirming who they are; they know. */
+    if (err.code === 'reauth_cancelled') return;
+    /* A page's own request refused until the person proves it is them. This
+       cannot retry it — only the caller knows what it was — so it gets them
+       through the confirmation and then says to do it again. */
+    if (needsReauth(err)) {
+      confirmIdentity(err).then(function (proof) {
+        if (proof) {
+          toast(
+            'Confirmed. ' + (what ? 'Now ' + what + ' again.' : 'Now try that again.'),
+            'good',
+            { ms: 6000 }
+          );
+        }
+      });
+      return;
+    }
     if (err.code === 'auth_required') {
       requireSignIn(
         '<b>You are signed out.</b> ' +
@@ -1519,6 +1906,11 @@
     toast(err.message || 'That did not work.', 'bad');
   }
 
+  /* What the pages use, and only that. signIn, register, the account panel,
+     mountChip and injectCss are all live inside this file — the dialogs and
+     boot() call them — but no page does, and an export nobody reads is one
+     more thing to keep working for no one. The chip mounts itself (see
+     boot, and window.TAS_CHIP to decline it). */
   window.TAS = {
     __loaded: true,
     api: api,
@@ -1526,8 +1918,6 @@
       state: state,
       ready: ready,
       refresh: refresh,
-      signIn: signIn,
-      register: register,
       signOut: signOut,
       canSave: canSave,
       /* may this visitor be shown the editor */
@@ -1536,7 +1926,6 @@
       },
       requireSignIn: requireSignIn,
       dialog: authDialog,
-      account: accountDialog,
       on: events.on,
       guestNudge: guestNudge,
       guestCopy: GUEST_COPY,
@@ -1550,9 +1939,7 @@
       message: message,
       el: el,
       esc: esc,
-      mountChip: mountChip,
       report: report,
-      injectCss: injectCss,
     },
   };
 
@@ -1572,6 +1959,40 @@
     try {
       history.replaceState(null, '', url.pathname + (url.search || '') + (url.hash || ''));
     } catch (e) {}
+    /* Back from a Google round trip that was only there to confirm who this
+       is (see confirmIdentity). Whatever Google said, the flag is spent. */
+    var resume = false;
+    try {
+      resume = sessionStorage.getItem(RESUME_KEY) === '1';
+      sessionStorage.removeItem(RESUME_KEY);
+    } catch (e) {}
+    if (resume && (mark === 'google' || mark === 'linked')) {
+      ready().then(function () {
+        if (!state.user) return;
+        accountDialog({ note: 'Confirmed with Google. Make that change again now.' });
+      });
+      return;
+    }
+    /* Attaching Google is a sensitive change too, and it happens by
+       navigation, so a refusal comes back as a mark on the URL rather than
+       an error a fetch could read. Offer the way through from here. */
+    if (mark === 'reauth' || REAUTH_CODES[mark] === 1) {
+      toast(
+        'Attaching Google needs you to confirm who you are first. Nothing has changed.',
+        'warn',
+        {
+          ms: 12000,
+          action: 'Confirm',
+          onAction: function () {
+            ready().then(function () {
+              if (!state.user) return;
+              attachGoogle('Confirm who you are, and Google opens again to attach it.');
+            });
+          },
+        }
+      );
+      return;
+    }
     var said = {
       google: 'Signed in with Google.',
       new: 'Account created with Google. Your work will be kept from now on.',

@@ -11,13 +11,15 @@ decision-tree-prompt.md
 # The horizon photograph used to be ignored, on the reasoning that it was a
 # local choice rather than something the repo ships. It is a deliberate part
 # of the design now, so it has to be committed — an ignored file is not on the
-# deployment, and the page would fall back to the drawn ridgelines there while
+# deployment, and the page would show the plain page colour there while
 # looking right on the machine that chose it.
 
-# secrets and local database settings
+# secrets and local database settings. Every .env.* is a secret except the
+# example, which documents the names and holds no values — `vercel env pull`
+# and friends write .env.production and the like, which must never be added.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # a crash dump from a Windows grep, not part of the project
 *.stackdump

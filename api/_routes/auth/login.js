@@ -1,26 +1,39 @@
-/* POST /api/auth/login — exchange email and password for a session cookie. */
+/* POST /api/auth/login — exchange email and password for a session cookie.
+
+   The attempt is reserved against the throttle BEFORE the password is
+   checked (see reserveAttempt in auth.js), so a burst of parallel guesses is
+   counted guess by guess instead of all slipping past one count. A session
+   made here counts as a fresh sign-in, which is also how the account panel's
+   "confirm it is you" step works: it signs in again. */
 import { json, readJson, route, str } from '../../_lib/http.js';
 import {
   authenticate,
   createSession,
+  endPresentedSession,
   publicUser,
-  attemptBuckets,
-  throttle,
-  recordAttempt,
+  signInBuckets,
+  reserveAttempt,
+  settleAttempt,
 } from '../../_lib/auth.js';
 
 export default route({
   async POST(req, res) {
-    const body = await readJson(req);
+    const body = (await readJson(req)) || {};
     const email = str(body.email, { max: 254 });
     const password = String(body.password || '');
 
-    const buckets = attemptBuckets(req, email);
-    await throttle(buckets);
+    const ticket = await reserveAttempt(signInBuckets(req, email));
 
-    const out = email && password ? await authenticate(email, password) : { reason: 'bad_credentials' };
+    let out;
+    try {
+      out = email && password ? await authenticate(email, password) : { reason: 'bad_credentials' };
+    } catch (err) {
+      await settleAttempt(ticket, false);
+      throw err;
+    }
+    await settleAttempt(ticket, !!out.user);
+
     if (out.reason === 'google_only') {
-      await recordAttempt(buckets, false);
       json(res, 409, {
         error: 'use_google',
         message:
@@ -30,7 +43,6 @@ export default route({
       return;
     }
     if (!out.user) {
-      await recordAttempt(buckets, false);
       /* One message for a wrong password and for an address with no account.
          Saying which would turn this endpoint into a directory of who has an
          account on a Tribe's tool. */
@@ -40,7 +52,10 @@ export default route({
       });
       return;
     }
-    await recordAttempt(buckets, true);
+    /* The session this browser was carrying (if any) ends here rather than
+       living on beside the new one: confirming identity must not leave a
+       possibly-leaked token valid for the rest of its lifetime. */
+    await endPresentedSession(req);
     await createSession(req, res, out.user.id);
     json(res, 200, { user: publicUser(out.user) });
   },

@@ -75,14 +75,6 @@
     return view;
   }
 
-  /* The scale that fits a box into a rect, never enlarging past 1:1 — a small
-     tree centred at its natural size reads better than a blown-up one. */
-  function scaleToFit(rect, bounds, pad) {
-    var p = pad == null ? 40 : pad;
-    if (!bounds || !bounds.w || !bounds.h) return 1;
-    return Math.min(1, (rect.width - p * 2) / bounds.w, (rect.height - p * 2) / bounds.h);
-  }
-
   /* One wheel event, as a zoom factor.
 
      A mouse wheel sends a few events per notch, each with a large deltaY. A
@@ -120,13 +112,13 @@
     return Math.min(b, Math.max(a, fit));
   }
 
+  /* Only what a page calls. Fit is each page's own (the reader and the editor
+     frame a tree differently), and MIN / MAX stay in here: a page that wants
+     a different floor passes one to zoom() rather than reading these. */
   window.TASView = {
     clamp: clamp,
     zoom: zoom,
-    scaleToFit: scaleToFit,
     wheelFactor: wheelFactor,
     floorFor: floorFor,
-    MIN: MIN,
-    MAX: MAX,
   };
 })();

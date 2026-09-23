@@ -1,7 +1,8 @@
 # Deploys the site to Vercel production on every push to the default branch.
 #
 # Requires three repository secrets (Settings -> Secrets and variables -> Actions):
-#   VERCEL_TOKEN       an access token from https://vercel.com/account/tokens
+#   VERCEL_TOKEN       an access token from https://vercel.com/account/tokens,
+#                      scoped to the team that owns this project, not "Full Account"
 #   VERCEL_ORG_ID      from .vercel/project.json after `npx vercel link`
 #   VERCEL_PROJECT_ID  from the same file
 #
@@ -15,6 +16,12 @@ on:
     branches: [master, main]
   workflow_dispatch:
 
+# The job reads the repository and nothing else. Without this block the token
+# GitHub hands every step defaults to whatever the repository setting allows,
+# which can include writing to it.
+permissions:
+  contents: read
+
 # A newer push supersedes an in-flight one; production only ever reflects the tip.
 concurrency:
   group: vercel-production
@@ -26,28 +33,45 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
+    # The org and project ids say which project to deploy; they are not
+    # credentials. The token is, so it is given only to the steps that use it
+    # below — not to checkout, and not to the npm install, where every
+    # dependency's install script would otherwise run with it in reach.
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
+      # No git credentials left behind in .git/config for later steps to find:
+      # nothing here pushes.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # An exact version, not @latest: this step's output runs with the
+      # production token one step later, so what it installs should be what
+      # was last known to build this project (59.5.0 is the version it was
+      # last built and checked with). Bump it deliberately.
       - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+        run: npm install --global vercel@59.5.0
 
       - name: Pull production settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to production
         id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
           echo "url=$url" >> "$GITHUB_OUTPUT"

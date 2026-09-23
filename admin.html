@@ -4,15 +4,6 @@
 <!-- the palette and the backdrop, shared with the other pages -->
 <link rel="stylesheet" href="theme.css">
 <style>
-/* The editor keeps an inspector down its right-hand side, so the sun's place
-   on the tree page — 64% across, in open sky — is behind a panel here. It sits
-   in the half that is actually canvas instead, and follows when the panel is
-   folded away. Everything else about the backdrop comes from theme.css. */
-
-/* A .btn carries display:inline-flex, which outranks the user-agent rule for
-   [hidden] — so a hidden button sat in the toolbar anyway. Hidden means
-   hidden, whatever else an element is. The tree page learned this already. */
-
 /* ---------------------------------------------------------------------------
    THE GATE
    Sits over the editor rather than beside it: half an editor behind a notice
@@ -45,10 +36,9 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 
 /* ===========================================================================
    ENVIRONMENTAL BACKDROP
-   Layered ridgelines receding into haze — atmospheric perspective is the
-   Clean Air Act's own subject (regional haze, §169A visibility). Sky wash,
-   slow cloud banks, and drifting air motes sit behind everything at low
-   contrast so card text stays fully legible.
+   The photograph behind everything lives in theme.css, shared with the other
+   pages, and look.js points it at whatever THEME names — which is what makes
+   the page behind the Appearance screen a live preview of the choice.
    ========================================================================= */
 
 
@@ -258,6 +248,66 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
   color:var(--muted);box-shadow:var(--sh1);pointer-events:none;white-space:nowrap;max-width:calc(100% - 120px);overflow:hidden;text-overflow:ellipsis}
 .tip b{color:var(--accent-ink);font-weight:700}
 
+/* ---- the Content tab's own sections ----
+   The tab grew from three blocks to everything a reader reads, and one long
+   scroll of it would bury the contact details under ten sections of guide.
+   So it is sectioned, with a row of pills to move between them. */
+.cnav{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 16px}
+.cnav button{font-family:var(--sans);font-size:11.5px;font-weight:600;border-radius:999px;padding:4px 10px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);cursor:pointer}
+.cnav button:hover{border-color:var(--accent);color:var(--accent-ink)}
+.cnav button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.f .reset{display:inline-block;margin-top:4px;border:none;background:none;padding:0;cursor:pointer;
+  font-family:var(--sans);font-size:11px;font-weight:600;color:var(--accent-ink);text-decoration:underline}
+textarea.html{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.45}
+.oitem .top .btn{flex:none}
+/* grid and flex items refuse to shrink below their content by default, so a
+   long title or a wide line of HTML would widen the whole panel sideways */
+.olist>.oitem,.oitem .top .lbl{min-width:0}
+.oitem .top .btn:disabled{opacity:.4;cursor:default}
+.oitem .meta{font-family:var(--sans);font-size:11px;color:var(--faint);margin:-2px 0 6px}
+.oitem .body{margin-top:10px}
+.vhead{font-family:var(--sans);font-size:12px;font-weight:700;color:var(--ink);margin:16px 0 2px}
+.vhead span{display:block;font-weight:400;font-size:11px;color:var(--faint)}
+/* The preview is the reader's prose styling, roughly: enough that a stray
+   tag or an unclosed <b> shows up here rather than in front of Council. */
+.prev{border:1px dashed var(--border-strong);border-radius:8px;padding:10px 12px;background:var(--surface);
+  font-size:14px;line-height:1.55;margin:0 0 13px;overflow-wrap:anywhere}
+.prev>:first-child{margin-top:0}
+.prev p{margin:0 0 9px}
+.prev ul,.prev ol{margin:6px 0 9px;padding-left:20px}
+.prev b{font-weight:650}
+.prev code{font-family:var(--sans);font-weight:600;font-size:12px;background:var(--accent-soft);
+  color:var(--accent-ink);border-radius:5px;padding:1px 5px}
+.prev .wnote{margin:11px 0 2px;border-left:3px solid var(--risk);background:var(--risk-bg);
+  border-radius:0 9px 9px 0;padding:9px 12px;font-size:13px}
+.prev .wnote b{color:var(--risk)}
+.prevk{font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 4px}
+/* The appearance screen. The thumbnail reads the same custom properties as
+   the backdrop, so it shows the focal point at full strength while the page
+   behind shows the photograph as readers will see it. */
+.lookthumb{height:130px;border-radius:10px;border:1px solid var(--border);margin:0 0 13px;
+  background-color:var(--surface-2);background-image:var(--photo-url,url("land.jpg"));
+  background-size:cover;background-position:var(--photo-pos,50% 56%);
+  display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:12px;color:var(--faint)}
+.radios{display:grid;gap:6px;margin:0 0 13px}
+.radios label{display:flex;align-items:flex-start;gap:8px;font-family:var(--sans);font-size:13px;cursor:pointer}
+.radios input{width:auto;flex:none;margin-top:3px}
+.radios label.off{color:var(--faint);cursor:default}
+.radios small{display:block;font-size:11px;color:var(--faint)}
+.rng{display:flex;align-items:center;gap:10px}
+.rng input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.rng output{font-family:var(--sans);font-size:12px;font-weight:600;min-width:42px;text-align:right}
+.rng .chk{flex:none;font-size:12px}
+.upmsg{font-family:var(--sans);font-size:12px;line-height:1.45;border-radius:8px;padding:8px 10px;margin:0 0 13px;
+  background:var(--surface-2);color:var(--muted)}
+.upmsg.bad{background:var(--alert-bg);color:var(--alert)}
+.upmsg.good{background:var(--good-bg);color:var(--good)}
+.rights{font-family:var(--sans);font-size:12px;line-height:1.5;color:var(--muted);border-left:3px solid var(--risk-line);
+  background:var(--risk-bg);border-radius:0 8px 8px 0;padding:9px 12px;margin:16px 0 0}
+.rights b{color:var(--ink)}
+
 dialog{border:none;border-radius:14px;padding:0;background:var(--surface);color:var(--ink);
   box-shadow:var(--sh2);max-width:min(560px,92vw);width:100%}
 dialog::backdrop{background:rgba(8,27,35,.55)}
@@ -347,6 +397,9 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 <!-- the canvas arithmetic the tree and the editor share -->
 <script src="view.js"></script>
 <script src="tree-data.js"></script>
+<!-- the backdrop photograph, as the content describes it: this page applies
+     the working copy's THEME to its own backdrop, so the editor is the preview -->
+<script src="look.js"></script>
 <!-- Accounts and saved trees. The editor works without it: the working copy
      lives in this browser either way, and "My trees" then explains why it
      cannot go any further than that. -->
@@ -363,7 +416,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
    ========================================================================= */
 var DRAFT_KEY='tas-tree-draft';
 var BASE=(window.TAS_TREE||{NODES:{},OUT:{},NONTAS:[],CRITERIA:[],NEXT:[],LINKS:[],
-                            DISC:{},CONTACT:{}});
+                            DISC:{},CONTACT:{},GUIDE:[],COPY:{},THEME:{}});
 /* The seven disclaimer placements, in the order a reader meets them. */
 var DISC_FIELDS=[
   ['bar','The standing bar',   'One line, under the top bar for the whole session. Plain text \u2014 no tags.'],
@@ -382,10 +435,39 @@ var CONTACT_FIELDS=[
   ['calendly','Calendly event link','The Calendly link for the event people should book \u2014 e.g. https://calendly.com/your-name/30min. It embeds in the Contact panel, and whatever the reader typed in the question box is carried into it as a prefill. Another scheduling service still works as a link, it just will not embed.']
 ];
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
+/* Content from anywhere but tree-data.js — the draft in this browser, a
+   pasted Import, a tree off the account — goes through look.js cleanTree, the
+   browser copy of the server's markup filter, before it becomes T. The
+   previews here are inert whatever T holds, but T is also what Export writes
+   into a file for the repo and what Publish sends, so hostile markup left in
+   it would travel. Returns null for what is not a tree with questions, and
+   when there is no filter to run (look.js did not load): the caller decides
+   what that means for its source. */
+function cleanContent(d){
+  var L=window.TAS_LOOK;
+  if(!L||typeof L.cleanTree!=='function') return null;
+  var c=L.cleanTree(d);
+  if(!c||!c.NODES||typeof c.NODES!=='object'||Array.isArray(c.NODES)) return null;
+  return c;
+}
 var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */
-try{ var raw=localStorage.getItem(DRAFT_KEY); if(raw) T=JSON.parse(raw); }catch(e){}
+/* A draft that is there but could not be checked is not opened — and not
+   overwritten either, since the first edit would otherwise save over the
+   only copy of someone's work. Reset (or an Import, or opening a saved tree)
+   is the deliberate way past it. */
+var draftHeld=false;
+(function(){
+  var raw=null, d=null;
+  try{ raw=localStorage.getItem(DRAFT_KEY); }catch(e){ return; }
+  if(!raw) return;
+  try{ d=cleanContent(JSON.parse(raw)); }catch(e){ d=null; }
+  if(d) T=d; else draftHeld=true;
+})();
 /* a draft written before the disclaimer set was split still opens */
 normaliseCopy();
+/* the editor's own backdrop shows the working copy's photograph from the
+   first paint, so what is on screen is what Publish would put out */
+applyLook();
 
 var TERMINALS={END:'Result',END_NONTAS:'Non-TAS pathways'};
 function isTerminal(id){ return TERMINALS.hasOwnProperty(id); }
@@ -395,7 +477,10 @@ function questionIds(){ return Object.keys(T.NODES); }
    look applied while the tree still showed the old content. Nothing about the
    editor and the tree can disagree now. */
 var saveTimer=null;
+var HELD_TEXT='the draft already in this browser could not be checked, so it has been left '
+  +'as it was — Reset replaces it';
 function saveNow(){
+  if(draftHeld){ setStatus('failed',HELD_TEXT); return; }
   try{
     localStorage.setItem(DRAFT_KEY,JSON.stringify(T));
     setStatus('saved');
@@ -1085,6 +1170,8 @@ function field(label,val,oninput,opt){
   if(!opt.area) el.type='text';
   el.value=val==null?'':val;
   if(opt.rows) el.rows=opt.rows;
+  if(opt.cls) el.className=opt.cls;
+  if(opt.spell===false) el.spellcheck=false;
   el.oninput=function(){ oninput(el.value); markDirty(); };
   wrap.appendChild(el);
   if(opt.hint){ var h=document.createElement('div'); h.className='hint'; h.textContent=opt.hint; wrap.appendChild(h); }
@@ -1226,8 +1313,72 @@ function listEditor(title,arr,hint){
       arr.length=0; next.forEach(function(x){ arr.push(x); });
     },{area:true,rows:7}));
 }
+/* ===========================================================================
+   CONTENT
+   Everything a reader reads that is not a question or a pathway: the fixed
+   parts of the result, the disclaimers, who Contact reaches, the guide, the
+   walkthrough, every other line of wording, and the photograph behind it all.
+   It used to be three blocks in one scroll. Now that it is the whole of the
+   reader's page, one scroll would bury the contact details under ten sections
+   of guide, so it is sectioned, with a row of pills to move between them.
+   ========================================================================= */
+var CSECS=[
+  ['result','Result'],['disc','Disclaimers'],['contact','Contact'],['guide','Guide'],
+  ['walk','Walkthrough'],['wording','Wording'],['look','Appearance']
+];
+var CSEC_KEY='tas-admin-section';
+var csec='result';
+/* Which section was open is a convenience for this one person, so it lives in
+   this browser, and failing to read it back costs nothing. */
+try{
+  var savedSec=localStorage.getItem(CSEC_KEY);
+  if(savedSec&&CSECS.some(function(c){ return c[0]===savedSec; })) csec=savedSec;
+}catch(e){}
+function showSection(k){
+  csec=k;
+  try{ localStorage.setItem(CSEC_KEY,k); }catch(e){}
+  renderPane();
+  pane.scrollTop=0;
+}
+/* A re-render prompted from inside the pane — a move, an add, a delete, a
+   change of photograph — keeps the place instead of throwing the editor back
+   to the top of a long list. */
+function refreshPane(){
+  var y=pane.scrollTop;
+  renderPane();
+  pane.scrollTop=y;
+}
+function contentHead(title,sub){
+  var h=document.createElement('div');
+  h.innerHTML='<h2>'+esc(title)+'</h2>'+(sub?'<p class="sub">'+esc(sub)+'</p>':'');
+  pane.appendChild(h);
+}
+function note(text){
+  var p=document.createElement('p'); p.className='sub'; p.textContent=text;
+  pane.appendChild(p); return p;
+}
+
 function renderContent(){
-  pane.innerHTML='<h2>Result content</h2><p class="sub">The parts of the result that do not depend on the path taken.</p>';
+  var nav=document.createElement('div'); nav.className='cnav';
+  nav.setAttribute('role','navigation'); nav.setAttribute('aria-label','Content sections');
+  CSECS.forEach(function(c){
+    var b=document.createElement('button'); b.type='button'; b.textContent=c[1];
+    b.setAttribute('aria-current',String(c[0]===csec));
+    b.onclick=function(){ showSection(c[0]); };
+    nav.appendChild(b);
+  });
+  pane.appendChild(nav);
+  if(csec==='disc') return renderDisclaimers();
+  if(csec==='contact') return renderContact();
+  if(csec==='guide') return renderGuide();
+  if(csec==='walk') return renderWalk();
+  if(csec==='wording') return renderWording();
+  if(csec==='look') return renderLook();
+  return renderResultContent();
+}
+
+function renderResultContent(){
+  contentHead('Result content','The parts of the result that do not depend on the path taken.');
   listEditor('Non-TAS options',T.NONTAS);
   listEditor('Eligibility criteria',T.CRITERIA);
   listEditor('Next steps',T.NEXT);
@@ -1239,24 +1390,553 @@ function renderContent(){
         return {t:line.slice(0,i<0?line.length:i).trim(),u:i<0?'':line.slice(i+2).trim()};
       });
     },{area:true,rows:4}));
-  pane.appendChild(sectionTitle('Disclaimers'));
-  var dnote=document.createElement('p'); dnote.className='sub';
-  dnote.textContent='Seven placements, because they do different jobs. Leave one blank and that '
-    +'placement simply carries nothing \u2014 which for the bar and the print-out means a reader sees '
-    +'no disclaimer at all, so blank them deliberately or not at all.';
-  pane.appendChild(dnote);
+  note('The result’s labels and fixed headings — “Recommended pathway”, “Next steps” and the rest — are under Wording.');
+}
+
+function renderDisclaimers(){
+  contentHead('Disclaimers','Seven placements, because they do different jobs.');
+  note('Leave one blank and that placement simply carries nothing — which for the bar and the '
+    +'print-out means a reader sees no disclaimer at all, so blank them deliberately or not at all.');
   DISC_FIELDS.forEach(function(f){
     pane.appendChild(field(f[1],T.DISC[f[0]],function(v){ T.DISC[f[0]]=v; },
       {area:true,rows:f[0]==='bar'?3:6,hint:f[2]}));
   });
-  pane.appendChild(sectionTitle('Contact'));
-  var cnote=document.createElement('p'); cnote.className='sub';
-  cnote.textContent='Who the Contact button reaches. Until these are filled in the panel says so '
-    +'plainly rather than naming anyone.';
-  pane.appendChild(cnote);
+}
+
+function renderContact(){
+  contentHead('Contact','Who the Contact button reaches.');
+  note('Until these are filled in the panel says so plainly rather than naming anyone. '
+    +'The panel’s own wording, and the email it drafts, are under Wording.');
   CONTACT_FIELDS.forEach(function(f){
     pane.appendChild(field(f[1],T.CONTACT[f[0]],function(v){ T.CONTACT[f[0]]=v; },{hint:f[2]}));
   });
+}
+
+/* ---- previewing HTML ------------------------------------------------------
+   Guide sections and walkthrough screens are HTML, and the reader renders them
+   with innerHTML. The server cleans published content whatever this page does;
+   this is the editor's own pass, so that a preview never runs what it shows.
+   It parses into an inert <template> — nothing inside one loads or runs — and
+   takes out anything that could act before a node is moved into the page. */
+var PREVIEW_DROP={SCRIPT:1,STYLE:1,IFRAME:1,FRAME:1,FRAMESET:1,OBJECT:1,EMBED:1,
+                  LINK:1,META:1,BASE:1,TEMPLATE:1,NOSCRIPT:1,SET:1,ANIMATE:1};
+var PREVIEW_URL_ATTR={href:1,src:1,srcset:1,action:1,formaction:1,'xlink:href':1,
+                      poster:1,background:1,data:1};
+function cleanFragment(html){
+  var tpl=document.createElement('template');
+  tpl.innerHTML=String(html==null?'':html);
+  (function walk(node){
+    Array.prototype.slice.call(node.childNodes).forEach(function(k){
+      if(k.nodeType!==1) return;
+      if(PREVIEW_DROP[String(k.nodeName).toUpperCase()]){ node.removeChild(k); return; }
+      Array.prototype.slice.call(k.attributes).forEach(function(a){
+        var n=a.name.toLowerCase();
+        /* a browser ignores whitespace and control characters inside a URL
+           scheme, so "java&#9;script:" is javascript: — compare without them */
+        var v=String(a.value).replace(/[\u0000- ]+/g,'').toLowerCase();
+        if(n.indexOf('on')===0||n==='srcdoc'
+           ||(PREVIEW_URL_ATTR[n]&&/^(javascript|vbscript|data):/.test(v))) k.removeAttribute(a.name);
+      });
+      walk(k);
+    });
+  })(tpl.content);
+  return tpl.content;
+}
+function previewBox(html){
+  var wrap=document.createElement('div');
+  var k=document.createElement('div'); k.className='prevk'; k.textContent='Preview';
+  var box=document.createElement('div'); box.className='prev';
+  /* a link in the preview is there to be seen, not followed out of the editor */
+  box.addEventListener('click',function(ev){
+    if(ev.target.closest&&ev.target.closest('a')) ev.preventDefault();
+  });
+  wrap.appendChild(k); wrap.appendChild(box);
+  function paint(h){ box.innerHTML=''; box.appendChild(document.importNode(cleanFragment(h),true)); }
+  var t=null;
+  paint(html);
+  wrap.update=function(h){ clearTimeout(t); t=setTimeout(function(){ paint(h); },160); };
+  return wrap;
+}
+
+/* ---- lists of titled HTML: the guide's sections, the walkthrough's screens
+   One open at a time, because each carries a long textarea and a preview, and
+   ten of them open at once is a page nobody can find their place in. */
+var GUIDE_MAX=40, WALK_MAX=12;   /* what a published tree may carry — the server's limits */
+/* The walkthrough's drawings live in index.html as WALK_ART, one per screen
+   position; there are four. They are drawn in the tree's own idiom rather than
+   written as content, so they are not editable here — only described. */
+var WALK_ART_COUNT=4;
+var OPENI={guide:-1,walk:-1};
+function moveItem(arr,kind,i,d){
+  var j=i+d;
+  if(j<0||j>=arr.length) return;
+  var x=arr[i]; arr[i]=arr[j]; arr[j]=x;
+  if(OPENI[kind]===i) OPENI[kind]=j; else if(OPENI[kind]===j) OPENI[kind]=i;
+  markDirty(); refreshPane();
+}
+function deleteItem(arr,kind,i,o){
+  if(arr.length<=o.min){ alert(o.minMsg); return; }
+  if(!confirm('Delete '+o.noun+' '+(i+1)+', “'+(arr[i].h||'untitled')+'”?\n\nThere is no undo.')) return;
+  arr.splice(i,1);
+  if(OPENI[kind]===i) OPENI[kind]=-1; else if(OPENI[kind]>i) OPENI[kind]--;
+  markDirty(); refreshPane();
+}
+function sectionsEditor(arr,kind,o){
+  var list=document.createElement('div'); list.className='olist';
+  arr.forEach(function(s,i){
+    var open=OPENI[kind]===i;
+    var it=document.createElement('div'); it.className='oitem';
+    var top=document.createElement('div'); top.className='top';
+    top.innerHTML='<span class="n">'+(i+1)+'</span><span class="lbl"></span>';
+    var lbl=top.querySelector('.lbl'); lbl.textContent=s.h||'(untitled)';
+    var up=button('↑',function(){ moveItem(arr,kind,i,-1); },'sm');
+    up.title='Move up'; up.setAttribute('aria-label','Move '+o.noun+' '+(i+1)+' up'); up.disabled=i===0;
+    var dn=button('↓',function(){ moveItem(arr,kind,i,1); },'sm');
+    dn.title='Move down'; dn.setAttribute('aria-label','Move '+o.noun+' '+(i+1)+' down'); dn.disabled=i===arr.length-1;
+    var ed=button(open?'Close':'Edit',function(){ OPENI[kind]=open?-1:i; refreshPane(); },'sm');
+    var del=button('Delete',function(){ deleteItem(arr,kind,i,o); },'sm danger');
+    [up,dn,ed,del].forEach(function(b){ top.appendChild(b); });
+    it.appendChild(top);
+    if(o.meta){
+      var m=document.createElement('div'); m.className='meta'; m.textContent=o.meta(i,arr.length);
+      it.appendChild(m);
+    }
+    if(open){
+      var body=document.createElement('div'); body.className='body';
+      body.appendChild(field('Title',s.h,function(v){ s.h=v; lbl.textContent=v||'(untitled)'; }));
+      var pv=previewBox(s.html);
+      body.appendChild(field('Text (HTML)',s.html,function(v){ s.html=v; pv.update(v); },
+        {area:true,rows:10,cls:'html',spell:false,hint:o.htmlHint}));
+      body.appendChild(pv);
+      it.appendChild(body);
+    }
+    list.appendChild(it);
+  });
+  pane.appendChild(list);
+  var row=document.createElement('div'); row.className='row'; row.style.marginTop='10px';
+  var add=button('+ Add a '+o.noun,function(){
+    if(arr.length>=o.max) return;
+    arr.push({h:'New '+o.noun,html:'<p></p>'});
+    OPENI[kind]=arr.length-1;
+    markDirty(); renderPane(); pane.scrollTop=pane.scrollHeight;
+  },'solid');
+  add.disabled=arr.length>=o.max;
+  row.appendChild(add);
+  pane.appendChild(row);
+  if(arr.length>=o.max) note('That is as many as a published tree may carry ('+o.max+').');
+}
+
+function renderGuide(){
+  contentHead('Guide','The manual behind the walkthrough — Full guide on the reader’s page, and /?guide=1.');
+  note('Each section is a heading and some HTML. The reader shows it to everyone, so anything that '
+    +'could run — scripts, event attributes, javascript: links — is stripped by the server on '
+    +'Publish, and the preview here strips it too. The “what this tool is not” box is under Disclaimers.');
+  sectionsEditor(T.GUIDE,'guide',{noun:'section',min:1,max:GUIDE_MAX,
+    minMsg:'The guide keeps at least one section. An empty guide would be read as an older draft that '
+      +'never had one, and the shipped guide would quietly come back in its place.',
+    htmlHint:'<p> for paragraphs; <b>, <i>, <code>, <ul><li>. <a href="#" data-open-contact>contact us</a> opens the Contact panel.'});
+}
+
+function renderWalk(){
+  contentHead('Walkthrough','What a first-time reader meets before the tree, and what Guide in the top bar brings back.');
+  note('The drawings are not content. They are drawn in index.html in the tree’s own idiom and belong '
+    +'to screen positions 1 to '+WALK_ART_COUNT+', not to the words: move a screen and its words move while '
+    +'the drawing stays where it was. A screen past position '+WALK_ART_COUNT+' has no drawing.');
+  note('The last screen’s button starts the tree, whatever that screen says — so end on the screen '
+    +'people should leave from. The buttons’ own labels are under Wording → Buttons and controls.');
+  sectionsEditor(T.COPY.walk,'walk',{noun:'screen',min:1,max:WALK_MAX,
+    minMsg:'The walkthrough needs at least one screen — its button is what starts the tree.',
+    meta:function(i,n){
+      return (i<WALK_ART_COUNT?'Shown with drawing '+(i+1):'No drawing at this position')
+        +(i===n-1?' · last screen: its button starts the tree':'');
+    },
+    htmlHint:'<p> for paragraphs; <div class="wnote">…</div> makes the shaded read-this-first box.'});
+}
+
+/* ---- wording ----------------------------------------------------------------
+   Verdicts get their own editor, because each one is two lines and a
+   condition, and the condition is the thing an editor needs to know. The flat
+   groups after them are rendered from their keys rather than from a list here,
+   so a group added to tree-data.js later is editable without touching this. */
+var VERDICTS=[
+  ['nontas','The reader chose not to pursue TAS now'],
+  ['regPar','Regulatory and Administrative both unlocked'],
+  ['tgtPar','Targeted and Administrative both unlocked'],
+  ['reg','Regulatory unlocked'],
+  ['tgt','Targeted unlocked'],
+  ['par','Only Administrative unlocked'],
+  ['none','No pathway unlocked'],
+  ['progress','A print-out or document made before the path reaches an ending']
+];
+var GROUPS=[
+  ['brand','Name and title','The top bar and the browser tab.'],
+  ['tree','Under the canvas','The hint line under the tree, and the word before a pathway on an answer.'],
+  ['result','Result panel','Labels and fixed paragraphs in the result. What changes with the path is under Pathways and on each option.'],
+  ['print','Print-out','Headings on the printed page.'],
+  ['contact','Contact panel','The panel’s own wording, and the email it drafts. Who it reaches is under Contact.'],
+  ['ui','Buttons and controls','Every other label on the reader’s page — the top bar, the walkthrough’s controls, the guide, the result sheet, zoom.']
+];
+var COPY_HINTS={
+  'brand.kicker':'The small capitals above the title in the top bar.',
+  'brand.title':'The heading in the top bar.',
+  'brand.pageTitle':'The browser tab, bookmarks and history.',
+  'print.stamp':'{date} becomes the day it is printed — keep it in.',
+  'tree.unlocks':'The word before a pathway’s name on an answer card.',
+  'tree.hintStart':'Under the canvas before the first answer.',
+  'tree.hintGoing':'Under the canvas part-way down.',
+  'tree.hintDone':'Under the canvas once the path reaches an ending.',
+  'result.nodeTag':'The label on the result card at the foot of the tree.',
+  'result.nodeOpen':'The button on that card.',
+  'contact.cue':'The callout that points at Contact while a question marked risky is open.',
+  'contact.noCal':'Shown in place of the calendar when there is no Calendly link. HTML.',
+  'contact.mailSubject':'The subject line of the email Send question drafts.'
+};
+function isGroup(o){ return !!o&&typeof o==='object'&&!Array.isArray(o); }
+function humanise(k){
+  var s=String(k).replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').toLowerCase();
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+function isHtml(s){ return typeof s==='string'&&/<[a-z!\/]/i.test(s); }
+/* A field that knows what tree-data.js ships for it, and offers it back once
+   the two differ. */
+function copyField(label,obj,key,shipped,opt){
+  var r=null;
+  function paint(){ if(r) r.hidden=obj[key]===shipped; }
+  var w=field(label,obj[key],function(v){ obj[key]=v; paint(); },opt);
+  if(typeof shipped!=='string') return w;
+  var ctrl=w.querySelector('input,textarea');
+  /* The reader treats an empty line as missing and shows the shipped one in
+     its place, so an emptied field shows that line greyed out: what readers
+     will actually get, not a blank the page never renders. */
+  ctrl.placeholder=shipped;
+  r=document.createElement('button'); r.type='button'; r.className='reset'; r.textContent='Reset to shipped';
+  r.title='Put back what tree-data.js ships: '+(shipped.length>140?shipped.slice(0,140)+'…':shipped);
+  r.onclick=function(){ obj[key]=shipped; ctrl.value=shipped; markDirty(); paint(); };
+  ctrl.parentNode.insertBefore(r,ctrl.nextSibling);
+  paint();
+  return w;
+}
+function orderedKeys(obj,base){
+  var out=Object.keys(base).filter(function(k){ return obj.hasOwnProperty(k); });
+  Object.keys(obj).forEach(function(k){ if(out.indexOf(k)<0) out.push(k); });
+  return out;
+}
+function wordField(path,label,obj,k,shipped){
+  var v=obj[k], html=isHtml(v)||isHtml(shipped);
+  var long=html||v.length>60||(typeof shipped==='string'&&shipped.length>60);
+  pane.appendChild(copyField(label,obj,k,shipped,{
+    area:long, rows:long?Math.min(8,Math.max(2,Math.ceil(Math.max(v.length,1)/46))):0,
+    hint:COPY_HINTS[path]||(html?'HTML.':'')}));
+}
+function verdictFields(V,BV,k,when){
+  var v=V[k];
+  if(!isGroup(v)) return;
+  var b=isGroup(BV[k])?BV[k]:{};
+  var h=document.createElement('div'); h.className='vhead';
+  h.textContent=when;
+  var s=document.createElement('span'); s.textContent='verdicts.'+k; h.appendChild(s);
+  pane.appendChild(h);
+  if(typeof v.t==='string') pane.appendChild(copyField('Headline',v,'t',b.t));
+  if(typeof v.s==='string') pane.appendChild(copyField('Sentence under it',v,'s',b.s,{area:true,rows:3}));
+}
+function wordingGroups(){
+  var out=[], seen={verdicts:1,walk:1};
+  GROUPS.forEach(function(g){ seen[g[0]]=1; if(isGroup(T.COPY[g[0]])) out.push(g); });
+  Object.keys(BASE.COPY||{}).concat(Object.keys(T.COPY)).forEach(function(k){
+    if(seen[k]) return;
+    seen[k]=1;
+    if(isGroup(T.COPY[k])) out.push([k,humanise(k),
+      'A group this editor has no description for yet. Every line in it is editable all the same.']);
+  });
+  return out;
+}
+function renderGroup(g){
+  var obj=T.COPY[g[0]], base=(BASE.COPY&&isGroup(BASE.COPY[g[0]]))?BASE.COPY[g[0]]:{};
+  pane.appendChild(sectionTitle(g[1]));
+  if(g[2]) note(g[2]);
+  orderedKeys(obj,base).forEach(function(k){
+    var v=obj[k];
+    if(typeof v==='string') return wordField(g[0]+'.'+k,humanise(k),obj,k,base[k]);
+    if(isGroup(v)){
+      var bk=isGroup(base[k])?base[k]:{};
+      orderedKeys(v,bk).forEach(function(s){
+        if(typeof v[s]==='string') wordField(g[0]+'.'+k+'.'+s,humanise(k)+' — '+humanise(s),v,s,bk[s]);
+      });
+    }
+  });
+}
+function renderWording(){
+  contentHead('Wording','Every other line a reader meets, grouped by where they meet it.');
+  note('A line an older draft never had falls back to what tree-data.js ships, so nothing here goes '
+    +'blank by itself. The same goes for a line emptied here: readers see what tree-data.js ships for '
+    +'it, shown greyed out in the empty field, so a line can be reworded from here but not removed.');
+  var V=T.COPY.verdicts, BV=(BASE.COPY&&isGroup(BASE.COPY.verdicts))?BASE.COPY.verdicts:{};
+  if(isGroup(V)){
+    pane.appendChild(sectionTitle('Verdicts'));
+    note('The result’s headline and the sentence under it, chosen by which pathways the answers '
+      +'unlocked. They name pathways, so a pathway renamed under Pathways needs renaming here too.');
+    var seen={};
+    VERDICTS.forEach(function(v){ seen[v[0]]=1; verdictFields(V,BV,v[0],v[1]); });
+    Object.keys(V).forEach(function(k){
+      if(!seen[k]) verdictFields(V,BV,k,'Shown wherever the reader’s page asks for “'+k+'”');
+    });
+  }
+  wordingGroups().forEach(renderGroup);
+}
+
+/* ---- appearance -------------------------------------------------------------
+   The photograph behind the tree. THEME is small on purpose: which picture,
+   where its focal point sits, and how strongly it shows in each theme. The
+   picture is one of an allowlist — the shipped file, none, or one uploaded to
+   this deployment — because a free URL here would be a way to put CSS into
+   every reader's page and to make it fetch from somewhere else. */
+var PHOTO_SHIPPED='land.jpg';
+var MEDIA_RE=/^\/api\/media\/[a-f0-9]{64}$/;
+var MEDIA_TYPES={'image/jpeg':1,'image/png':1,'image/webp':1};
+var MEDIA_EDGE=2400, MEDIA_MAX=1500000;
+/* theme.css's own strengths, shown on the slider while Default is ticked */
+var LOOK_DEFAULT_OP={light:.66,dark:.3};
+/* The last photograph uploaded from this browser, so switching to the shipped
+   one and back does not mean uploading it again. A convenience, nothing more. */
+var UPLOAD_KEY='tas-admin-upload';
+var lastUpload='';
+try{ var lu=localStorage.getItem(UPLOAD_KEY); if(lu&&MEDIA_RE.test(lu)) lastUpload=lu; }catch(e){}
+var upMsg=null, uploading=false;
+
+/* TAS_LOOK.clean is the one definition of a valid THEME. The fallback is for
+   look.js failing to load, which this page survives as it survives any other
+   script going missing, and it is the same allowlist rather than a looser one. */
+function lookClean(th){
+  if(window.TAS_LOOK&&typeof TAS_LOOK.clean==='function'){
+    try{ return TAS_LOOK.clean(th); }catch(e){}
+  }
+  var o=isGroup(th)?th:{}, out={}, p=o.photo;
+  out.photo=(p==='land.jpg'||p===''||(typeof p==='string'&&/^\/api\/media\/[a-f0-9]{64}$/.test(p)))?p:'land.jpg';
+  out.position=(typeof o.position==='number'&&isFinite(o.position))?Math.max(0,Math.min(100,o.position)):56;
+  ['opacityLight','opacityDark'].forEach(function(k){
+    var n=o[k];
+    out[k]=(typeof n==='number'&&isFinite(n))?Math.max(0,Math.min(1,n)):null;
+  });
+  return out;
+}
+function applyLook(){
+  if(!window.TAS_LOOK||typeof TAS_LOOK.apply!=='function') return;
+  try{ TAS_LOOK.apply(T.THEME); }catch(e){}
+}
+/* cleaned in place, because the controls on screen hold T.THEME itself */
+function lookChanged(){
+  var c=lookClean(T.THEME);
+  Object.keys(c).forEach(function(k){ T.THEME[k]=c[k]; });
+  applyLook(); markDirty();
+}
+function repaintLook(){ if(tab==='content'&&csec==='look') refreshPane(); }
+
+/* Why upload is not available here, in words, or '' when it is. The same
+   state the gate and My trees read, from account.js. */
+function uploadBlocked(){
+  if(!window.TAS) return 'Uploading needs the account service, which did not load on this page.';
+  var s=TAS.auth.state;
+  if(!s.ready) return 'Checking whether this deployment can keep a photograph…';
+  if(s.storage==='unconfigured') return 'This deployment has no storage, so there is nowhere to keep an uploaded '
+    +'photograph. The shipped photograph, or none, works without it.';
+  if(s.storage!=='ready') return 'Storage is not answering right now, so an upload would have nowhere to go. Try again shortly.';
+  /* the same reasons the gate gives, in the same words, since the server
+     refuses an upload for exactly the reasons it refuses a publish */
+  var es=editorState(s);
+  if(es==='unset') return UNSET_TEXT;
+  if(!s.user) return 'Sign in as the editor to upload a photograph.';
+  if(es==='unverified') return verifyStepsText(s.user.email);
+  if(!TAS.auth.isAdmin()) return 'Only the editor’s account can upload a photograph, and only once its address is verified.';
+  return '';
+}
+function kb(n){ return n<1000000?Math.max(1,Math.round(n/1000))+' KB':(n/1000000).toFixed(1)+' MB'; }
+
+/* Shrunk here rather than on the server: a phone photograph is 5 MB of pixels
+   nobody sees behind a tree at a third of its strength. Long edge to 2400px,
+   JPEG at .85, then quality and after that size stepped down until it is under
+   1.5 MB. Transparency has no meaning behind a backdrop, so it is flattened
+   onto the page's own neutral rather than JPEG's black. */
+function shrinkToJpeg(bmp){
+  var scale=Math.min(1,MEDIA_EDGE/Math.max(bmp.width,bmp.height)), q=.85;
+  function attempt(){
+    var w=Math.max(1,Math.round(bmp.width*scale)), h=Math.max(1,Math.round(bmp.height*scale));
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    var g=c.getContext('2d');
+    g.fillStyle='#e5e8eb'; g.fillRect(0,0,w,h);
+    g.drawImage(bmp,0,0,w,h);
+    return new Promise(function(res,rej){
+      c.toBlob(function(b){ if(b) res(b); else rej(new Error('This browser could not encode the image.')); },'image/jpeg',q);
+    }).then(function(b){
+      if(b.size<MEDIA_MAX) return b;
+      if(q>.6){ q=Math.round((q-.1)*100)/100; return attempt(); }
+      if(Math.max(w,h)>480){ scale*=.8; q=.8; return attempt(); }
+      throw new Error('It would not come down under 1.5 MB.');
+    });
+  }
+  return attempt().then(function(b){ try{ bmp.close(); }catch(e){} return b; },
+                        function(err){ try{ bmp.close(); }catch(e){} throw err; });
+}
+/* Raw bytes, not JSON, so it goes around TAS.api — but with the same header
+   account.js puts on every write (X-TAS-App), which is what the server's
+   write guard checks for and a form on another site cannot send. */
+var MEDIA_ERRORS={
+  bad_image:'The server did not recognise it as a JPEG, PNG or WebP image.',
+  limit_reached:'This deployment already holds as many uploaded images as it allows.',
+  too_large:'It is larger than the server accepts.',
+  auth_required:'You are signed out. Sign in again and upload it once more.',
+  forbidden:'Only the editor’s account can upload a photograph, and only once its address is verified.'
+};
+function postMedia(blob){
+  return fetch('/api/media',{method:'POST',credentials:'same-origin',cache:'no-store',
+    headers:{'Content-Type':blob.type||'image/jpeg','X-TAS-App':'1','Accept':'application/json'},body:blob})
+  .then(function(res){
+    return res.text().then(function(text){
+      var d=null;
+      try{ d=text?JSON.parse(text):null; }catch(e){ d=null; }
+      if(!res.ok){
+        var e=new Error((d&&d.message)||(d&&MEDIA_ERRORS[d.error])
+          ||(res.status===404?'This deployment has no upload service.':'The server returned '+res.status+'.'));
+        e.code=d&&d.error; e.status=res.status;
+        throw e;
+      }
+      if(!d||typeof d.url!=='string'||!MEDIA_RE.test(d.url))
+        throw new Error('The server took the image but did not say where it is.');
+      return d;
+    });
+  },function(){ throw new Error('No connection to the server.'); });
+}
+function uploadPhoto(f){
+  var why=uploadBlocked();
+  if(why){ upMsg={kind:'bad',text:why}; return repaintLook(); }
+  if(!MEDIA_TYPES[f.type]){
+    upMsg={kind:'bad',text:'That is not a JPEG, PNG or WebP image. SVG in particular is refused, because an SVG can carry script.'};
+    return repaintLook();
+  }
+  if(typeof createImageBitmap!=='function'){
+    upMsg={kind:'bad',text:'This browser cannot prepare an image for upload. A current Chrome, Edge, Firefox or Safari can.'};
+    return repaintLook();
+  }
+  uploading=true; upMsg={kind:'',text:'Preparing “'+f.name+'”…'}; repaintLook();
+  createImageBitmap(f).then(null,function(){
+    throw new Error('This browser could not read that file as an image.');
+  }).then(shrinkToJpeg).then(function(blob){
+    upMsg={kind:'',text:'Uploading '+kb(blob.size)+'…'}; repaintLook();
+    return postMedia(blob);
+  }).then(function(d){
+    uploading=false;
+    lastUpload=d.url;
+    try{ localStorage.setItem(UPLOAD_KEY,d.url); }catch(e){}
+    T.THEME.photo=d.url; lookChanged();
+    upMsg={kind:'good',text:'Uploaded'+(d.size?' ('+kb(d.size)+')':'')+'. It is the photograph now — '
+      +'in this browser straight away, and for every reader once you Publish.'};
+    repaintLook();
+  },function(err){
+    uploading=false;
+    var r=editorRefusal(err);
+    upMsg={kind:'bad',text:'The photograph was not uploaded. '+(r?r.text:((err&&err.message)||''))};
+    if(err&&(r||err.code==='auth_required')&&window.TAS) TAS.auth.refresh(true);
+    repaintLook();
+  });
+}
+
+var rangeSeq=0;
+function rangeField(label,val,min,max,step,fmt,oninput,hint,extra){
+  var wrap=document.createElement('div'); wrap.className='f';
+  var id='rng-'+(++rangeSeq);
+  var l=document.createElement('label'); l.textContent=label; l.htmlFor=id; wrap.appendChild(l);
+  var row=document.createElement('div'); row.className='rng';
+  var r=document.createElement('input'); r.type='range'; r.id=id;
+  r.min=String(min); r.max=String(max); r.step=String(step); r.value=String(val);
+  var out=document.createElement('output'); out.textContent=fmt(+r.value);
+  r.oninput=function(){ out.textContent=fmt(+r.value); oninput(+r.value); };
+  row.appendChild(r); row.appendChild(out);
+  if(extra) row.appendChild(extra);
+  wrap.appendChild(row);
+  if(hint){ var h=document.createElement('div'); h.className='hint'; h.textContent=hint; wrap.appendChild(h); }
+  wrap.range=r; wrap.out=out;
+  return wrap;
+}
+function pct(v){ return Math.round(v*100)+'%'; }
+/* Default stores null, which means "whatever theme.css says" — so a later
+   retune of the stylesheet reaches a tree that never chose a strength. */
+function opacityField(label,key,def){
+  var th=T.THEME, isDef=th[key]==null;
+  var chk=document.createElement('label'); chk.className='chk';
+  var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=isDef;
+  chk.appendChild(cb); chk.appendChild(document.createTextNode('Default'));
+  var w=rangeField(label,isDef?def:th[key],0,1,.01,pct,function(v){ th[key]=v; lookChanged(); },
+    'Default is the stylesheet’s own '+pct(def)+', and follows it if that is ever retuned.',chk);
+  w.range.disabled=isDef;
+  cb.onchange=function(){
+    w.range.disabled=cb.checked;
+    if(cb.checked){ th[key]=null; w.range.value=String(def); w.out.textContent=pct(def); }
+    else th[key]=+w.range.value;
+    lookChanged();
+  };
+  pane.appendChild(w);
+}
+function renderLook(){
+  var th=T.THEME;
+  contentHead('Appearance','The photograph behind the tree, on every page of the tool.');
+  var thumb=document.createElement('div'); thumb.className='lookthumb';
+  if(th.photo==='') thumb.textContent='No photograph — the plain page colour shows';
+  pane.appendChild(thumb);
+  note('The page behind this panel is the live preview, at the strength readers will see. The '
+    +'thumbnail shows the picture at full strength, so the focal point is easy to judge.');
+
+  pane.appendChild(sectionTitle('Photograph'));
+  var up=MEDIA_RE.test(th.photo)?th.photo:lastUpload;
+  var radios=document.createElement('div'); radios.className='radios';
+  radios.setAttribute('role','radiogroup'); radios.setAttribute('aria-label','Photograph');
+  [
+    {v:PHOTO_SHIPPED,t:'Shipped photograph',d:'land.jpg, the file served beside the pages.'},
+    {v:up,t:'Uploaded photograph',d:up?'The one uploaded from here.':'Upload one below first.',off:!up},
+    {v:'',t:'No photograph',d:'No picture at all: the plain page colour shows behind the tree.'}
+  ].forEach(function(o){
+    var l=document.createElement('label'); if(o.off) l.className='off';
+    var r=document.createElement('input'); r.type='radio'; r.name='photo-src'; r.disabled=!!o.off;
+    r.checked=!o.off&&th.photo===o.v;
+    r.onchange=function(){ if(!r.checked) return; th.photo=o.v; lookChanged(); refreshPane(); };
+    var s=document.createElement('span'); s.textContent=o.t;
+    var sm=document.createElement('small'); sm.textContent=o.d; s.appendChild(sm);
+    l.appendChild(r); l.appendChild(s); radios.appendChild(l);
+  });
+  pane.appendChild(radios);
+
+  var blocked=uploadBlocked();
+  var file=document.createElement('input'); file.type='file';
+  file.accept='image/jpeg,image/png,image/webp'; file.hidden=true;
+  file.onchange=function(){ var f=file.files&&file.files[0]; file.value=''; if(f) uploadPhoto(f); };
+  var urow=document.createElement('div'); urow.className='row'; urow.style.margin='0 0 10px';
+  var ub=button(uploading?'Uploading…':'Upload a photograph…',function(){ file.click(); },'solid');
+  ub.disabled=!!blocked||uploading;
+  urow.appendChild(ub); urow.appendChild(file);
+  pane.appendChild(urow);
+  if(upMsg){
+    var um=document.createElement('div'); um.className='upmsg'+(upMsg.kind?' '+upMsg.kind:'');
+    um.setAttribute('role','status'); um.textContent=upMsg.text; pane.appendChild(um);
+  }
+  if(blocked){
+    var bm=document.createElement('div'); bm.className='upmsg'; bm.textContent=blocked; pane.appendChild(bm);
+  }else if(!upMsg){
+    note('JPEG, PNG or WebP. It is shrunk here first — 2400 pixels on the long edge at most, under '
+      +'1.5 MB as a JPEG — then kept on this deployment and served from it, so readers still make no '
+      +'request anywhere else.');
+  }
+
+  pane.appendChild(sectionTitle('Framing'));
+  pane.appendChild(rangeField('Vertical focus',th.position,0,100,1,function(v){ return Math.round(v)+'%'; },
+    function(v){ th.position=v; lookChanged(); },
+    '0% keeps the top of the picture in view, 100% the bottom. Shipped at '+lookClean(BASE.THEME).position+'%.'));
+  opacityField('Strength in the light theme','opacityLight',LOOK_DEFAULT_OP.light);
+  opacityField('Strength in the dark theme','opacityDark',LOOK_DEFAULT_OP.dark);
+
+  var rights=document.createElement('div'); rights.className='rights';
+  rights.innerHTML='<b>Choosing the image is a decision for the Tribe deploying this, not a default to be '
+    +'shipped.</b> A photograph of one nation’s country used as decoration on a tool other nations open '
+    +'makes a claim about whose land it is. Use a photograph the Tribe owns or has cleared, and check the rights — the file is served '
+    +'publicly alongside the page.';
+  pane.appendChild(rights);
 }
 
 /* DISC was a single string before the disclaimer set was split by placement.
@@ -1281,7 +1961,105 @@ function normaliseCopy(){
     if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{};
   });
   if(!T.NODES||typeof T.NODES!=='object') T.NODES=clone(BASE.NODES||{});
+
+  /* The guide, the wording and the photograph, by the merge rule the reader
+     applies too. A draft, a published tree, a saved tree or an import can be
+     older than today's shape: a group or a key it lacks comes from what the
+     repo ships, key by key; a list is taken whole only when it has something
+     in it; THEME is validated and merged a key at a time. Nothing opens blank
+     because an older record never had a newer line. */
+  T.GUIDE=mergeSections(T.GUIDE,Array.isArray(BASE.GUIDE)?BASE.GUIDE:[],true);
+  var BC=isGroup(BASE.COPY)?BASE.COPY:{};
+  if(!isGroup(T.COPY)) T.COPY={};
+  Object.keys(BC).forEach(function(g){
+    var b=BC[g], t=T.COPY[g];
+    if(Array.isArray(b)) T.COPY[g]=mergeSections(t,b,g==='walk');
+    else if(isGroup(b)){ if(!isGroup(t)) t=T.COPY[g]={}; mergeShipped(t,b); }
+    else if(typeof t!==typeof b) T.COPY[g]=b;
+  });
+  var shippedLook=lookClean(BASE.THEME), incoming=isGroup(T.THEME)?T.THEME:{}, merged={};
+  Object.keys(shippedLook).forEach(function(k){
+    merged[k]=incoming.hasOwnProperty(k)?incoming[k]:shippedLook[k];
+  });
+  T.THEME=lookClean(merged);
 }
+/* titled HTML lists: an empty or missing one is an older record, not a
+   deliberate blank, and gets the shipped list whole */
+function mergeSections(arr,shipped,titled){
+  if(!Array.isArray(arr)||!arr.length) return clone(shipped);
+  if(!titled) return arr;
+  var ok=arr.filter(isGroup).map(function(s){
+    return {h:typeof s.h==='string'?s.h:'',html:typeof s.html==='string'?s.html:''};
+  });
+  return ok.length?ok:clone(shipped);
+}
+function mergeShipped(t,b){
+  Object.keys(b).forEach(function(k){
+    var bv=b[k];
+    if(typeof bv==='string'){ if(typeof t[k]!=='string') t[k]=bv; }
+    else if(isGroup(bv)){ if(!isGroup(t[k])) t[k]=clone(bv); else mergeShipped(t[k],bv); }
+    else if(Array.isArray(bv)){ if(!Array.isArray(t[k])||!t[k].length) t[k]=clone(bv); }
+    else if(t[k]===undefined) t[k]=bv;
+  });
+}
+
+/* ---- content that names a pathway -----------------------------------------
+   The guide and the wording quote the pathways by name, and nothing ties the
+   two together: rename one under Pathways and the guide goes on saying the old
+   name. So the checks look for it. */
+function stripTags(s){
+  return String(s==null?'':s).replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&');
+}
+function stringLeaves(o){
+  var out=[];
+  (function walk(x){
+    if(typeof x==='string') out.push(x);
+    else if(x&&typeof x==='object') Object.keys(x).forEach(function(k){ walk(x[k]); });
+  })(o);
+  return out;
+}
+function contentPlaces(){
+  var out=[];
+  (T.GUIDE||[]).forEach(function(s,i){
+    out.push({where:'the guide’s “'+(s.h||('section '+(i+1)))+'”',sec:'guide',guide:true,
+      text:stripTags(s.h)+' \n '+stripTags(s.html)});
+  });
+  Object.keys(T.COPY||{}).forEach(function(g){
+    var v=T.COPY[g];
+    if(Array.isArray(v)) v.forEach(function(s,i){
+      out.push({where:(g==='walk'?'walkthrough screen ':humanise(g)+' ')+(i+1),sec:g==='walk'?'walk':'wording',
+        text:stringLeaves(s).map(stripTags).join(' \n ')});
+    });
+    else if(isGroup(v)) out.push({where:g==='verdicts'?'the verdicts':'Wording → '+humanise(g),sec:'wording',
+      text:stringLeaves(v).map(stripTags).join(' \n ')});
+  });
+  return out;
+}
+function renamedPathways(out){
+  var B=isGroup(BASE.OUT)?BASE.OUT:{}, names=[], places=null;
+  Object.keys(B).forEach(function(k){ if(B[k]&&B[k].name) names.push(B[k].name); });
+  Object.keys(T.OUT||{}).forEach(function(k){ if(T.OUT[k]&&T.OUT[k].name) names.push(T.OUT[k].name); });
+  Object.keys(B).forEach(function(k){
+    var was=B[k]&&B[k].name, now=T.OUT[k]&&T.OUT[k].name;
+    if(!was||!T.OUT[k]||now===was) return;
+    /* “Regulatory TAS” sits inside “Targeted Regulatory TAS”, so any longer
+       name containing this one is taken out of the text before looking */
+    var longer=names.filter(function(n){ return n!==was&&n.length>was.length&&n.indexOf(was)>=0; });
+    places=places||contentPlaces();
+    var hits=places.filter(function(p){
+      var t=p.text;
+      longer.forEach(function(n){ t=t.split(n).join(' '); });
+      return t.indexOf(was)>=0;
+    });
+    if(!hits.length) return;
+    var where=hits.slice(0,3).map(function(h){ return h.where; }).join(', ')
+      +(hits.length>3?' and '+(hits.length-3)+' more':'');
+    out.push({bad:false,t:(hits[0].guide?'The guide':'The wording')+' still says “'+was+'”',
+      d:'That pathway is called “'+(now||'(no name)')+'” now, but '+where+' still use'
+        +(hits.length===1?'s':'')+' the old name.',content:hits[0].sec});
+  });
+}
+
 function checks(){
   var out=[], reach=reachable();
   if(!T.NODES[ROOT]) out.push({bad:true,t:'No root question',d:'The tree starts at "'+ROOT+'", which does not exist.'});
@@ -1297,7 +2075,26 @@ function checks(){
     });
     if(!reach[id]) out.push({bad:false,t:(q.tag||id)+' is unreachable',d:'No option leads to it, so a reader can never see it.',go:{kind:'q',id:id}});
   });
+  renamedPathways(out);
+  /* An uploaded photograph lives in this deployment's database. With none,
+     every reader's request for it is a 404. Nothing breaks — the plain
+     page colour shows — but it is not what the editor chose, and a draft
+     carried over from a deployment that had storage would do it silently. */
+  if(T.THEME&&MEDIA_RE.test(T.THEME.photo)&&window.TAS&&TAS.auth.state.ready&&TAS.auth.state.storage!=='ready'){
+    out.push({bad:false,t:'The uploaded photograph has nowhere to come from',
+      d:TAS.auth.state.storage==='unconfigured'
+        ? 'This deployment has no storage, so readers will get a 404 for it and see the plain page colour instead. Choose the shipped photograph or none under Appearance, or attach a database.'
+        : 'Storage is not answering right now, so readers will get an error for it and see the plain page colour until it is back.',
+      content:'look'});
+  }
   return out;
+}
+function goContent(sec){
+  tab='content';
+  ['Inspect','Paths','Content','Check'].forEach(function(o){
+    document.getElementById('tab'+o).setAttribute('aria-selected',String(o==='Content'));
+  });
+  showSection(sec);
 }
 function renderChecks(){
   pane.innerHTML='<h2>Checks</h2><p class="sub">Run against the working copy as you edit.</p>';
@@ -1311,6 +2108,7 @@ function renderChecks(){
       document.getElementById('tabInspect').setAttribute('aria-selected','true');
       document.getElementById('tabCheck').setAttribute('aria-selected','false');
       select(i.go); };
+    else if(i.content) d.onclick=function(){ goContent(i.content); };
     wrap.appendChild(d);
   });
   pane.appendChild(wrap);
@@ -1325,6 +2123,7 @@ document.getElementById('bSave').onclick=function(){
   if(bad.length&&!confirm(bad.length+' problem(s) would ship with this draft:\n\n'
       +bad.slice(0,6).map(function(b){return '• '+b.t;}).join('\n')
       +(bad.length>6?'\n…':'')+'\n\nSave anyway?')) return;
+  if(draftHeld){ alert('Not saved: '+HELD_TEXT+'.'); return; }
   try{
     localStorage.setItem(DRAFT_KEY,JSON.stringify(T));
     markDirty(false);
@@ -1337,7 +2136,6 @@ document.getElementById('bExport').onclick=function(){
     '  if(typeof window!==\'undefined\') window.TAS_TREE=DATA;\n'+
     '  if(typeof module!==\'undefined\'&&module.exports) module.exports=DATA;\n})();\n';
   var lost=questionIds().filter(function(id){ return !reachable()[id]; });
-  var lost=questionIds().filter(function(id){ return !reachable()[id]; });
   if(lost.length){
     var NL=String.fromCharCode(10);
     var msg=lost.length+' question(s) cannot be reached by a reader, so they will not appear in the tree:'+NL+NL
@@ -1346,7 +2144,13 @@ document.getElementById('bExport').onclick=function(){
   }
   window.__exportBody=body;
   openDlg('Export — for publishing to everyone',body,
-    'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, replace tree-data.js in the repo, and commit.',false);
+    'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, replace tree-data.js in the repo, and commit.'
+    /* an uploaded photograph is a row in this deployment's database, and the
+       file names it by address — so the file carries it only as far as that
+       database reaches */
+    +(T.THEME&&MEDIA_RE.test(T.THEME.photo)
+      ? ' The photograph is one uploaded to this deployment: the file names it, but only a deployment with the same database can serve it — anywhere else readers see the plain page colour.'
+      : ''),false);
   document.getElementById('dlgSave').hidden=false;
 };
 document.getElementById('bImport').onclick=function(){
@@ -1356,7 +2160,8 @@ document.getElementById('bImport').onclick=function(){
 document.getElementById('bReset').onclick=function(){
   if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
-  T=clone(BASE); normaliseCopy(); sel=null; markDirty(false); render();
+  draftHeld=false;
+  T=clone(BASE); normaliseCopy(); applyLook(); sel=null; markDirty(false); render();
 };
 document.getElementById('bAddQ').onclick=function(){ addQuestion(null); };
 document.getElementById('bOpen').onclick=function(){ window.open('index.html','_blank'); };
@@ -1389,10 +2194,19 @@ document.getElementById('dlgOk').onclick=function(){
   if(m) txt=m[1];
   try{
     var d=JSON.parse(txt);
-    if(!d.NODES||typeof d.NODES!=='object') throw new Error('no NODES object found');
-    T=d;
+    if(!d||!d.NODES||typeof d.NODES!=='object') throw new Error('no NODES object found');
+    /* filtered on the way in, like every other source; without the filter
+       nothing pasted is taken at all */
+    if(!window.TAS_LOOK||typeof TAS_LOOK.cleanTree!=='function')
+      throw new Error('the content filter (look.js) did not load on this page, so nothing pasted can be checked. Reload and try again');
+    d=cleanContent(d);
+    if(!d) throw new Error('that is not a tree this editor can open');
+    T=d; draftHeld=false;
     ['OUT','NONTAS','CRITERIA','NEXT','LINKS'].forEach(function(k){ if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{}; });
+    /* the same merge a draft gets, so an export from before the guide and
+       the wording moved into the content still opens with all of it */
     normaliseCopy();
+    applyLook();
     sel=null; markDirty(); render();
     dlg.close?dlg.close():dlg.removeAttribute('open');
   }catch(e){ alert('Could not read that: '+e.message); }
@@ -1513,8 +2327,14 @@ function paintLink(){
 /* The shape /api stores: exactly what Export writes, minus the wrapper. */
 function currentData(){ return JSON.parse(JSON.stringify(T)); }
 function adoptFromAccount(item){
-  T=JSON.parse(JSON.stringify(item.data));
+  /* the server has already filtered what it stores and serves; this is the
+     same filter every other source gets, but not the only one on this path,
+     so a missing look.js does not refuse a tree the server vouched for */
+  var d=JSON.parse(JSON.stringify(item.data));
+  T=cleanContent(d)||d;
+  draftHeld=false;
   normaliseCopy();
+  applyLook();
   sel=null;
   try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(T)); }catch(e){}
   markDirty(false);
@@ -1641,17 +2461,173 @@ function cloudDialog(){
 
 /* ===========================================================================
    WHO MAY EDIT
-   ADMIN_EMAIL on the server names the one account allowed in here. The page
-   asks /api/auth/me, which answers `adminGate` (is there a gate at all) and
-   `admin` (are you through it), and paints one of four states: checking,
-   signed out, signed in as the wrong person, or in.
+   ADMIN_EMAIL on the server names the one account allowed to publish from
+   here. The page asks /api/auth/me — `adminGate` (is an editor named at all),
+   `admin` (are you it) — and editorState() turns the answer into one of:
+
+     checking     /api/auth/me has not answered yet
+     open         no database: no accounts and nowhere to publish to, so
+                  there is nobody to gate against and the editor stays open
+                  the way it did before accounts existed
+     unset        a database, but ADMIN_EMAIL is empty. Accounts are real and
+                  anyone can register one, so the server lets NOBODY publish
+                  or upload until an editor is named. The page says so up
+                  front rather than letting someone find out at Publish.
+     signed_out   sign in with the editor's account
+     unverified   the server says this is the editor's address but it has
+                  not been proven yet
+     wrong        signed in as some other account
+     in           through
+
+   Verified is what makes ADMIN_EMAIL mean anything. An account's address is
+   whatever was typed when it was registered, so on its own ADMIN_EMAIL would
+   hand the editor to whoever registered that address first. The server only
+   trusts it once it has been proven — by signing in with Google as that
+   address, or by the site owner running scripts/admin-user.mjs verify. The
+   page is never told which address ADMIN_EMAIL holds (that would tell anyone
+   who opened it whose account to go after), so where the server does not say
+   "unverified" in so many words, the wrong-account screen carries the
+   verification steps as well, for the one person they apply to.
 
    What this is honest about: /admin is a page the browser fetches like any
    other, so this decides whether the editor is *presented*, not whether the
    file can be read. A deployment that needs more than that puts Vercel
    Deployment Protection in front of the project or drops admin.html from the
-   deploy — both are in the README.
+   deploy — both are in the README. What actually stops a publish is the
+   server; this page only has to explain it in words.
    ========================================================================= */
+
+/* The codes the server may answer a refused publish or upload with, or name in
+   /api/auth/me's `adminReason`. More than one spelling of each is accepted so
+   the wording here does not hang on one string: an unrecognised refusal still
+   falls through to the server's own message, never to silence. */
+var EDITOR_UNSET={admin_unset:1,admin_unconfigured:1,admin_email_unset:1,no_admin:1,
+  editor_unset:1,editor_unconfigured:1};
+var EDITOR_UNVERIFIED={admin_unverified:1,editor_unverified:1,email_unverified:1,
+  unverified_email:1,unverified:1,not_verified:1};
+
+/* /api/auth/me names the reason (adminReason), but account.js keeps only the
+   fields every page needs and leaves it out of TAS.auth.state. Rather than
+   guess, the editor asks once for itself whenever a signed-in visitor is
+   stopped at the gate, and remembers the answer against exactly that user —
+   id, address and verified flag — so a sign-in as someone else, or the same
+   account after it is verified, is asked again rather than told the old
+   reason. */
+var gateReason={key:null,why:null};
+function userKey(u){ return u?JSON.stringify([u.id||null,u.email||null,u.emailVerified===true]):null; }
+function syncGateReason(){
+  if(!window.TAS) return;
+  var st=TAS.auth.state;
+  if(st.adminReason!==undefined) return;              /* account.js passes it now */
+  if(!st.ready||!st.user||st.admin||!st.adminGate) return;
+  var key=userKey(st.user);
+  if(gateReason.key===key) return;
+  gateReason={key:key,why:null};
+  TAS.api('/auth/me').then(function(d){
+    if(gateReason.key!==key) return;
+    gateReason.why=(d&&typeof d.adminReason==='string')?d.adminReason:null;
+    if(gateReason.why){ paintGate(); repaintLook(); }
+  },function(){});
+}
+function knownReason(st){
+  if(st.adminReason) return String(st.adminReason);
+  return (st.user&&gateReason.key===userKey(st.user)&&gateReason.why)||'';
+}
+
+function editorState(st){
+  if(!st||!st.ready) return 'checking';
+  var why=knownReason(st);
+  if(EDITOR_UNSET[why]) return 'unset';
+  if(!st.adminGate) return st.storage==='ready'?'unset':'open';
+  if(st.admin) return 'in';
+  if(!st.user) return 'signed_out';
+  if(EDITOR_UNVERIFIED[why]) return 'unverified';
+  return 'wrong';
+}
+/* true, false, or null when the server does not say */
+function emailVerified(u){
+  if(!u) return null;
+  if(u.emailVerified===true||u.verified===true||u.emailVerifiedAt) return true;
+  if(u.emailVerified===false||u.verified===false) return false;
+  return null;
+}
+function googleOffered(){ return !!(window.TAS&&TAS.auth.state.auth&&TAS.auth.state.auth.google); }
+
+/* The two ways an address gets verified, in words. `addr` is shown as typed
+   when we know it is the account's own; otherwise the command carries a
+   placeholder rather than a guess. */
+function verifyStepsHtml(addr){
+  var esc2=TAS.ui.esc, a=addr?'<b>'+esc2(addr)+'</b>':'that address';
+  return '<p><b>Sign in with Google as '+(addr?esc2(addr):'that address')+'</b> — Google has already '
+    +'checked the address, and the server takes its word for it.'
+    +(googleOffered()?'':' (Google sign-in is not turned on for this deployment, so this way is closed here.)')
+    +'</p><p>Or the site owner, from a machine with the database address, runs '
+    +'<code>node scripts/admin-user.mjs verify '+(addr?esc2(addr):'&lt;address&gt;')+'</code> '
+    +'to vouch for '+a+' directly.</p>';
+}
+function verifyStepsText(addr){
+  var a=addr||'the address';
+  return 'Verify '+a+' first: sign in with Google as '+a
+    +(googleOffered()?'':' (not turned on for this deployment)')
+    +', or have the site owner run "node scripts/admin-user.mjs verify '+(addr||'<address>')+'".';
+}
+var UNSET_HTML=
+  '<p>There is a database here, so accounts are real and anyone can register one — but '
+  +'<b>ADMIN_EMAIL</b> is empty, so the server has not been told whose editor this is. Until '
+  +'it has, it refuses every Publish and every photograph upload, from every account. Nothing '
+  +'reaches readers from this page.</p>'
+  +'<p>To publish, set <b>ADMIN_EMAIL</b> to the editor’s address wherever <b>DATABASE_URL</b> '
+  +'is set and redeploy, then verify that address: sign in with Google as it, or have the site '
+  +'owner run <code>node scripts/admin-user.mjs verify &lt;address&gt;</code>.</p>';
+var UNSET_TEXT='ADMIN_EMAIL is not set on this deployment, so the server refuses every publish and '
+  +'upload, from every account. Set ADMIN_EMAIL to the editor’s address wherever DATABASE_URL is '
+  +'set, redeploy, and verify that address.';
+
+/* Why the server refused a publish, withdraw or upload — in words, with what
+   to do — or null when the refusal is not about who may edit, so the caller
+   hands it to the ordinary error report. Returns {html,text}. */
+function editorRefusal(err){
+  if(!err||!window.TAS) return null;
+  var code=String(err.code||''), msg=String(err.message||'');
+  var st=TAS.auth.state, refused=err.status===403||code==='forbidden';
+  var addr=st.user&&st.user.email;
+  if(EDITOR_UNSET[code]||(refused&&editorState(st)==='unset'))
+    return {html:UNSET_HTML,text:UNSET_TEXT};
+  /* "limited to one verified account" is a rule, not a diagnosis, so only
+     wording that says THIS address is unproven counts */
+  if(EDITOR_UNVERIFIED[code]||(refused&&/\bunverified\b|\bnot (yet |been )*verified\b/i.test(msg)))
+    return {
+      html:'<p><b>'+(addr?TAS.ui.esc(addr):'This address')+' has not been verified.</b> It is the '
+        +'address the editor is limited to, but the server only trusts an address once it has '
+        +'been proven, so it will not publish from it yet.</p>'+verifyStepsHtml(addr),
+      text:(addr||'This address')+' has not been verified, so the server will not accept it as the editor yet. '
+        +verifyStepsText(addr)
+    };
+  if(!refused) return null;
+  return {
+    html:'<p><b>The server refused: this account is not the editor.</b> '
+      +(msg?TAS.ui.esc(msg)+' ':'')+'Only the account <b>ADMIN_EMAIL</b> names can publish, and only '
+      +'once its address is verified.</p>'
+      +(emailVerified(st.user)===true?'':'<p>If this is that account, verify it first.</p>'+verifyStepsHtml(addr)),
+    text:'The server refused: only the account ADMIN_EMAIL names can do this, and only once its address is verified.'
+      +(emailVerified(st.user)===true?'':' If this is that account, verify it first. '+verifyStepsText(addr))
+  };
+}
+/* A refusal shown where it happened, at the top of the open dialog, and the
+   account state asked again so the gate catches up with whatever the server
+   now thinks. Returns false when it was not a refusal of that kind. */
+function showRefusal(err,m){
+  var r=editorRefusal(err);
+  if(!r) return false;
+  var old=m.body.querySelector('.edRefusal');
+  if(old) old.parentNode.removeChild(old);
+  var box=TAS.ui.message(r.html,'bad');
+  box.className+=' edRefusal';
+  m.body.insertBefore(box,m.body.firstChild);
+  TAS.auth.refresh(true);
+  return true;
+}
+
 function gateShow(kk,title,bodyHtml,acts){
   var g=document.getElementById('gate');
   document.getElementById('gateKk').textContent=kk;
@@ -1664,69 +2640,94 @@ function gateShow(kk,title,bodyHtml,acts){
 }
 function gateHide(){ document.getElementById('gate').hidden=true; }
 
+var SIGNIN_REASON='<b>The editor is limited to one account.</b> Sign in with it to open the tree for editing.';
+function switchAccount(e){
+  var b=e.currentTarget; b.disabled=true;
+  TAS.auth.signOut().then(function(){
+    b.disabled=false;
+    TAS.auth.dialog({dismissable:true,guest:false,reason:SIGNIN_REASON});
+  });
+}
+
 function paintGate(){
   if(!window.TAS) return gateHide();
   var st=TAS.auth.state;
+  syncGateReason();
   var el=TAS.ui.el, esc2=TAS.ui.esc;
   var out=document.getElementById('bOut');
   if(out) out.hidden=!(st.user&&st.adminGate&&st.admin);
+  var s=editorState(st);
 
-  if(!st.ready){
+  if(s==='checking'){
     gateShow('The editor','Checking…','<p>Asking who you are signed in as.</p>',[]);
     return;
   }
-  /* No gate configured. With no database that is the right answer and always
-     was: there are no accounts, so there is nobody to gate against, and the
-     editor stays open the way it did before accounts existed.
+  if(s==='open'||s==='in'){ gateHide(); return; }
 
-     With storage READY that reasoning has gone. Accounts exist, anyone can
-     register, and publishing reaches every reader gated on ADMIN_EMAIL and
-     nothing else — so an editor that opens without asking is a deployment
-     someone forgot to finish, not a mode. It still opens, because refusing
-     would lock out whoever has to fix it, but it no longer does so quietly. */
-  if(!st.adminGate){
-    if(st.storage==='ready'){
-      gateShow('The editor','This editor is unprotected',
-        '<p>Anyone who reaches this page can edit the tree, and anyone who registers an '
-        +'account can publish it to every reader. There is a database here, so accounts '
-        +'are real — what is missing is the setting that says whose editor this is.</p>'
-        +'<p>Set <b>ADMIN_EMAIL</b> to that address wherever <b>DATABASE_URL</b> is set, '
-        +'then redeploy. The gate comes up by itself.</p>',
-        [
-          el('button',{class:'btn solid',type:'button',text:'Edit anyway',onclick:gateHide})
-        ]);
-      return;
-    }
-    gateHide(); return;
+  /* It still opens, because refusing would lock out whoever has to fix it and
+     the working copy lives in this browser either way — but it does not open
+     quietly, and it says plainly that nothing will reach readers from here. */
+  if(s==='unset'){
+    gateShow('The editor','Nobody can publish yet',
+      UNSET_HTML
+      +'<p>Editing, exporting and saving trees to your own account all still work.</p>',
+      [
+        el('button',{class:'btn solid',type:'button',text:'Edit without publishing',onclick:gateHide})
+      ]);
+    return;
   }
-  if(st.admin){ gateHide(); return; }
 
-  if(!st.user){
+  if(s==='signed_out'){
     gateShow('The editor','Sign in to edit',
       '<p>This editor is limited to one account. Sign in with it and the tree opens for editing.</p>'
+      +'<p>That account’s address has to be verified, too — signing in with Google as it does that.</p>'
       +'<p>The reader’s tree needs no account at all — only this page does.</p>',
       [
         el('button',{class:'btn solid',type:'button',text:'Sign in',onclick:function(){
-          TAS.auth.dialog({dismissable:true,guest:false,reason:'<b>The editor is limited to one account.</b> Sign in with it to open the tree for editing.'});
+          TAS.auth.dialog({dismissable:true,guest:false,reason:SIGNIN_REASON});
         }})
       ]);
     return;
   }
-  /* signed in, but not the account this editor belongs to */
+
+  var who='<div class="who">Signed in as <b>'+esc2(st.user.email)+'</b></div>';
+  var acts=[];
+  /* Attaching Google proves the address only when it is the same address;
+     the account screen says a different one is allowed, so this says it
+     has to match. It leads when the server has said "unverified", and sits
+     second when the page is only guessing that it might apply. */
+  if(googleOffered()&&emailVerified(st.user)!==true){
+    acts.push(el('a',{class:s==='unverified'?'btn solid':'btn',role:'button',text:'Verify with Google',
+      title:'Attach the Google account for this same address',
+      href:'/api/auth/google/start?link=1&next='+encodeURIComponent(location.pathname+location.search)}));
+  }
+
+  if(s==='unverified'){
+    acts.push(el('button',{class:'btn',type:'button',text:'Sign in as someone else',onclick:switchAccount}));
+    gateShow('Verify this address','Not verified yet',
+      who
+      +'<p>This is the address the editor is limited to, but the server only trusts an address once '
+      +'it has been proven — otherwise whoever registered it first would have the editor. Until then '
+      +'it will not let this account publish or upload.</p>'
+      +verifyStepsHtml(st.user.email),
+      acts);
+    return;
+  }
+
+  /* signed in, but not the account this editor belongs to — or it is, and the
+     server has not seen its address verified; the page cannot tell which */
+  acts.unshift(el('button',{class:'btn solid',type:'button',
+    text:'Sign in as someone else',onclick:switchAccount}));
+  acts.push(el('a',{class:'btn',href:'/work',text:'My work'}));
   gateShow('Not this account','The editor is someone else’s',
-    '<div class="who">Signed in as <b>'+esc2(st.user.email)+'</b></div>'
-    +'<p>This deployment limits the editor to one account, and that is not this one. Nothing is wrong with your account — it just is not the one that edits the tree.</p>'
-    +'<p>Sign in with the account that does.</p>',
-    [
-      el('button',{class:'btn solid',type:'button',text:'Sign in as someone else',onclick:function(e){
-        var b=e.currentTarget; b.disabled=true;
-        TAS.auth.signOut().then(function(){
-          b.disabled=false;
-          TAS.auth.dialog({dismissable:true,guest:false,reason:'<b>The editor is limited to one account.</b> Sign in with it to open the tree for editing.'});
-        });
-      }}),
-      el('a',{class:'btn',href:'/work',text:'My work'})
-    ]);
+    who
+    +'<p>This deployment limits the editor to one account, and the server does not accept this one. '
+    +'Nothing is wrong with your account — it just is not the one that edits the tree.</p>'
+    +'<p>Sign in with the account that does.</p>'
+    +(emailVerified(st.user)===true?'':
+      '<p>If this <em>is</em> the address the site owner named, it has not been verified yet, and '
+      +'the server will not take it as the editor until it is.</p>'+verifyStepsHtml(st.user.email)),
+    acts);
 }
 
 if(window.TAS){
@@ -1741,6 +2742,17 @@ if(window.TAS){
   TAS.auth.on('change',paintPublish);
   TAS.auth.ready().then(paintPublish);
   TAS.auth.on('change',paintLink);
+  /* Upload on the Appearance screen, and the stored-photograph check, both
+     depend on who is signed in and whether there is storage; neither is
+     known until /api/auth/me answers. Only those two views repaint, so
+     nobody loses a caret mid-word to a sign-in elsewhere. */
+  var repaintAuthViews=function(){ if(tab==='check') refreshPane(); else repaintLook(); };
+  TAS.auth.on('change',repaintAuthViews);
+  TAS.auth.ready().then(repaintAuthViews);
+  /* signing in reports the new user before it knows whether they are the
+     editor, and "signin" is what fires once it does */
+  TAS.auth.on('signin',repaintAuthViews);
+  TAS.auth.on('signout',repaintAuthViews);
   TAS.auth.ready().then(function(s){
     paintLink();
     /* /admin?tree=<id> — the link the work page hands you */
@@ -1805,6 +2817,17 @@ function publishDialog(){
         : 'Nothing is published yet, so readers are seeing <b>tree-data.js</b>, the file the repo ships. '
           +'Publishing puts this working copy in front of them instead.',
       pub&&pub.published?'good':null));
+    /* Offering a Publish the server is certain to refuse, and explaining
+       afterwards, is the wrong way round: with no editor named, say why now
+       and offer nothing but the way out. */
+    if(editorState(TAS.auth.state)==='unset'){
+      m.body.appendChild(TAS.ui.message(UNSET_HTML,'bad'));
+      m.foot.innerHTML='';
+      m.foot.appendChild(el('span',{class:'grow'}));
+      m.foot.appendChild(el('button',{class:'tasa-b solid',type:'button',text:'Close',
+        onclick:function(){ m.close(null); }}));
+      return;
+    }
     if(bad.length){
       m.body.appendChild(TAS.ui.message(
         '<b>'+bad.length+' problem'+(bad.length===1?'':'s')+' in this tree.</b> '
@@ -1828,7 +2851,7 @@ function publishDialog(){
             b.disabled=false;
             TAS.ui.toast('Withdrawn. Readers fall back to the file the repo ships.',null);
             load();
-          },function(err){ b.disabled=false; TAS.ui.report(err,'withdraw the published tree'); });
+          },function(err){ b.disabled=false; if(!showRefusal(err,m)) TAS.ui.report(err,'withdraw the published tree'); });
         }}));
     }
     m.foot.appendChild(el('span',{class:'grow'}));
@@ -1843,7 +2866,7 @@ function publishDialog(){
           m.close(true);
           TAS.ui.toast('Published. Every reader has it on their next load.','good',{ms:7000});
           paintPublish();
-        },function(err){ b.disabled=false; TAS.ui.report(err,'publish this tree'); });
+        },function(err){ b.disabled=false; if(!showRefusal(err,m)) TAS.ui.report(err,'publish this tree'); });
       }}));
   }
   function load(){
@@ -1863,5 +2886,6 @@ function paintPublish(){
 
 render();
 fit();
+if(draftHeld) setStatus('failed',HELD_TEXT);
 window.addEventListener('resize',function(){ fit(); });
 </script>

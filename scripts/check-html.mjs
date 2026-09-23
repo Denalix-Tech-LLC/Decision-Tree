@@ -5,10 +5,17 @@
    The pages carry their JavaScript inline, so a syntax error in one of them
    is invisible to `node --check` and shows up as a blank page instead. This
    pulls each <script> block out and parses it the way the browser would.
+
+   It also checks the two things about a page that only production sees: that
+   vercel.json's Content-Security-Policy still carries the hash of every
+   inline block (scripts/csp.mjs, npm run csp), and that .vercelignore uploads
+   everything the pages load and nothing that .gitignore keeps private.
    ========================================================================= */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
+import { cspProblems, readIgnore, isIgnored, deployable } from './csp.mjs';
 
 const files = process.argv.slice(2);
 const pages = files.length
@@ -42,7 +49,7 @@ for (const page of pages) {
 }
 
 /* the standalone scripts the pages load */
-for (const f of ['account.js', 'tree-data.js', 'view.js']) {
+for (const f of ['account.js', 'tree-data.js', 'look.js', 'view.js']) {
   if (!fs.existsSync(path.join(process.cwd(), f))) continue;
   try {
     new vm.Script(fs.readFileSync(f, 'utf8'), { filename: f });
@@ -166,8 +173,148 @@ for (const page of pages) {
   }
 }
 
+/* ---- Content-Security-Policy ---------------------------------------------
+   vercel.json allows each page's inline scripts by their SHA-256, so editing
+   one character of an inline script without regenerating the hashes gives a
+   page that parses, passes everything above, works on any server that does
+   not send the header — and is blank in production. This is the check that
+   makes that impossible to miss. The fix is always `npm run csp`. */
+{
+  const problems = cspProblems();
+  if (problems.length) {
+    bad++;
+    console.error(
+      '  vercel.json: the Content-Security-Policy is stale, and production would refuse\n' +
+        '    the pages’ own scripts:\n' +
+        problems.map((p) => '      ' + p).join('\n') +
+        '\n    Run: npm run csp'
+    );
+  } else {
+    console.log('  vercel.json        Content-Security-Policy hashes match every page');
+  }
+}
+
+/* ---- what a deployment uploads -------------------------------------------
+   Everything uploaded that is not a function is served, publicly. The CLI
+   reads .vercelignore and not .gitignore, which is how .pglite/ — the local
+   database, account emails and password hashes — came to be served by a
+   manual deploy. Two checks, one in each direction:
+     - nothing .gitignore keeps out of the repository may be uploaded, since
+       whatever is too private to commit is too private to publish;
+     - everything a page loads must be uploaded, or it 404s in production. */
+{
+  const root = process.cwd();
+  const vercel = readIgnore(root, '.vercelignore');
+  const git = readIgnore(root, '.gitignore');
+  const leaks = [];
+  const uploaded = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      const rel = dir ? dir + '/' + e.name : e.name;
+      if (e.name === '.git') continue;
+      const isDir = e.isDirectory();
+      if (!deployable(vercel, rel, isDir)) continue; /* not uploaded: fine */
+      if (isIgnored(git, rel, isDir)) leaks.push(rel + (isDir ? '/' : ''));
+      else if (isDir) walk(rel);
+      else uploaded.push(rel);
+    }
+  };
+  walk('');
+
+  const missing = [];
+  const refs = new Set(['api/[...route].js', 'api/index.js', 'package.json', 'package-lock.json', 'vercel.json']);
+  for (const page of pages) {
+    const src = fs.readFileSync(page, 'utf8');
+    for (const m of src.matchAll(/\b(?:src|href)="([\w./-]+\.(?:js|css|jpe?g|png|webp|svg|ico))"/g)) refs.add(m[1]);
+  }
+  for (const f of [...pages, 'theme.css'].filter((f) => fs.existsSync(f))) {
+    for (const css of cssBlocks(f)) {
+      for (const m of css.matchAll(/url\(\s*["']?([\w./-]+\.(?:jpe?g|png|webp|svg|woff2?))["']?\s*\)/g)) refs.add(m[1]);
+    }
+  }
+  for (const page of pages) refs.add(page);
+  for (const r of refs) {
+    const rel = r.replace(/^\.?\//, '');
+    if (!fs.existsSync(path.join(root, rel))) missing.push(rel + ' (referenced, but not on disk)');
+    else if (!deployable(vercel, rel, false)) missing.push(rel + ' (excluded by .vercelignore)');
+  }
+
+  if (leaks.length) {
+    bad++;
+    console.error(
+      '  .vercelignore: a deployment would upload, and serve publicly, what .gitignore keeps private:\n' +
+        leaks.map((l) => '      ' + l).join('\n')
+    );
+  }
+  if (missing.length) {
+    bad++;
+    console.error(
+      '  .vercelignore: the site needs files a deployment would leave out:\n' +
+        missing.map((l) => '      ' + l).join('\n')
+    );
+  }
+  if (!leaks.length && !missing.length) {
+    console.log(`  .vercelignore      uploads all ${refs.size} files the pages load, and nothing gitignored`);
+  }
+
+  /* ---- what a Git deployment would leave out ------------------------------
+     Both the GitHub Actions workflow and the dashboard's Git integration build
+     from a checkout, so a file that is on disk but not in git is uploaded by a
+     manual `npx vercel --prod` and missing from every Git deploy. That is how
+     a partial commit ships a function that fails at import (records.js needs
+     markup.js; the dispatcher needs the media routes) and a reader whose
+     look.js is a 404. A warning, not a failure: a working copy is allowed to
+     have new files it has not committed yet — but the next commit must
+     `git add` them. Staged files count as tracked. Skipped outside a
+     repository or without git. */
+  let tracked = null;
+  try {
+    const out = execFileSync('git', ['ls-files', '-z', '--cached'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    tracked = new Set(out.split('\0').filter(Boolean));
+  } catch {
+    /* not a git checkout, or git is not installed */
+  }
+  if (tracked) {
+    const untracked = uploaded.filter((f) => !tracked.has(f)).sort();
+    /* and the tooling: every file an npm script runs, plus the module this
+       check imports, so a commit cannot leave npm run check or selftest
+       pointing at a file only this machine has */
+    const tooling = new Set(['scripts/csp.mjs']);
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+      for (const cmd of Object.values(pkg.scripts || {})) {
+        for (const m of String(cmd).matchAll(/\bnode\s+([\w./-]+\.m?js)\b/g)) tooling.add(m[1]);
+      }
+    } catch {
+      /* an unreadable package.json fails loudly elsewhere */
+    }
+    for (const t of [...tooling].sort()) {
+      if (fs.existsSync(path.join(root, t)) && !tracked.has(t) && !untracked.includes(t)) untracked.push(t);
+    }
+    if (untracked.length) {
+      const quote = (u) => (/[\s[\]]/.test(u) ? '"' + u + '"' : u);
+      console.warn(
+        '  WARNING git:       ' + untracked.length + ' file(s) the site or its npm scripts need are not tracked.\n' +
+          '    A Git-based deploy (the workflow, or the dashboard) or a fresh clone would lack them:\n' +
+          untracked.map((u) => '      ' + u).join('\n') +
+          '\n    Before committing: git add ' + untracked.map(quote).join(' ')
+      );
+    } else {
+      console.log(`  git                tracks all ${uploaded.length} files a deployment uploads`);
+    }
+  }
+}
+
 if (bad) {
   console.error(`\n${bad} problem(s) found.`);
   process.exit(1);
 }
-console.log('\nAll page scripts parse, and escaping is quote-safe where it reaches attributes.');
+console.log(
+  '\nAll page scripts parse, escaping is quote-safe where it reaches attributes,\n' +
+    'the Content-Security-Policy matches, and a deployment uploads what it should.'
+);

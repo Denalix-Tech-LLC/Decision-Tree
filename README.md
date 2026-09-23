@@ -136,8 +136,11 @@ attached to questions that no longer say the same thing. A saved path reopens ag
 the tree it was answered against, whatever has changed since.
 
 Deleting anything moves it to a deleted list. Purging is a separate, confirmed action
-(`?purge=1&confirm=1`), and closing an account needs both the password and the word
-`DELETE`. There is no undo past that point and no backup — the dialog says so.
+(`?purge=1&confirm=1`), and closing an account needs the word `DELETE` and proof that it
+is the owner: the password, or for an account with no password (one made through
+Google) a sign-in within the last ten minutes. There is no undo past that point and no
+backup — the dialog says so. The same proof is asked, once in a while, before changing a
+password or linking or unlinking Google.
 
 An account is a place to keep work and nothing more. It is not a submission to EPA, it
 is not visible to anyone else, and nobody is notified when it is used. The tool sends
@@ -146,12 +149,19 @@ there is no mail path and inventing one would be a bigger promise than this depl
 can keep. Someone with database access resets a forgotten password instead:
 
 ```bash
-node scripts/admin-user.mjs passwd someone@example.org 'a new long passphrase'
+node scripts/admin-user.mjs passwd someone@example.org
 ```
 
-The same script lists accounts, shows what one holds, signs a person out everywhere,
-and deletes an account with its work. It is the whole of the administration story, and
-it is deliberately not a page on the site.
+It asks for the new password at a hidden prompt, typed twice. A password is never a
+command-line argument — that would put it in shell history and the process list — so
+one given as an argument is refused. For automation, set `TAS_NEW_PASSWORD` from a
+secret store, or pipe the password in on the first line of stdin. `passwd` also ends
+every session on the account.
+
+The same script creates an account (`create`, which also prompts), marks an address
+verified (`verify` — see [Who may edit](#who-may-edit)), lists accounts, shows what one
+holds, signs a person out everywhere, and deletes an account with its work. It is the
+whole of the administration story, and it is deliberately not a page on the site.
 
 ### Two ways in
 
@@ -177,16 +187,28 @@ https://your-project.vercel.app/api/auth/google/callback
 http://localhost:8777/api/auth/google/callback
 ```
 
-The two ways in meet on a **verified** email address. If a Google account's address
-matches an account someone registered with a password, the two are joined rather than
-duplicated — it is the same person, and Google has verified the address, which is what
-makes joining on it safe and would not be safe on an unverified one. An account created
-through Google has no password, and **Account settings** offers to set one so nobody is
+The two ways in meet on a **verified** email address. Registering with a password never
+verifies one — nothing in that proves the person owns the address — but Google does. So
+when a Google sign-in's address matches an existing account:
+
+- if that account's address is already verified, it is the same proven person, and the
+  Google identity is attached;
+- if it is not, whoever registered it never proved the address was theirs, and Google
+  has just proved who does. The owner takes the account over: the password someone else
+  chose is removed and every session on it ends, so anyone who pre-registered the address
+  keeps neither. The owner can set their own password afterwards.
+
+An account's address is never rewritten to a Google one. An account created through
+Google has no password, and **Account settings** offers to set one so nobody is
 locked to a single route; the same panel attaches or detaches a Google account, and
 refuses to detach the only way in. Typing a password for a Google-only account gets
 told to use the button rather than a wrong-password message it could never satisfy.
 
-There is no password reset by email, for either route — see below.
+There is no password reset by email, for either route — see above.
+
+Sessions last at most 30 days (sooner if unused), and an account keeps no more than 20.
+Over HTTPS the cookie is `__Host-tas_session`; the first deploy that introduced the prefix
+signed everyone out once, which is expected.
 
 ### If there is no database
 
@@ -336,7 +358,8 @@ Any Postgres does. Two routes, and the first needs no account you do not already
 #### Route A — from Vercel, no new signup
 
 Vercel's dashboard → your project → **Storage** → **Create** a Postgres database (the
-marketplace offers Neon; the free tier is enough). Connect it to the project and Vercel
+marketplace offers Neon; the free tier is enough — see [Limits](#limits) for how the tool
+keeps within it). Connect it to the project and Vercel
 sets the environment variables itself — no connection string to copy, no password to
 handle, and it gives you the pooled one by default.
 
@@ -375,11 +398,14 @@ functions generally cannot reach, and it gives one connection per instance with 
 pooling — serverless will exhaust it. The give-away is the shape: a pooler user is
 `postgres.<project-ref>`, a direct one is plain `postgres`.
 
-**3. Try it before you deploy.**
+**3. Try it before you deploy.** Put the string in `.env` as `DATABASE_URL`, then:
 
 ```bash
-npm run db:check -- "postgresql://postgres.abc:PASSWORD@aws-0-eu-west-2.pooler.supabase.com:6543/postgres"
+npm run db:check
 ```
+
+(It also takes the string as an argument, but then the password lands in your shell
+history.)
 
 It reports what the string points at, creates the schema, counts what is there, and
 names the cause when nothing answers — DNS, a refused password, the wrong pooler user,
@@ -392,7 +418,7 @@ password.
 | Variable | Value |
 |---|---|
 | `DATABASE_URL` | the pooler string from step 2 |
-| `ADMIN_EMAIL` | the one address allowed to edit the tree |
+| `ADMIN_EMAIL` | the one address allowed to publish the tree — and it must be verified |
 
 **5. Redeploy.** Environment variables do not apply to deployments that already exist,
 so nothing changes until a new one is built. The chip goes from *No saving* to *Sign in*,
@@ -404,20 +430,23 @@ turns up.
 
 #### Set ADMIN_EMAIL in the same breath
 
-This is the one that bites. With no database there are no accounts, so nobody can edit
-anything and the gate never comes up. The moment a database is attached, that changes:
-registration is open to anyone, and `PUT /api/tree` publishes the tree **every reader
-sees**. Its only gate is `ADMIN_EMAIL`.
+With a database attached, registration is open to anyone, and `PUT /api/tree` publishes
+the tree **every reader sees**. So the gate fails closed: with a database and no
+`ADMIN_EMAIL`, **nobody** can publish — not even you — and `/api/health` says
+`"editor": "nobody: …"` until it is set. Set it with `DATABASE_URL`, not after, and
+redeploy.
 
-```
-ok   with no ADMIN_EMAIL there is no gate
-ok   and everyone signed in may edit
-```
+The account must also have a **verified** address, or it still cannot publish. After the
+deploy, do one of these once:
 
-So without it, anyone on the internet can sign up and rewrite what Council is shown. Set
-it with `DATABASE_URL`, not after. With it set, the gate holds — *the named account is
-the editor, another signed-in account is not, and a guest is not*. A comma-separated
-list is accepted for a handover; one address is the intent.
+- sign in with **Google** as that address, or
+- from a checkout whose `.env` points at the same database, run
+  `node scripts/admin-user.mjs verify you@example.org` (for an account you know is yours),
+  or `passwd` / `create`, which set a password at a prompt and verify the account.
+
+With both in place the gate holds — *the named, verified account is the editor; another
+signed-in account is not, and a guest is not*. A comma-separated list is accepted for a
+handover; one address is the intent.
 
 `/admin` itself is the same sign-in. There is no second login: the editor is the account
 named in `ADMIN_EMAIL`, signing in through the same chip as everyone else. Anyone else
@@ -465,8 +494,12 @@ running it means a mistake surfaces at setup time instead of on someone's first 
 It prints the tables it finds and how many accounts exist.
 
 TLS certificate verification is off by default, because managed Postgres is usually
-signed by a chain Node does not carry. Set `PGSSLMODE=verify-full` once the provider's
-CA is in the trust store.
+signed by a chain Node does not carry. Ask for it with `PGSSLMODE` (or `sslmode=` in the
+URL): `verify-full` checks the chain and the host name, `verify-ca` the chain only.
+`PGSSLROOTCERT` names the CA — a file path, the PEM text itself (Vercel has variables but
+no files), or `system` for Node's own store, which also means `verify-full`. A request to
+verify wins over anything that would turn TLS off, and a CA that cannot be read is an
+error rather than a silent downgrade.
 
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` go in the same place if you want the
 Google button; leaving them out is a complete configuration, not a missing one. Add
@@ -476,11 +509,44 @@ deployments included, if accounts are on there too.
 Housekeeping is optional and can go on cron:
 
 ```bash
-npm run db:prune -- --trash 90
+npm run db:prune -- --trash 90 --media
 ```
 
-Expired sessions and stale login attempts always go; `--trash 90` also purges work that
-has been in someone's deleted list for over 90 days.
+Expired and over-age sessions, stale login attempts and abandoned Google sign-ins always
+go; `--trash 90` also purges work that has been in someone's deleted list for over 90
+days, and `--media` removes uploaded images more than a week old that no published tree,
+saved tree or saved path mentions. (It cannot see an unpublished, unsaved draft in the
+editor's own browser, so publish or save before relying on it.)
+
+### Limits
+
+Sized for a free-tier database of about 0.5 GB, because on Neon going over the storage
+cap makes every write fail — including the ones that let people sign in. Each can be
+raised with an environment variable on a bigger database:
+
+| Limit | Default | Variable |
+|---|---|---|
+| everything one account keeps: paths, documents, trees — deleted ones too, until purged | 5 MB | `TAS_ACCOUNT_BYTES` |
+| uploaded backdrop images, for the whole deployment | 25 MB | `TAS_MEDIA_BYTES` |
+| the database as a whole: past it new work is refused, sign-in still works | 400 MB | `TAS_DB_BYTES` |
+| successful registrations per client address per hour | 20 | `TAS_REGISTRATIONS_PER_IP` |
+
+The registration limit is per address because a Tribal office, a conference room or a
+workshop usually reaches the internet through one; raise it for a larger session. A
+refused request says why in a sentence, and points at the prune command where that is
+the answer.
+
+### Before you deploy a change
+
+- **A new file the site serves** (a page, a script, an image) must be let in by
+  `.vercelignore`, which is an allowlist: anything it does not name stays off the
+  deployment. `npm run check` fails if a page references a file it would leave out, and
+  warns about files the site needs that git does not track yet.
+- **An edit to an inline `<script>`** in `index.html`, `admin.html` or `work.html` changes
+  its hash, and the Content-Security-Policy in `vercel.json` allows scripts by hash. Run
+  `npm run csp` after the edit; `npm run check` fails until you do, and the dev server
+  sends the same headers, so a stale hash blanks the page locally before it can in
+  production.
 
 ## Local development
 
@@ -546,20 +612,21 @@ send a charset mangle every em-dash, curly quote and `§`.
 
 ## Editing the tree
 
-The questions, options, pathways and result content live in `tree-data.js`.
-Edit it by hand, or visually at **`/admin`**.
+Everything a reader sees lives in `tree-data.js`: the questions and options, the
+pathways, the result content, the seven disclaimers, the contact details, the guide,
+the walkthrough, the wording of every label and heading (`COPY`), and the backdrop
+(`THEME`). Edit it by hand, or visually at **`/admin`**.
 
 The editor draws the whole tree — every question with its options fanned
 beneath it — and you edit by clicking a card. You can retitle anything, add or
-remove options, point an option at any question or ending, and edit the pathways,
-the result boilerplate, the seven disclaimers and the contact details. A Checks tab
-flags options that lead nowhere, questions with no text, and questions nothing can
-reach.
+remove options, point an option at any question or ending, and give an option a hint,
+a note shown once it is chosen, and a detail for the full result. The Content tab holds
+the rest: Result, Disclaimers, Contact, Guide, Walkthrough, Wording and Appearance. A
+Checks tab flags options that lead nowhere, questions with no text, and questions
+nothing can reach.
 
-The guide copy is bundled in `index.html` rather than in `tree-data.js`, because it
-describes how the tool behaves rather than what it recommends — but it does quote the
-four pathway names and the result panel's running order, so renaming a pathway at
-`/admin` puts the guide out of date and the editor cannot warn you.
+The guide and the verdict headlines quote the pathway names, so renaming a pathway
+under Pathways means renaming it there too.
 
 Edits **save themselves** as you make them, into `localStorage`, so the tree at
 `/` always shows what the editor shows — in that browser. The status in the
@@ -614,9 +681,11 @@ alongside email and password — carrying on as a guest is not offered, because 
 exactly what the gate is refusing. A comma-separated list is accepted for a handover
 week, but one address is the intent.
 
-Leave `ADMIN_EMAIL` unset and the editor stays open to anyone who reaches it, which is
-how this tool worked before accounts existed and how a deployment with no database has
-to keep working.
+The named account must have a verified address — see
+[Set ADMIN_EMAIL in the same breath](#set-admin_email-in-the-same-breath). Leave
+`ADMIN_EMAIL` unset on a deployment with a database and nobody can publish. With no
+database at all there are no accounts, and the editor works in that browser only, as it
+always has.
 
 The editor drops the account chip and the guide link when it is gated: a *Sign in*
 button in a toolbar the page will not show you until you have signed in is offering
@@ -634,14 +703,12 @@ so this decides whether the editor is *presented*, not whether the file can be r
 Everything it can actually change is already scoped: it writes to the visitor's own
 browser and to their own account, and neither changes what anyone else sees. If the
 editor must be genuinely unreachable, put Vercel Deployment Protection on the project,
-or drop `admin.html` from the deploy via `.vercelignore` and run it locally.
+or take `admin.html` out of the allowlist in `.vercelignore` and run it locally.
 
 Saving to an account is not publishing. A saved tree is that account's copy; the tree
-the public sees is still what `tree-data.js` ships, so publishing still means
-**Export** and a commit. Content precedence at `/` is unchanged, with the account
-sitting alongside rather than above: the bundled copy, then `tree-data.js`, then this
-browser's draft — and a saved tree only when one is opened deliberately, by
-`/?tree=<id>` or from the editor.
+the public sees is the published one, or `tree-data.js` if nothing is published. A saved
+tree reaches `/` only when it is opened deliberately, by `/?tree=<id>` or from the
+editor.
 
 Anyone with an account can save a tree, and each account sees only its own. This is
 storage for a person's working copies, not a shared editorial workflow with review and
@@ -649,46 +716,27 @@ approval. If several people need to edit one canonical tree, the seam is still
 `tree-data.js` — serve that same JSON shape from an endpoint of your own and the viewer
 needs no other change.
 
-## The sunset
+## The backdrop
 
-The backdrop is a sunset, drawn rather than photographed: cool dusk overhead, a mauve
-band, then the sun's own band and gold at the horizon, with layered ridgelines
-darkening as they come near and a sun sitting on the nearest of them. It moves with the
-theme — after dark it is the last of the light behind black ridges — and it is the same
-on `/`, `/admin` and `/work`, so the three read as one tool.
+Behind all three pages is one photograph, edge to edge, held at low opacity so card text
+keeps its contrast. The repo ships `land.jpg`, a lake at sunset. It is chosen at
+**`/admin` → Content → Appearance**, and carried in the content as `THEME`, so it
+publishes with everything else:
 
-Every colour in it is a mix of a brand colour with a brand neutral, the way the card
-tints are; the tokens are `--sky-top`, `--sky-mid`, `--sky-glow`, `--sky-bot`,
-`--ridge-1/2/3`, `--haze`, `--cloud` and `--mote`, and retuning the scene means editing
-those and nothing else. The two exceptions are the sun's own `--sun-core` and
-`--sun-halo`, which are brighter than the palette allows because they are a light
-source rather than a surface — the same exception the arrival bloom already took.
+- the shipped `land.jpg`, an uploaded image, or none (the plain page colour);
+- where the image sits vertically, and its opacity in the light and dark themes.
 
-Cards keep the neutral surfaces, so nothing behind the sunset changes the contrast of
-text sitting on top of it. The sun sits at 64% across on the tree and at 34% in the
-editor, because the editor keeps an inspector down its right-hand side and 64% there is
-behind a panel. `--halo`, the wide stroke drawn under each limb of the tree,
-is the one thing that had to follow the sky: it used to be the page background, which
-read as a cold outline once the sky went warm.
+An upload (JPEG, PNG or WebP) is resized in the browser, stored in Postgres, named by
+its SHA-256 and served from `/api/media/<hash>` with long-lived caching. That needs a
+database, and counts toward the deployment's 25 MB image budget (see [Limits](#limits)).
+`look.js` decides what a `THEME` may say — only `land.jpg`, an uploaded image's address,
+or nothing — so content can never point the page at another site's image.
 
-## Using a photograph as the horizon
-
-Drop an image named `land.jpg` beside `index.html` and it becomes the horizon on
-both the tree and the editor. `.png` and `.webp` work too — change the filename
-in the `.env .photo` rule.
-
-If no such file exists nothing breaks: the background simply does not paint and
-the drawn ridgelines show through, so the page is complete either way.
-
-The image is treated rather than dropped in raw — masked away toward the top
-where the cards sit, warmed toward the sunset behind it, held at low opacity
-(`--photo-op`, .34 light / .2 dark), and covered by a gradient scrim in `--sky-bot`. Card text
-measured 15.99:1 with the image in place, unchanged from without it. Tune
-`--photo-op` if it reads too strong or too faint.
+If the image fails to load nothing breaks: the page colour shows, and the tool is
+complete either way.
 
 **Choosing the image is a decision for the Tribe deploying this, not a default
 to be shipped.** A photograph of one nation's country used as decoration on a
-tool other nations open makes a claim about whose land it is; the drawn
-ridgelines are deliberately region-neutral for that reason. Use a photograph the
+tool other nations open makes a claim about whose land it is. Use a photograph the
 Tribe owns or has cleared, and check the rights — the file is served publicly
 alongside the page.

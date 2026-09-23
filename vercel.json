@@ -24,6 +24,90 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(), microphone=(), camera=()"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-EK9GK5WGALNulq+aDiMF16kP+RAGVyWqf/8B+BPMgJ4='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/index",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-EK9GK5WGALNulq+aDiMF16kP+RAGVyWqf/8B+BPMgJ4='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-EK9GK5WGALNulq+aDiMF16kP+RAGVyWqf/8B+BPMgJ4='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-ZyrWn5oOpLDwlaCtqeWXBHtT5ozCbbmUDlgEtvQ9JRc='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-ZyrWn5oOpLDwlaCtqeWXBHtT5ozCbbmUDlgEtvQ9JRc='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/work",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-8UVtpI19uRPVMKptBSGmJ7qoh0Ev4QsJjcizc2AcUd4='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/work.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-8UVtpI19uRPVMKptBSGmJ7qoh0Ev4QsJjcizc2AcUd4='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/((?!api/media/|index$|index\\.html$|admin$|admin\\.html$|work$|work\\.html$).+)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         }
       ]
     },
@@ -73,12 +157,21 @@
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/api/((?!media/).*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "no-store, no-cache, must-revalidate, max-age=0"
         },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/api/media/(.*)",
+      "headers": [
         {
           "key": "X-Robots-Tag",
           "value": "noindex"

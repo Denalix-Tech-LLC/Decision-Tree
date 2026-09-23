@@ -21,6 +21,16 @@
    Changing what a module in _lib exports is the one case that needs a
    restart, and the server says so.
 
+   It serves what production serves and nothing more. The headers come from
+   vercel.json — including the Content-Security-Policy, so a page whose inline
+   script no longer matches its hash goes blank here, not first in
+   production. Files follow .vercelignore, so .env, .pglite/ (a real database
+   with real password hashes), .git/ and node_modules are never handed out.
+   And it answers only to localhost: a request whose Host is anything else is
+   refused, because otherwise a web page elsewhere can point its own domain at
+   127.0.0.1 (DNS rebinding) and read this server — and write to it, since the
+   API's same-origin check compares Origin against that same Host.
+
    ========================================================================= */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -28,6 +38,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { loadEnv } from './scripts/env.mjs';
+import { headersFor, readIgnore, deployable } from './scripts/csp.mjs';
 
 loadEnv();
 /* Cookies over plain http on localhost cannot carry Secure, or no browser
@@ -170,12 +181,60 @@ async function loadHandler(file) {
   return fn;
 }
 
+/* ---- what production would send ---------------------------------------- */
+
+/* vercel.json and .vercelignore, re-read when they change so an `npm run csp`
+   takes effect without a restart. */
+const watched = new Map();
+function fresh(file, parse) {
+  const full = path.join(ROOT, file);
+  let mtime = 0;
+  try {
+    mtime = fs.statSync(full).mtimeMs;
+  } catch {
+    /* missing: parse() decides what that means */
+  }
+  const hit = watched.get(file);
+  if (hit && hit.mtime === mtime) return hit.value;
+  const value = parse(full);
+  watched.set(file, { mtime, value });
+  return value;
+}
+const vercelConfig = () => fresh('vercel.json', (f) => JSON.parse(fs.readFileSync(f, 'utf8')));
+const ignoreRules = () => fresh('.vercelignore', () => readIgnore(ROOT));
+
+/* The Host header, checked against the port this socket actually accepted
+   on — which is the right one even when the self-test asks for port 0. */
+function localHost(req) {
+  const port = req.socket.localPort;
+  const host = String(req.headers.host || '').toLowerCase();
+  return ['localhost', '127.0.0.1', '[::1]'].some(
+    (n) => host === n + ':' + port || (port === 80 && host === n)
+  );
+}
+
 /* ---- static ------------------------------------------------------------- */
 
+/* The file a URL names, or null for anything that is not plainly a path under
+   the root: a malformed escape, a NUL, a drive letter, a way back out. */
 function safeJoin(root, urlPath) {
-  const clean = path.normalize(decodeURIComponent(urlPath)).replace(/^([/\\])+/, '');
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath);
+  } catch {
+    return null;
+  }
+  if (decoded.includes('\0')) return null;
+  const clean = path.normalize(decoded).replace(/^([/\\])+/, '');
   const full = path.join(root, clean);
-  return full.startsWith(root) ? full : null;
+  const rel = path.relative(root, full);
+  return rel.startsWith('..') || path.isAbsolute(rel) ? null : full;
+}
+
+function notFound(res) {
+  res.statusCode = 404;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  return res.end('<h1>404</h1><p>No such page. Try <a href="/">/</a>.</p>');
 }
 
 async function serveStatic(req, res, urlPath) {
@@ -203,11 +262,11 @@ async function serveStatic(req, res, urlPath) {
       stat = null;
     }
   }
-  if (!stat) {
-    res.statusCode = 404;
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.end('<h1>404</h1><p>No such page. Try <a href="/">/</a>.</p>');
-  }
+  /* Judged on the file actually resolved — after clean URLs, directory
+     indexes and any ../ — and answered with the same 404 as a file that does
+     not exist, so nothing here says whether .env is there to be had. */
+  const rel = path.relative(ROOT, file).split(path.sep).join('/');
+  if (!stat || !deployable(ignoreRules(), rel, stat.isDirectory())) return notFound(res);
   res.statusCode = 200;
   res.setHeader('Content-Type', TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -218,9 +277,17 @@ async function serveStatic(req, res, urlPath) {
 
 async function requestHandler(req, res) {
   const started = Date.now();
-  const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
+  if (!localHost(req)) {
+    res.statusCode = 421;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.end('This development server only answers to localhost.\n');
+  }
+  const url = new URL(req.url, 'http://localhost');
   let label = '';
   try {
+    /* Before the handler runs, so a route that sets its own value for a
+       header — the media route's sandbox policy — has the last word. */
+    for (const [k, v] of headersFor(vercelConfig(), url.pathname)) res.setHeader(k, v);
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       const segments = url.pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
       const hit = await resolveApi(segments);
@@ -285,6 +352,11 @@ if (invokedDirectly) {
     if (localDb) {
       process.env.DATABASE_URL = localDb.url;
       process.env.PGSSL = 'off';
+      /* A PGSSLMODE=verify-full or PGSSLROOTCERT in .env is meant for the real
+         database, and db.js honours a verification request over PGSSL=off —
+         which would demand TLS from this in-process one, which has none. */
+      delete process.env.PGSSLMODE;
+      delete process.env.PGSSLROOTCERT;
     } else {
       console.error('  --pglite asked for, but the devDependency is missing. Run npm install.');
     }

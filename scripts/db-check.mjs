@@ -26,7 +26,7 @@ if (arg) process.env.DATABASE_URL = arg;
 /* The app's own precedence, imported rather than copied: a checker that looks
    at a different variable than the app is a checker that passes while
    production is down. */
-const { connectionString, connectionSource, URL_VARS } = await import('../api/_lib/db.js');
+const { connectionString, connectionSource, URL_VARS, sslFor } = await import('../api/_lib/db.js');
 
 const URL_STR = connectionString();
 if (!URL_STR) {
@@ -79,6 +79,26 @@ console.log('  database  ' + db);
 console.log('  user      ' + user);
 console.log('  password  ' + (u.password ? String(u.password.length) + ' characters' : 'NONE'));
 console.log('  sslmode   ' + (u.searchParams.get('sslmode') || '(unset)'));
+/* The decision the app will make from all of it — the URL's sslmode,
+   PGSSLMODE, PGSSLROOTCERT, PGSSL — so a verification request that is not
+   being honoured shows up here rather than as a mystery in production. */
+{
+  let tls;
+  try {
+    const ssl = sslFor(URL_STR);
+    const own = ssl && ssl.ca ? ', against PGSSLROOTCERT' : '';
+    tls = !ssl
+      ? 'off (no encryption)'
+      : !ssl.rejectUnauthorized
+        ? 'encrypted, certificate NOT verified (the default)'
+        : ssl.checkServerIdentity
+          ? 'encrypted, certificate chain verified (verify-ca)' + own
+          : 'encrypted, certificate and host name verified (verify-full)' + own;
+  } catch (err) {
+    tls = 'cannot be set up: ' + err.message;
+  }
+  console.log('  tls       ' + tls);
+}
 
 /* ---- what kind of host is this, before dialling it ---------------------- */
 const notes = [];
@@ -163,7 +183,12 @@ function diagnose(err) {
     return 'That database name does not exist on the server.';
   }
   if (/self.signed|certificate/i.test(msg)) {
-    return 'TLS refused the certificate. This project turns verification off by\n  default, so something has set PGSSLMODE=verify-full.';
+    return (
+      'TLS refused the certificate. This project turns verification off by\n' +
+      '  default, so something asked for it: sslmode=verify-full or verify-ca in\n' +
+      '  the URL, PGSSLMODE, or PGSSLROOTCERT. Give it the provider’s CA certificate\n' +
+      '  in PGSSLROOTCERT (a path, or the PEM text) rather than turning it off.'
+    );
   }
   if (/unsupported startup parameter/i.test(msg)) {
     return 'The pooler refused a startup parameter. This codebase sends none that it\n  should not, so something in the connection string is asking for one — look\n  for options=... and remove it.';
@@ -202,6 +227,7 @@ try {
     ['accounts', 'select count(*)::int as n from users'],
     ['saved trees', 'select count(*)::int as n from trees'],
     ['published tree', 'select count(*)::int as n from site_tree'],
+    ['uploaded images', 'select count(*)::int as n from media'],
   ]) {
     try {
       const r = await rawQuery(sql);

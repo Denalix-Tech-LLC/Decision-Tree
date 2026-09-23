@@ -28,7 +28,23 @@ export const tooMany = (message, retryAfter) =>
   new HttpError(429, 'rate_limited', message || 'Too many attempts. Wait a moment.', {
     retryAfter,
   });
-export const tooLarge = (message) => new HttpError(413, 'too_large', message || 'That is too big.');
+/* The code is overridable because "that one thing is too big" and "there is
+   no room for another one" are both 413, and a client wants to tell them
+   apart without parsing the sentence. */
+export const tooLarge = (message, code = 'too_large') =>
+  new HttpError(413, code, message || 'That is too big.');
+/* The whole database is near its ceiling (records.js databaseFull). 507
+   Insufficient Storage: not this request's fault, and not fixed by
+   retrying it smaller. */
+export const storageFull = (message) =>
+  new HttpError(
+    507,
+    'storage_full',
+    message ||
+      'This deployment has run out of room for new saved work. Nothing already saved is affected, ' +
+        'and signing in still works. The site owner needs to clear space (npm run db:prune) ' +
+        'or raise TAS_DB_BYTES on a bigger database.'
+  );
 
 export function json(res, status, body) {
   res.statusCode = status;
@@ -85,9 +101,30 @@ const MAX_BODY = 2_000_000; /* 2 MB — a tree definition is tens of KB */
 
 export async function readJson(req) {
   /* Vercel's Node runtime parses a JSON body for us; the local dev server
-     does not, and neither does a request that arrived as a stream. */
-  if (req.body && typeof req.body === 'object') return req.body;
+     does not, and neither does a request that arrived as a stream. A body
+     that arrives already parsed has skipped the count below, so the same
+     ceiling is applied to it here — by the declared length when there is
+     one, and by measuring it when there is not — or the only limit left on
+     a pre-parsed body would be the platform's own 4.5 MB. */
+  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+    const declared = Number(req.headers && req.headers['content-length']);
+    const size = Number.isFinite(declared) && declared > 0 ? declared : jsonSize(req.body);
+    if (size > MAX_BODY) throw tooLarge('The request body is larger than 2 MB.');
+    return req.body;
+  }
+  if (Buffer.isBuffer(req.body)) {
+    if (req.body.length > MAX_BODY) throw tooLarge('The request body is larger than 2 MB.');
+    if (!req.body.length) return {};
+    try {
+      return JSON.parse(req.body.toString('utf8'));
+    } catch {
+      throw bad('bad_json', 'The request body was not valid JSON.');
+    }
+  }
   if (typeof req.body === 'string' && req.body) {
+    if (Buffer.byteLength(req.body, 'utf8') > MAX_BODY) {
+      throw tooLarge('The request body is larger than 2 MB.');
+    }
     try {
       return JSON.parse(req.body);
     } catch {
@@ -107,6 +144,90 @@ export async function readJson(req) {
   } catch {
     throw bad('bad_json', 'The request body was not valid JSON.');
   }
+}
+
+/* The body as bytes, for the one route that takes something other than JSON:
+   an uploaded image. Capped while it streams, so an oversized upload is
+   refused as it arrives rather than after it has all been held in memory.
+
+   Two things this has to survive that readJson does not care about:
+
+     - A runtime that has already buffered the body hands it over as
+       req.body. Vercel's does that as a Buffer for some content types, so a
+       Buffer is taken as it is. A string is not — it has been decoded as
+       text somewhere on the way, and a JPEG decoded as UTF-8 is no longer the
+       JPEG, so it is refused rather than stored damaged.
+     - Going over the cap must not destroy the request. Leaving a for-await
+       loop early destroys the stream, and destroying an IncomingMessage takes
+       the socket with it, so the client would see a reset instead of the 413
+       that says what went wrong. So this listens by hand, and on overflow
+       stops keeping chunks and lets the rest drain to nowhere while the
+       answer goes out. */
+export async function readRaw(req, maxBytes) {
+  const limit = Math.max(0, Math.floor(Number(maxBytes) || 0));
+  const words =
+    limit >= 1_000_000 && limit % 1_000_000 === 0
+      ? limit / 1_000_000 + ' MB'
+      : limit.toLocaleString('en-US') + ' bytes';
+  const overflow = () => tooLarge('The request body is larger than ' + words + '.');
+
+  if (Buffer.isBuffer(req.body) || req.body instanceof Uint8Array) {
+    const buf = Buffer.from(req.body.buffer, req.body.byteOffset, req.body.byteLength);
+    if (buf.length > limit) throw overflow();
+    return buf;
+  }
+  if (typeof req.body === 'string' && req.body) {
+    throw bad('bad_body', 'The upload arrived as text, not bytes, so it cannot be stored intact.');
+  }
+  /* A declared length over the cap is refused before a byte is read. The
+     count below still applies, because the header is the client's word. */
+  const declared = Number(req.headers['content-length']);
+  if (Number.isFinite(declared) && declared > limit) {
+    req.resume();
+    throw overflow();
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let done = false;
+    const finish = (err, value) => {
+      if (done) return;
+      done = true;
+      req.off('data', onData);
+      req.off('end', onEnd);
+      req.off('error', onError);
+      if (err) reject(err);
+      else resolve(value);
+    };
+    const onData = (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        chunks.length = 0;
+        /* keep it flowing, so the rest is read and discarded */
+        req.resume();
+        finish(overflow());
+        return;
+      }
+      chunks.push(chunk);
+    };
+    const onEnd = () => finish(null, Buffer.concat(chunks, size));
+    const onError = (err) => finish(err);
+    req.on('data', onData);
+    req.on('end', onEnd);
+    req.on('error', onError);
+    /* A stream that has already ended will never say 'end' again, so waiting
+       for it would hang until the platform's timeout. But readableEnded is
+       only the truth when req.on is the stream's own. Vercel reads every body
+       before the handler runs and then replaces req.on on the request itself,
+       replaying 'data' and 'end' from a copy; there the original stream is
+       finished while the bytes are still on their way, and taking this
+       shortcut stored every upload as empty. An own-property `on` means
+       someone is replaying, so the listeners above are left to hear it. */
+    if (req.readableEnded && !Object.prototype.hasOwnProperty.call(req, 'on')) {
+      finish(null, Buffer.alloc(0));
+    }
+  });
 }
 
 export function parseCookies(req) {
@@ -211,6 +332,10 @@ function sendError(req, res, err) {
       res.setHeader('Retry-After', String(Math.ceil(err.retryAfter)));
     }
     if (err.fields) body.fields = err.fields;
+    /* Which proof of identity a reauth_required error will accept
+       ('password' | 'google' | 'any'), set by auth.js requireRecentAuth, so
+       the client offers only the ones that can work. */
+    if (err.reauth) body.reauth = err.reauth;
     return json(res, err.status, body);
   }
   if (err instanceof DbUnconfigured || err?.code === 'db_unconfigured') {
