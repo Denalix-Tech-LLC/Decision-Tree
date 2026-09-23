@@ -35,9 +35,6 @@ a{color:var(--accent-ink)}
 /* and the light it throws along the horizon, wider and much fainter */
 
 /* slow cloud banks */
-.env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
-.env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
-.env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
 
 /* the haze band the Act exists to clear */
 
@@ -569,12 +566,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   .tnode.entering{transition:opacity .4s linear!important}
   .tnode.entering.slow{transition:opacity .55s linear!important}
   .tnode.notaken{opacity:.42!important;filter:saturate(.28)!important}
-  .env .ridges{transform:none!important}
-  .env .clouds span,.env .motes span{animation:none!important}
   .env .bloom,.env .sparks,.env .flash{display:none!important}
   .tnode.result.arrived{animation:none!important}
   .doc{animation:none!important}
-  .env .motes span{opacity:.5!important}
   .btn:hover,.tnode:hover{transform:none!important}
 }
 
@@ -602,17 +596,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 </style>
 
 <div class="env" aria-hidden="true">
-  <div class="sky"></div>
-  <div class="sun"></div>
   <div class="photo"></div>
-  <div class="clouds"><span></span><span></span><span></span></div>
-  <div class="haze"></div>
-  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
-    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
-    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
-    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
-  </svg>
-  <div class="motes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 </div>
 
 <div class="shell">
@@ -1675,9 +1659,16 @@ function focusFrontier(){
   }
   applyView();
 }
+/* Every zoom the reader makes — pinch, ctrl+wheel, the + and − buttons —
+   goes through here, and none of them may shrink the tree past the point
+   where the whole of it is already on screen. Beyond that nothing more comes
+   into view; the cards only get smaller. Fit is the exception, and is meant
+   to be: it sets the scale directly, because asking to see everything is
+   asking for exactly that. */
 function zoomBy(k,cx,cy){
   if(!window.TASView) return;
-  TASView.zoom(view,stage.getBoundingClientRect(),k,cx,cy);
+  var r=stage.getBoundingClientRect();
+  TASView.zoom(view,r,k,cx,cy,TASView.floorFor(r,bbox(),26,0.3,0.75));
   applyView();
 }
 var drag=null;
@@ -1700,8 +1691,12 @@ stage.addEventListener('wheel',function(e){
   /* Scrolling PANS the canvas. Only an explicit zoom gesture (ctrl/cmd+wheel,
      pinch, or the +/-/Fit buttons) is allowed to change the tree's size. */
   if(e.ctrlKey||e.metaKey){
+    /* ctrl+wheel is also what a two-finger trackpad pinch arrives as, in
+       dozens of tiny events. A fixed step per event flung the tree to the
+       floor on the gentlest pinch; the factor is proportional to the delta
+       now — see TASView.wheelFactor. */
     var r=stage.getBoundingClientRect();
-    zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX-r.left,e.clientY-r.top);
+    zoomBy(window.TASView?TASView.wheelFactor(e):1,e.clientX-r.left,e.clientY-r.top);
     return;
   }
   if(e.shiftKey){ view.tx-=e.deltaY; }
@@ -1739,7 +1734,19 @@ function relayout(){
     var q=nodesEl.querySelector('.tnode.q');
     var stale=q&&Math.abs(q.offsetWidth-questionW())>1;
     if(stale){ stopReveal(); build(); focusFrontier(); }
-    else fit();
+    /* This used to call fit(), which scales to the WHOLE tree. Since one of
+       the things that calls relayout is pointerup on the stage, every pan
+       ended by shrinking the tree — and further each time, because the tree it
+       was fitting had grown another row:
+
+         answer, pan  1.00 -> 0.73 -> 0.66 -> 0.50 -> 0.40
+
+       By the fourth question the reader was looking at their whole history in
+       miniature instead of the question in front of them. Re-clamping keeps
+       the tree on screen without touching what the reader set: the scale is
+       theirs, and it changes only when they ask (+ / - / Fit, ctrl+wheel,
+       pinch), which is what focusFrontier has always promised. */
+    else applyView();
   },140);
 }
 /* Watched rather than listened for. A window resize event is not the only way
@@ -2702,28 +2709,16 @@ setSound(AUDIO.on);
 
 /* ===========================================================================
    DEPTH INTERACTIONS
-   Parallax on the ridge layers, and a slight tilt of interactive nodes toward
-   the pointer. Both are pure transform writes on rAF-free paths so they stay
-   cheap, and both are inert when the reader prefers reduced motion.
-   ========================================================================= */
-var ridgeEl=document.querySelector('.env .ridges');
-var ridgePaths=ridgeEl?ridgeEl.querySelectorAll('path'):[];
-/* far ridges shift least — the standard parallax reading of distance */
-var PARALLAX=[0.018,0.038,0.066];
-function paintParallax(){
-  if(reduce||!ridgePaths.length) return;
-  for(var i=0;i<ridgePaths.length;i++){
-    var k=PARALLAX[i]||0.03;
-    ridgePaths[i].setAttribute('transform','translate('+(view.tx*k).toFixed(2)+','+(view.ty*k*0.35).toFixed(2)+')');
-  }
-}
-var _applyView=applyView;
-applyView=function(){ _applyView(); paintParallax(); };
+   There used to be parallax here, shifting the three ridge layers against each
+   other as the canvas moved — the standard reading of distance. The ridges
+   were a drawn stand-in for a horizon and a photograph replaced them, so the
+   parallax went with them; a single flat image has no layers to separate, and
+   sliding it against the page would only announce that it is a backdrop.
 
-/* Deliberately NO pointer tilt on the cards. Rotating a node rotates the
+   Still deliberately NO pointer tilt on the cards. Rotating a node rotates the
    label the reader is in the middle of reading, and this audience cannot be
-   handed soft type. Depth here comes from the receding not-taken plane and
-   from backdrop parallax — neither of which touches text the reader needs. */
+   handed soft type. Depth comes from the receding not-taken plane instead —
+   which touches no text the reader needs. */
 
 /* The tree runs the moment the page loads. This script is the last thing in
    the document, so the stage is already laid out and focusFrontier() can

@@ -53,6 +53,57 @@ for (const f of ['account.js', 'tree-data.js', 'view.js']) {
   }
 }
 
+/* ---- zoom ----------------------------------------------------------------
+   A two-finger trackpad pinch arrives as dozens of tiny ctrl+wheel events.
+   Both pages used to apply a fixed 12% per event, so the gentlest pinch
+   multiplied the scale by 0.89 twenty-odd times and flung the tree to 0.15,
+   where a card title is under three pixels tall. view.js now turns each event
+   into a factor proportional to its delta, and stops zooming out once the
+   whole tree is already on screen. Checked here without a browser, because
+   the arithmetic is the whole of it. */
+{
+  const sandbox = { window: {} };
+  vm.createContext(sandbox);
+  new vm.Script(fs.readFileSync('view.js', 'utf8'), { filename: 'view.js' }).runInContext(sandbox);
+  const V = sandbox.window.TASView;
+  const fails = [];
+  const expect = (name, cond, got) => {
+    if (!cond) fails.push(name + (got === undefined ? '' : ' (got ' + got + ')'));
+  };
+
+  /* a gentle pinch: twenty small events must come out gentle, not at the floor */
+  let s = 1;
+  for (let i = 0; i < 20; i++) s *= V.wheelFactor({ deltaY: 3, deltaMode: 0 });
+  expect('a gentle trackpad pinch zooms out gently', s > 0.5 && s < 0.6, s.toFixed(3));
+
+  /* a mouse notch must be exactly the step it always was */
+  const notch = V.wheelFactor({ deltaY: 100, deltaMode: 0 });
+  expect('a mouse notch is unchanged', Math.abs(notch - 1 / 1.12) < 1e-9, notch);
+  const lines = V.wheelFactor({ deltaY: 3, deltaMode: 1 });
+  expect('a line-mode notch is unchanged', Math.abs(lines - 1 / 1.12) < 1e-9, lines);
+
+  /* no zoom-out goes past the point where the whole tree fits */
+  const rect = { width: 1000, height: 640 };
+  const box = { w: 1296, h: 1590 };
+  const floor = V.floorFor(rect, box, 26, 0.3, 0.75);
+  const view = { s: 1, tx: 0, ty: 0 };
+  for (let i = 0; i < 300; i++) V.zoom(view, rect, V.wheelFactor({ deltaY: 3 }), 500, 320, floor);
+  expect('a hard pinch stops where the whole tree fits', Math.abs(view.s - floor) < 1e-9, view.s);
+  expect('and that is not the old 0.15', view.s > 0.3, view.s);
+
+  /* already below the floor (Fit on a tall tree): zooming in must not jump */
+  const low = { s: 0.2, tx: 0, ty: 0 };
+  V.zoom(low, rect, 1.05, 500, 320, floor);
+  expect('zooming in from below the floor does not jump', Math.abs(low.s - 0.21) < 1e-9, low.s);
+
+  if (fails.length) {
+    bad++;
+    console.error('  view.js zoom: ' + fails.join('; '));
+  } else {
+    console.log('  view.js            zoom is proportional and floored');
+  }
+}
+
 /* ---- CSS sanity ----------------------------------------------------------
    Nothing here validates CSS, and a stylesheet does not fail loudly: an
    unbalanced comment silently swallows the rules after it and the page simply

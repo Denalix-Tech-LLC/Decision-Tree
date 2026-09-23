@@ -8,9 +8,6 @@
    on the tree page — 64% across, in open sky — is behind a panel here. It sits
    in the half that is actually canvas instead, and follows when the panel is
    folded away. Everything else about the backdrop comes from theme.css. */
-.env .sun{left:34%}
-body.wide .env .sun{left:52%}
-@media (max-width:900px){ .env .sun{left:42%} }
 
 /* A .btn carries display:inline-flex, which outranks the user-agent rule for
    [hidden] — so a hidden button sat in the toolbar anyway. Hidden means
@@ -54,9 +51,6 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
    contrast so card text stays fully legible.
    ========================================================================= */
 
-.env .clouds span:nth-child(1){width:62vw;height:17vh;left:-18vw;top:9vh;animation:cloud1 132s linear infinite}
-.env .clouds span:nth-child(2){width:48vw;height:13vh;left:38vw;top:22vh;animation:cloud2 168s linear infinite}
-.env .clouds span:nth-child(3){width:70vw;height:20vh;left:12vw;top:2vh;animation:cloud3 204s linear infinite}
 
 
 /* ---- top bar ---- */
@@ -275,17 +269,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 </style>
 
 <div class="env" aria-hidden="true">
-  <div class="sky"></div>
-  <div class="sun"></div>
   <div class="photo"></div>
-  <div class="clouds"><span></span><span></span><span></span></div>
-  <div class="haze"></div>
-  <svg class="ridges" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" focusable="false">
-    <path class="r3" d="M0,240 L86,212 L154,234 L268,196 L342,224 L430,204 L512,231 L604,188 L712,219 L806,200 L902,227 L1018,192 L1124,221 L1216,206 L1330,229 L1440,208 L1440,420 L0,420 Z"/>
-    <path class="r2" d="M0,301 L104,262 L196,293 L300,244 L418,283 L498,258 L612,297 L736,250 L840,285 L946,262 L1064,301 L1178,254 L1290,289 L1440,266 L1440,420 L0,420 Z"/>
-    <path class="r1" d="M0,353 L148,318 L282,349 L440,306 L596,345 L742,316 L910,353 L1076,320 L1244,351 L1380,328 L1440,345 L1440,420 L0,420 Z"/>
-  </svg>
-  <div class="motes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 </div>
 
 <div class="shell">
@@ -1422,7 +1406,8 @@ function fitAll(){
 }
 function zoomBy(k){
   if(!window.TASView) return;
-  TASView.zoom(view,stage.getBoundingClientRect(),k);
+  var r=stage.getBoundingClientRect();
+  TASView.zoom(view,r,k,null,null,TASView.floorFor(r,window.__box,40,0.2,0.75));
   applyView();
 }
 document.getElementById('zIn').onclick=function(){ zoomBy(1.2); };
@@ -1452,10 +1437,17 @@ stage.addEventListener('pointerup',function(e){
 stage.addEventListener('wheel',function(e){
   e.preventDefault();
   if(e.ctrlKey||e.metaKey){
-    var r=stage.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
-    var ns=Math.min(2,Math.max(.15,view.s*(e.deltaY<0?1.12:1/1.12)));
-    var wx=(cx-view.tx)/view.s, wy=(cy-view.ty)/view.s;
-    view.s=ns; view.tx=cx-wx*ns; view.ty=cy-wy*ns;
+    /* This used to carry its own copy of the zoom-about-a-point arithmetic
+       and its own limits, with the same fixed 12% step per event as the
+       reader's tree — which a trackpad pinch, arriving as dozens of tiny
+       ctrl+wheel events, turned into a plunge to the floor. Both pages go
+       through TASView now. The editor's floor sits lower than the reader's,
+       because seeing a whole tree at once is part of editing one. */
+    var r=stage.getBoundingClientRect();
+    if(window.TASView){
+      TASView.zoom(view,r,TASView.wheelFactor(e),e.clientX-r.left,e.clientY-r.top,
+        TASView.floorFor(r,window.__box,40,0.2,0.75));
+    }
   } else { view.tx-=e.deltaX; view.ty-=e.deltaY; }
   applyView();
 },{passive:false});
@@ -1667,9 +1659,30 @@ function paintGate(){
     gateShow('The editor','Checking…','<p>Asking who you are signed in as.</p>',[]);
     return;
   }
-  /* no gate configured, or nowhere to check against: the editor is open, the
-     way it was before accounts existed */
-  if(!st.adminGate){ gateHide(); return; }
+  /* No gate configured. With no database that is the right answer and always
+     was: there are no accounts, so there is nobody to gate against, and the
+     editor stays open the way it did before accounts existed.
+
+     With storage READY that reasoning has gone. Accounts exist, anyone can
+     register, and publishing reaches every reader gated on ADMIN_EMAIL and
+     nothing else — so an editor that opens without asking is a deployment
+     someone forgot to finish, not a mode. It still opens, because refusing
+     would lock out whoever has to fix it, but it no longer does so quietly. */
+  if(!st.adminGate){
+    if(st.storage==='ready'){
+      gateShow('The editor','This editor is unprotected',
+        '<p>Anyone who reaches this page can edit the tree, and anyone who registers an '
+        +'account can publish it to every reader. There is a database here, so accounts '
+        +'are real — what is missing is the setting that says whose editor this is.</p>'
+        +'<p>Set <b>ADMIN_EMAIL</b> to that address wherever <b>DATABASE_URL</b> is set, '
+        +'then redeploy. The gate comes up by itself.</p>',
+        [
+          el('button',{class:'btn solid',type:'button',text:'Edit anyway',onclick:gateHide})
+        ]);
+      return;
+    }
+    gateHide(); return;
+  }
   if(st.admin){ gateHide(); return; }
 
   if(!st.user){
