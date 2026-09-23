@@ -1,15 +1,42 @@
-# never publish the internal source document or working notes
-*.docx
-*.doc
-decision-tree-prompt.md
-.claude
-.github
-README.md
-docs
+# WHAT A DEPLOYMENT UPLOADS — an allowlist, not a denylist.
+#
+# Everything a deployment uploads that is not a function is served publicly as
+# a static file. The Vercel CLI does NOT read .gitignore once this file exists,
+# so a denylist here has to name every local-only thing by hand — and it used
+# to miss .pglite/, the local development database, which holds real account
+# emails and password hashes. A manual `npx vercel --prod` uploaded it and
+# served it at /.pglite/... to anyone who asked.
+#
+# So: ignore everything at the root, then let back in exactly what the site is.
+# A new local file (a database, a log, a dump, notes, a secret) is private by
+# default. A new file the SITE needs has to be added below, and forgetting to
+# is loud rather than dangerous: dev-server.mjs refuses to serve anything this
+# file excludes, and npm run check fails if a page references one.
+#
+# This applies to Git deployments as well as the CLI.
+/*
 
-# local-only tooling: the dev server and the database scripts. The functions
-# in /api and package.json must NOT be listed here — they are the deployment.
-dev-server.mjs
-scripts
-.env
-.env.example
+# the pages, their scripts, the stylesheet and the images they use
+!/*.html
+!/*.js
+!/*.css
+!/*.jpg
+!/*.jpeg
+!/*.png
+!/*.webp
+!/*.svg
+!/*.ico
+
+# the one serverless function and its code
+!/api
+
+# what the function build needs
+!/package.json
+!/package-lock.json
+!/vercel.json
+
+# Kept out by the rule at the top, named so nobody "fixes" the allowlist by
+# adding them: .env and .env.* (secrets; .env.example too — it documents the
+# secrets), .pglite/ (the local database), .git/, .github/, .claude/,
+# .vercel/, node_modules/, scripts/, docs/, dev-server.mjs, README.md, the
+# source .docx and the working notes, and any *.log or *.stackdump.

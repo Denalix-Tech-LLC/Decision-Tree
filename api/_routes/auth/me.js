@@ -4,9 +4,28 @@
 
    A guest is not an error here: GET answers 200 with user:null, so the page
    can lay out its account chip without treating "not signed in" as a failure.
+
+   `admin` is the editor rule from auth.js (isAdmin): named in ADMIN_EMAIL
+   AND the address proven. `adminReason` says why not, when there is a reason
+   worth telling: 'admin_unset' (a database, but no ADMIN_EMAIL, so nobody may
+   publish) or 'admin_unverified' (this is the editor's address, not yet
+   proven). The second is only ever told to someone signed in as that
+   address, so the page never learns whose address ADMIN_EMAIL holds.
+   `recentAuthUntil` is when this session stops counting as a recent
+   sign-in, so a page can ask the person to confirm who they are BEFORE a
+   sensitive change that happens by navigation (attaching Google).
    ========================================================================= */
 import { json, readJson, route, str } from '../../_lib/http.js';
-import { currentUser, requireUser, publicUser, signInMethods, adminGateOn, isAdminEmail } from '../../_lib/auth.js';
+import {
+  currentUser,
+  requireUser,
+  publicUser,
+  signInMethods,
+  adminGateOn,
+  isAdmin,
+  adminReason,
+  recentAuthUntil,
+} from '../../_lib/auth.js';
 import { counts, LIMITS } from '../../_lib/records.js';
 import { isConfigured, query } from '../../_lib/db.js';
 import { isGoogleEnabled } from '../../_lib/google.js';
@@ -38,6 +57,7 @@ export default route({
         auth: offered,
         adminGate: gate,
         admin: false,
+        adminReason: gate ? null : 'admin_unset',
         limits: LIMITS,
       });
       return;
@@ -47,9 +67,11 @@ export default route({
       storage: 'ready',
       auth: offered,
       adminGate: gate,
-      /* with no gate configured the editor is open, so everyone signed in
-         counts as able to use it */
-      admin: gate ? isAdminEmail(user.email) : true,
+      /* With storage and no ADMIN_EMAIL nobody is the editor: the server
+         refuses every publish then, so the page must not offer one. */
+      admin: isAdmin(user),
+      adminReason: adminReason(user),
+      recentAuthUntil: recentAuthUntil(user),
       methods: await signInMethods(user.id),
       counts: await counts(user.id),
       limits: LIMITS,
@@ -58,7 +80,7 @@ export default route({
 
   async PATCH(req, res) {
     const user = await requireUser(req, res);
-    const body = await readJson(req);
+    const body = (await readJson(req)) || {};
     const name = str(body.name, { max: 120 });
     await query('update users set name = $2, updated_at = now() where id = $1', [user.id, name]);
     json(res, 200, { user: publicUser({ ...user, name }) });

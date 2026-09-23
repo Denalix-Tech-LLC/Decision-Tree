@@ -8,11 +8,10 @@
    sunset landed — nobody edits three files reliably, and nothing tells you
    when one of them is missed.
 
-   Everything a page does not need is inert rather than wrong: the work page
-   renders no clouds, so the cloud rules match nothing there. What stays in a
-   page is what differs on purpose — the editor moves the sun out from behind
-   its inspector, the work page fades its ridges — and each of those sits next
-   to the rest of that page's own styling, where it can be seen.
+   The backdrop is one photograph now (see THE BACKDROP below); the painted
+   sky, sun, clouds and ridgelines it replaced are gone, and so are their
+   tokens. What stays in a page is what differs on purpose, and each of those
+   sits next to the rest of that page's own styling, where it can be seen.
 
    Loaded with <link> ahead of each page's <style>, so page rules win.
    ========================================================================= */
@@ -50,15 +49,15 @@
   --good:#5f6a3c; --good-bg:#e6e9db; --good-line:#899163;
   --alert:#a13760; --alert-bg:#f6e0e8; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#e5e8eb;  --photo-op:.66;
-  /* ---- THE SUNSET ----
-     The backdrop is a sunset: cool dusk overhead, mauve, then the sun's
-     band and gold at the horizon, with the ridges darkening as they come
-     near. Every colour below is a mix of a brand colour with a brand
-     neutral, as the other tints are. The sun itself is brighter than the
-     palette allows, because it is a light source rather than a surface —
-     the same exception the arrival bloom already takes. */
-  --sky-glow:#d6af96; --sun-core:rgba(255,247,224,.98); --sun-halo:rgba(222,194,106,.62);--halo:#efe6dc;
+  --on-accent:#e5e8eb;
+  /* how strongly the photograph shows; /admin can override it per theme
+     through --photo-op-l and --photo-op-d, which look.js sets */
+  --photo-op:var(--photo-op-l,.66);
+  /* the casing drawn under every limb of the tree (.edge.halo in
+     index.html), so a line crossing the photograph or another line still
+     reads as its own; a mix of a brand colour with a brand neutral, as the
+     other tints are */
+  --halo:#efe6dc;
   /* ---- BRAND TYPE ----
      Real families first, then the closest system stand-ins, because this page
      makes no external requests. Self-host Morvi / Gotham / Marion / Dongra as
@@ -84,8 +83,8 @@
     --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
     --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
     --gold:#dec26a;
-    --on-accent:#081b23;    --photo-op:.3;
-    --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
+    --on-accent:#081b23;    --photo-op:var(--photo-op-d,.3);
+    --halo:#12202a;
     --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
     --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
   }
@@ -101,34 +100,20 @@
   --good:#a3ab7a; --good-bg:#1e2a1a; --good-line:#899163;
   --alert:#d9739a; --alert-bg:#3a1a26; --alert-line:#c24e78;
   --gold:#dec26a;
-  --on-accent:#081b23;  --photo-op:.3;
-  --sky-glow:#3f2f2c; --sun-core:rgba(255,203,138,.72); --sun-halo:rgba(201,129,80,.42);--halo:#12202a;
+  --on-accent:#081b23;  --photo-op:var(--photo-op-d,.3);
+  --halo:#12202a;
   --sh1:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.38);
   --sh2:0 2px 8px rgba(0,0,0,.4),0 20px 44px rgba(0,0,0,.5);
 }
 
 /* ===========================================================================
    THE BACKDROP
-   Layered ridgelines receding into a sunset. Atmospheric perspective is the
-   Clean Air Act's own subject — regional haze, visibility under 169A — so
-   the page is built out of it rather than decorated with it.
+   A single photograph, fixed behind everything at low contrast: land.jpg as
+   shipped, or whichever one the editor chose at /admin. The Clean Air Act's
+   subject is what the air lets you see — regional haze, visibility under
+   169A — so the page sits on a view rather than a pattern.
    ========================================================================= */
 .env{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:paint}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* How strongly the photograph shows through. --photo-op is the one knob.
 
@@ -140,8 +125,15 @@
 
    That costs nothing in legibility, because the fades were never what carried
    it: the header, the notice strip, the hint pill and every card paint their
-   own opaque background, so text has never sat on the photograph. */
-.env .photo{position:absolute;inset:0;
-  background-image:url("land.jpg");background-size:cover;background-position:50% 56%;
-  opacity:var(--photo-op);filter:saturate(.88) contrast(1.04)}
+   own opaque background, so text has never sat on the photograph.
 
+   Which photograph, and where it sits, come from the content: look.js sets
+   --photo-url and --photo-pos from THEME, chosen at /admin, and --photo-op-l
+   / --photo-op-d when the editor has turned the knob above. The fallbacks
+   here are the shipped picture and its framing, so a page without look.js,
+   or before it runs, looks exactly as it always has. --photo-url is none
+   when the editor chose no photograph, and then the page colour shows. */
+.env .photo{position:absolute;inset:0;
+  background-image:var(--photo-url,url("land.jpg"));background-size:cover;
+  background-position:var(--photo-pos,50% 56%);
+  opacity:var(--photo-op);filter:saturate(.88) contrast(1.04)}

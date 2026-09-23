@@ -5,9 +5,9 @@
 <link rel="stylesheet" href="theme.css">
 <style>
 
-/* A .btn carries display:inline-flex, which outranks the user-agent rule for
-   [hidden] — so the Result button sat in the bar before there was a result.
-   Hidden means hidden, whatever else an element is. */
+/* [hidden]{display:none!important} lives in theme.css, shared by all three
+   pages: a .btn's display:inline-flex would otherwise outrank the user-agent
+   rule and show the Result button before there was a result. */
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -20,43 +20,22 @@ a{color:var(--accent-ink)}
 
 /* ===========================================================================
    ENVIRONMENTAL BACKDROP
-   Layered ridgelines receding into haze — atmospheric perspective is the
-   Clean Air Act's own subject (regional haze, §169A visibility). Sky wash,
-   slow cloud banks, and drifting air motes sit behind everything at low
-   contrast so card text stays fully legible.
+   A single photograph behind everything, at low contrast so card text stays
+   fully legible. There used to be painted layers here (sky wash, sun, clouds,
+   haze, ridgelines, motes); the photograph replaced all of them.
    ========================================================================= */
 
-/* sky wash */
-
-/* The sun, low and half-taken by the nearest ridge. It is what makes the wash
-   above read as a sunset rather than a warm sky, and it is the only thing on
-   the page brighter than the palette — a light source, like the arrival bloom,
-   not a surface. Sized in vmin so it stays a sun on a phone. */
-/* and the light it throws along the horizon, wider and much fainter */
-
-/* slow cloud banks */
-
-/* the haze band the Act exists to clear */
-
-/* ridgelines, far to near */
-
-/* drifting air motes */
-
-/* ---- optional photograph ----
-   Drop a file named land.jpg (or .png / .webp — see README) beside this page
-   and it becomes the horizon. Nothing here 404s loudly: if the file is absent
-   the background simply does not paint and the drawn ridgelines below show
-   through, so the page is complete either way.
-
-   The treatment is deliberate. The image is masked away toward the top, where
-   the cards live, desaturated toward the brand palette and held at low opacity,
-   so it can never compete with 13px text sitting on top of it. */
-/* pulls whatever the photo is toward the brand neutrals */
+/* ---- the photograph ----
+   Styled in theme.css, not here, so the three pages cannot drift apart. Which
+   picture it is, where it is anchored and how strongly it shows come from the
+   content's THEME, chosen at /admin; look.js paints them into --photo-url,
+   --photo-pos, --photo-op-l and --photo-op-d, and adoptContent() calls it
+   whenever new content arrives. */
 
 /* ---- arriving at a result ----
    A sunrise rather than confetti. This tool ends a sovereignty decision, so the
-   moment is marked in the language the page already speaks: warm light rising
-   behind the ridgelines, and seed-light carried up on the air. */
+   moment is marked quietly: warm light rising from the bottom of the scene,
+   and seed-light carried up on the air. */
 .env .bloom{position:absolute;left:50%;bottom:-6%;width:170vw;height:92vh;
   transform:translateX(-50%);pointer-events:none;opacity:0;
   background:radial-gradient(ellipse 44% 54% at 50% 100%,
@@ -278,7 +257,9 @@ a{color:var(--accent-ink)}
    the one place a node crosses between depth planes, and it lands at Z:0 */
 .tnode.notaken:hover{--lift:-3px;--z:0px;opacity:1;filter:none;border-color:var(--accent);box-shadow:var(--sh2)}
 .tnode.notaken .kb{display:none}
-.tnode.notaken::after{content:'switch';position:absolute;bottom:6px;right:9px;font-family:var(--mono);
+/* the words come from COPY.ui by way of data-alt, set in build(), so a
+   reworded label at /admin reaches the hover hint too */
+.tnode.notaken::after{content:attr(data-alt);position:absolute;bottom:6px;right:9px;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);opacity:0;transition:opacity .2s}
 .tnode.notaken:hover::after{opacity:1}
 /* an answered question invites you back to it */
@@ -292,7 +273,7 @@ a{color:var(--accent-ink)}
   transition:background .16s,border-color .16s,color .16s,transform .16s var(--ease);z-index:5}
 .rewind:hover{background:var(--alert);border-color:var(--alert);color:var(--on-accent);transform:scale(1.15)}
 .rewind:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
-.tnode.q.reopenable::after{content:'answer again';position:absolute;bottom:7px;right:12px;
+.tnode.q.reopenable::after{content:attr(data-alt);position:absolute;bottom:7px;right:12px;
   font-family:var(--sans);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--accent);opacity:0;transition:opacity .2s}
 .tnode.q.reopenable:hover::after{opacity:1}
@@ -477,8 +458,8 @@ body.running .hint{opacity:1}
 .ctwo{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 @media (max-width:520px){ .ctwo{grid-template-columns:1fr} }
 
-/* Calendly. The frame is only created when the reader asks for it, so nothing
-   third-party loads for someone who came to type a question — see mountCal(). */
+/* Calendly. The frame goes up when Contact opens with a Calendly link set, and
+   is not rebuilt as the reader types — see mountCal(). */
 .calbox{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow:hidden}
 .calbox #calFrame:not(:empty){border-top:1px solid var(--border)}
 .calbox iframe{display:block;width:100%;height:660px;border:0;background:var(--surface-2)}
@@ -618,13 +599,16 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="photo"></div>
 </div>
 
+<!-- Every word of chrome below is repainted from COPY by paintChrome() before
+     the first frame; what is written here is only what shows if the script
+     never runs. -->
 <div class="shell">
   <header class="bar">
     <div class="brand">
       <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
       <span>
-        <span class="kk">Clean Air Act · Treated as a State</span>
-        <h1>TAS Decision Tree</h1>
+        <span class="kk" id="brandKicker">Clean Air Act · Treated as a State</span>
+        <h1 id="brandTitle">TAS Decision Tree</h1>
       </span>
     </div>
     <div class="acts">
@@ -659,7 +643,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     </div>
   </header>
   <div class="rail"><i id="railFill"></i></div>
-  <p class="notice"><b>Note</b><span id="noticeTxt">General information to support your discussion
+  <p class="notice"><b id="noticeLabel">Note</b><span id="noticeTxt">General information to support your discussion
     — not legal advice, and not an official EPA product. Confirm with Tribal legal counsel.</span></p>
 
   <div class="stage" id="stage">
@@ -681,14 +665,14 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="bg" data-close="1"></div>
   <div class="panel">
     <div class="head">
-      <div><span class="kk">Your pathway</span><h3 id="sheetTitle">Result</h3></div>
+      <div><span class="kk" id="sheetKicker">Your pathway</span><h3 id="sheetTitle">Result</h3></div>
       <span class="grow"></span>
-      <button class="btn sm" data-print="1" title="Print this result, or save it as a PDF">
+      <button class="btn sm" id="sheetPrint" data-print="1" title="Print this result, or save it as a PDF">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
-        Print
+        <span class="lb">Print</span>
       </button>
-      <button class="btn sm" data-savedoc="1" hidden title="Keep this result as a document you can edit, print and come back to">Save as document</button>
-      <button class="btn sm" data-close="1">Close ✕</button>
+      <button class="btn sm" id="sheetSaveDoc" data-savedoc="1" hidden title="Keep this result as a document you can edit, print and come back to">Save as document</button>
+      <button class="btn sm" id="sheetClose" data-close="1">Close ✕</button>
     </div>
     <div class="body" id="sheetBody"></div>
   </div>
@@ -723,9 +707,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="bg" data-gclose="1"></div>
   <div class="doc">
     <div class="dhead">
-      <div><span class="kk">Before you start</span><h3 id="guideTitle">How to use this tool</h3></div>
+      <div><span class="kk" id="guideKicker">Before you start</span><h3 id="guideTitle">How to use this tool</h3></div>
       <span class="grow"></span>
-      <button class="btn sm" data-gclose="1" aria-label="Close the guide">Close &#10005;</button>
+      <button class="btn sm" id="guideClose" data-gclose="1" aria-label="Close the guide">Close &#10005;</button>
     </div>
     <div class="dbody" id="guideBody"></div>
     <div class="dfoot">
@@ -733,7 +717,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
       <button class="btn" id="guideWalk" title="The five-screen introduction, again">Walkthrough</button>
       <button class="btn" id="guideContact">Contact</button>
       <span class="grow"></span>
-      <span class="fnote">The <b>Guide</b> button in the top bar reopens this whenever you have a doubt.</span>
+      <span class="fnote" id="guideFoot"></span>
     </div>
   </div>
 </div>
@@ -744,9 +728,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="bg" data-cclose="1"></div>
   <div class="doc narrow">
     <div class="dhead">
-      <div><span class="kk">Contact</span><h3 id="contactTitle">Talk to a person</h3></div>
+      <div><span class="kk" id="contactKicker">Contact</span><h3 id="contactTitle">Talk to a person</h3></div>
       <span class="grow"></span>
-      <button class="btn sm" data-cclose="1" aria-label="Back to the tree">Close &#10005;</button>
+      <button class="btn sm" id="contactClose" data-cclose="1" aria-label="Back to the tree">Close &#10005;</button>
     </div>
     <div class="dbody" id="contactBody"></div>
     <div class="dfoot" id="contactFoot"></div>
@@ -758,6 +742,8 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 <!-- the canvas arithmetic the tree and the editor share -->
 <script src="view.js"></script>
 <script src="tree-data.js"></script>
+<!-- what THEME is allowed to say, and how it becomes the photograph -->
+<script src="look.js"></script>
 <!-- Accounts, saved work and the guest explanation. Loaded before the tree so
      the top bar can carry an account chip from the first paint; the tree runs
      perfectly well if this file 404s, and the Save buttons then say so. -->
@@ -831,8 +817,8 @@ function setSound(on){
   var b=document.getElementById('btnSound');
   if(b){
     b.setAttribute('aria-pressed',String(on));
-    b.title=on?'Sound on — click to mute':'Sound off — click to unmute';
-    b.querySelector('.sndLabel').textContent=on?'Sound':'Muted';
+    b.title=on?COPY.ui.soundOnTip:COPY.ui.soundOffTip;
+    b.querySelector('.sndLabel').textContent=on?COPY.ui.soundOn:COPY.ui.soundOff;
     b.classList.toggle('muted',!on);
   }
 }
@@ -855,75 +841,94 @@ function setSound(on){
    canvas — see the check at the foot of this block.
    ========================================================================= */
 var NODES={}, OUT={}, NONTAS=[], CRITERIA=[], NEXT=[], LINKS=[];
-var DISC={bar:'',guide:'',boundary:'',authority:'',result:'',print:'',cites:''};
-/* ---------------------------------------------------------------------------
-   DISCLAIMERS. Seven placements, because they do different jobs: the standing
+/* DISCLAIMERS. Seven placements, because they do different jobs: the standing
    bar is one line the reader never loses, the printout has to stand alone
-   months later with none of the tool around it. Editable at /admin.
-   ------------------------------------------------------------------------- */
-
+   months later with none of the tool around it. Editable at /admin. */
+var DISC={bar:'',guide:'',boundary:'',authority:'',result:'',print:'',cites:''};
 /* Who a reader reaches with a question. All five are blank in the repo: the
-   Tribe deploying this tool fills them in at /admin (or here) before it is
-   shared, and the contact panel says plainly when they are not yet set.
-   `calendly` takes the Calendly link for the event people should book: it
-   embeds in the Contact panel, carrying the reader's question in as a
-   prefill. Another scheduling service still works as a link. */
+   Tribe deploying this tool fills them in at /admin before it is shared, and
+   the contact panel says plainly when they are not yet set. */
 var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
+/* The guide's sections, every other word the page says (COPY), and the
+   photograph (THEME). COPY starts as empty groups rather than nothing, so a
+   page whose tree-data.js failed but which still has a draft to draw from
+   renders blanks instead of throwing. */
+var GUIDE=[];
+var COPY={brand:{},verdicts:{},result:{},print:{},tree:{},contact:{},walk:[],ui:{}};
+var THEME=null;
 
 /* ---------------------------------------------------------------------------
-   THE GUIDE. Opens before the tree on a first visit and from the Guide button
-   after that. It describes the tool as built — if the behaviour changes, this
-   changes with it.
+   Merging. Content arrives from records of different ages: a draft from last
+   month, a tree published before the wording was editable, a path saved a
+   year ago with its snapshot. Each is laid over what tree-data.js shipped,
+   never over each other, so a key an older record lacks falls back to the
+   shipped wording rather than to whichever layer happened to come before —
+   and nothing renders blank because a record predates the key.
    ------------------------------------------------------------------------- */
-var GUIDE=[
-  {h:`What this tool is for`,
-   html:`<p>This tool helps you think through whether your Tribe should seek <b>treatment in the same manner as a state</b> (TAS, commonly "treated as a state") under the Tribal Authority Rule, <code>40 CFR Part 49</code>, EPA's rule implementing Clean Air Act <code>§301(d)</code> — and if so, for which Clean Air Act sections.</p><p>You answer four questions: whether any jurisdictional boundaries are disputed and how you would proceed; how many emission sources are in your jurisdiction and, if there are many, how you would implement Clean Air Act programs; whether outside sources affect your air; and whether you have the capacity to run a program. The tree grows as you answer and shows the routes that follow.</p><p>The decision itself belongs to Tribal leadership, Council and Tribal legal counsel. The limits of this tool are set out in the notice on this page and in the bar above the tree.</p>`},
-  {h:`Moving around the canvas`,
-   html:`<p>Drag anywhere on the background to move the canvas. A scroll wheel or a two-finger trackpad swipe moves it too — scrolling pans rather than zooms, so the tree does not change size by accident. Hold <code>shift</code> while scrolling to move sideways.</p><p>To zoom, hold <code>ctrl</code> (or <code>cmd</code> on a Mac) while scrolling, pinch on a touchscreen, or use <b>+</b> and <b>−</b> at the bottom right. <b>Fit</b> frames the whole tree at once.</p><p>Panning is held so that part of the tree always stays on screen.</p>`},
-  {h:`Answering, and changing your mind`,
-   html:`<p>One question is active at a time, with its answers fanned beneath it. Click an answer and the tree grows: the line to the next question draws itself, the question fades in, then its options arrive one at a time. You can also press the number of an option on the active question, or move between cards with <code>Tab</code> and choose with <code>Enter</code>.</p><p>Answers you did not take stay on the canvas, greyed and pushed slightly out of focus, so the whole decision stays visible. <b>Click a greyed answer and the tree re-routes down that branch instead</b> — useful for showing Council what the other choice would have led to.</p><p>Every question you have already answered carries a small <b>x</b>. Clicking it cuts the tree back to that question and reopens it with all its options live; everything that grew below it comes away, because it no longer follows from your answers.</p><p><b>Start over</b> in the top bar withdraws the tree, deepest limb first, and returns you to question one. Each choice plays a short tone; the <b>Sound</b> button turns that off.</p>`},
-  {h:`What the pathways mean`,
-   html:`<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. There are four:</p><ul><li><b>Regulatory TAS</b> — the route to running your own permitting, inspection and enforcement program for sources in your jurisdiction, once EPA approves the program itself.</li><li><b>Targeted Regulatory TAS</b> — the same route for a narrower program aimed at one local problem, such as smoke from open burning.</li><li><b>Administrative TAS</b> — a formal role as a neighbouring government: notice of and comment on nearby plans and permits, and a route to ask EPA to act on sources outside your jurisdiction.</li><li><b>Capacity building</b> — ways to move toward TAS while you build staff and expertise, rather than waiting until they are in place.</li></ul><p>Pathways accumulate and are not exclusive. Many sources <i>and</i> a wish for a say in nearby permits finishes with both Regulatory and Administrative. A pathway stays unlocked unless you change the answer that unlocked it.</p><p>A pathway is a direction to consider, not a finding of eligibility. EPA decides eligibility against the four criteria at <code>40 CFR §49.6</code>, which the result panel lists. Part 49 also does not open every Clean Air Act provision to Tribes — <code>§49.4</code> lists the provisions for which Tribes are not treated as states, including implementation-plan submittal deadlines and the sanctions tied to them.</p>`},
-  {h:`What you get at the end`,
-   html:`<p>When you reach an ending, light rises behind the ridgelines and a <b>Result</b> button appears in the top bar. The panel slides over the canvas; the tree stays as you left it behind it. Close it with <b>Back to the tree</b> or <code>escape</code>.</p><p>The panel holds:</p><ul><li>a headline naming the pathway, or combination, your answers point to, and a sentence on why;</li><li>the Clean Air Act sections to consider seeking, and the pathways unlocked;</li><li>a <b>boundary-risk note</b>, when a boundary answer came up — read it in full there;</li><li>one card per unlocked pathway, with the sections to seek under it — for Regulatory TAS, the pros and cons of writing your own programs against taking delegation of the federal ones;</li><li>what your capacity answer means for a TAS request, with a link to EPA's Peacock memo;</li><li>the options that need no TAS at all — inherent Tribal authority, <code>§103</code> grants, monitoring, education, indoor-air and radon work;</li><li>the four eligibility criteria at <code>40 CFR §49.6</code>, and what a request must contain under <code>§49.7</code>;</li><li>next steps, and links to EPA's pages on the Tribal Authority Rule.</li></ul><p>One point to carry into any discussion: TAS eligibility is a threshold status. Each program must then be submitted to EPA separately and approved before the Tribe can implement or enforce it.</p>`},
-  {h:`The printed document`,
-   html:`<p><b>Print</b> at the top of the result panel prints the result or saves it as a PDF, depending on what you choose in your browser's print dialog.</p><p>It opens with a drawing of the route you took — each question, the answer chosen, the pathway it unlocked, and the result — then the written sections: the recommended pathways with their sections, the non-TAS options, the eligibility criteria, next steps, references, and the standing notice. Someone who was not at the screen can read it and see both what the tool pointed to and how you got there.</p><p><b>Confirm every section number against the current Clean Air Act and 40 CFR Part 49 before anyone relies on it.</b> Sections are amended and renumbered, and this is not an official EPA product.</p>`},
-  {h:`Changing the content`,
-   html:`<p>The questions, answers, pathways and result text can be changed in the editor at <code>/admin</code>. Edits are held in that browser, so the tree shows them on that machine only. <b>Export</b> downloads a <code>tree-data.js</code> file; publishing that file to the site is what puts the change in front of everyone else.</p>`},
-  {h:`Keeping your work, and using this as a guest`,
-   html:`<p>You can use every part of this tool without an account. Answer the questions, re-route the tree, open the result, print it. Nothing is sent anywhere and nothing is required of you.</p><p>What a guest cannot do is <b>keep</b> any of it. Close the tab and the path is gone; the editor's working copy lives in this browser on this machine, and clearing the browser clears it. <b>Print</b> is how a guest keeps a result — the print-out is written to stand on its own.</p><p>Signing in takes one of two forms — <b>Continue with Google</b>, or an email address and a password you choose. Either way it adds three things and changes nothing else:</p><ul><li><b>Save</b> in the top bar keeps the path you are on — every answer, and the tree as it stood when you answered it. Open it again later and the tree grows back to exactly where you left off, whatever has been edited since.</li><li><b>Save as document</b>, in the result, turns the result into a document you can edit word by word, print, and open again months later.</li><li>At <code>/admin</code>, <b>My trees</b> keeps your version of the questions and recommendations somewhere other than one browser.</li></ul><p>All of it sits under <b>My work</b>, reached from the account button in the top bar. Deleting something there moves it to a deleted list rather than destroying it, and you can restore it or delete it for good.</p><p>An account here is a place to keep work, nothing more. It is not a submission to EPA, it is not visible to anyone else, and no one is notified when you save. Signing in with Google tells this tool your name, your email address and nothing else, and gives it no ability to do anything in your Google account. If the deployment you are using has no storage behind it, or has not been set up for Google, the sign-in panel says so and offers what it does have.</p>`},
-  {h:`Working on the document afterwards`,
-   html:`<p>The result panel prints, but it does not let you change a word. <b>Save as document</b> does: it takes the print-out exactly as it stands — the drawing of the route, the answers, the pathways and their sections, the criteria, the next steps, the references and the standing notice — and keeps it on your account as something you can rewrite. On <b>My work</b> you can also turn any saved path into a document later, with <b>Make a document</b>.</p><p>Open it at <b>My work → Documents</b>. The title at the top is a plain field; the body below it is the document itself, edited in place. The toolbar holds what a briefing needs and nothing else: <b>B</b>, <b>I</b> and <b>U</b>; <b>Heading</b>, <b>Sub</b> and <b>Text</b> for the three levels; bulleted and numbered lists; <b>Quote</b> for something set apart; <b>Clear</b> to strip formatting off a selection that came in wearing someone else's; <b>Rule</b> for a horizontal line; and undo and redo.</p><p>Text pasted from elsewhere arrives as plain text on purpose. A block of another page's HTML is the quickest way to make a document that will not print properly.</p><p>It <b>saves itself</b> about a second after you stop typing. The line beside <b>All documents</b> says <i>Saving…</i>, then <i>Saved</i>, and says so plainly if a save failed — if it ever does, the words are still on your screen, so do not close the tab. <b>Save</b> forces it immediately, and so does <code>ctrl</code>+<code>s</code>.</p><p><b>Print / Save PDF</b> prints what you have made of it, not what the tree produced — the editing tools and the page around them are not printed. <b>Duplicate</b> before a substantial rewrite gives you the earlier version to go back to; there is no version history beyond the copies you make. <b>Delete</b> moves a document to the deleted list, where <b>Restore</b> brings it back.</p><p>Two things a document does <i>not</i> do. Editing it never changes the tree, and never changes the saved path it came from — so the record of what was actually answered survives whatever you write on top of it. And a document is a snapshot: it does not update if you later change an answer or edit the content at <code>/admin</code>. To reflect a changed decision, make a new document and keep or delete the old one deliberately.</p><p>As a guest none of this is available, because nothing can be kept. <b>Print</b> in the result is the way to take a copy away with you.</p>`},
-  {h:`Getting help`,
-   html:`<p><b>Contact</b> in the top bar reaches whoever maintains this tool — use it for a citation that looks wrong, a question that reads badly, or behaviour you did not expect.</p><p>For the decision itself, work with Tribal legal counsel and then your EPA Regional Office Tribal air lead, who can confirm scope and what a request needs. <b>Guide</b> in the top bar reopens this page at any time.</p>`}
-];
+var SHIPPED=null;
+function hasWords(v){ return typeof v==='string'&&v.trim()!==''; }
+function clone(o){ return o==null?o:JSON.parse(JSON.stringify(o)); }
+/* GUIDE and COPY.walk: a list of {h, html} screens, replaced whole — a
+   half-merged sequence of screens would read as nonsense — and only by a
+   list that has at least one usable screen in it. */
+function mergeSections(base,inc){
+  if(!Array.isArray(inc)) return base;
+  var ok=inc.filter(function(x){
+    return x&&typeof x==='object'&&(hasWords(x.h)||hasWords(x.html));
+  }).map(function(x){
+    return {h:typeof x.h==='string'?x.h:'',html:typeof x.html==='string'?x.html:''};
+  });
+  return ok.length?ok:base;
+}
+/* A group of strings (or, for verdicts, of {t, s} pairs), key by key. Only
+   keys the shipped file knows are kept, and an empty string counts as
+   missing, the same rule DISC has always followed. */
+function mergeWords(base,inc){
+  var out={};
+  if(!inc||typeof inc!=='object'||Array.isArray(inc)) inc={};
+  for(var k in base){
+    if(!Object.prototype.hasOwnProperty.call(base,k)) continue;
+    var b=base[k];
+    out[k]=(b&&typeof b==='object')?mergeWords(b,inc[k]):(hasWords(inc[k])?inc[k]:b);
+  }
+  return out;
+}
+function mergeCopy(base,inc){
+  var out={};
+  if(!inc||typeof inc!=='object') inc={};
+  for(var g in base){
+    if(!Object.prototype.hasOwnProperty.call(base,g)) continue;
+    out[g]=Array.isArray(base[g])?mergeSections(base[g],inc[g]):mergeWords(base[g],inc[g]);
+  }
+  return out;
+}
 
-/* Contact panel copy. Short on purpose: the panel is a scheduler and a
-   question box, and prose between the reader and either one is in the way. */
-var CCOPY={
-  lead:`<p>Book a time, or just ask — whichever suits the question.</p>`,
-  leadNoCal:`<p>Ask whatever you need to. Whoever maintains this tool answers it.</p>`,
-  counsel:`<p><b>Tribal legal counsel and Tribal leadership come before EPA.</b> A TAS request
-    needs a jurisdictional showing, and EPA provides that showing to neighbouring state and local
-    air agencies — so counsel should read what the Tribe is about to assert before anyone outside
-    the Tribe does.</p>`,
-  whoTodo:`All of these are placeholders. The Tribe deploying this tool fills them in before it is
-    shared.`,
-  privacy:`<p>Nothing on this page is sent anywhere on its own. The question opens in your own
-    email program, so you can read and change every word before it goes; booking a time goes to
-    Calendly, which is a service outside the Tribe.</p>`
-};
+/* Named rather than closed over, because content arrives from several
+   places: the shipped file, the published tree, a draft, a tree saved to an
+   account, and the snapshot carried inside a saved path. All of them mean the
+   same thing — replace the content and redraw. The first call is always
+   tree-data.js, and it becomes the base the others fall back to.
 
-/* ---------------------------------------------------------------------------
-   Content precedence. The definitions above are the bundled fallback so this
-   file still works on its own; tree-data.js is what the repo ships; a draft
-   saved from /admin wins over both, for this browser only.
-   ------------------------------------------------------------------------- */
-/* Named rather than closed over, because content now arrives from three more
-   places than it used to: a tree saved to an account, a snapshot carried
-   inside a saved path, and a preview opened from /work. All of them mean the
-   same thing — replace the content and redraw. */
+   Everything a reader can see that is not the tree itself is repainted here
+   (see repaint()), so no caller can adopt new wording and forget to show it.
+   The tree is the caller's to redraw, because only the caller knows whether
+   the reader's path survives the change.
+
+   It is also the one gate every piece of content passes on its way to
+   innerHTML, so it is where content is filtered (look.js cleanTree, the
+   browser copy of the server's markup filter). The server already filters
+   what it stores and serves, but the /admin draft never went near it:
+   Import writes whatever JSON was pasted straight into that draft, and this
+   page renders it in the editor's own session. Filtering here, whatever the
+   source, means no route can skip it. If look.js did not load there is no
+   filter, and then only tree-data.js — the file this deployment shipped,
+   and always the first call — is taken; anything else is ignored. */
+var chromeReady=false;
 function adoptContent(d){
+  if(!d) return;
+  var LOOK=window.TAS_LOOK||null;
+  if(LOOK&&LOOK.cleanTree) d=LOOK.cleanTree(d);
+  else if(SHIPPED) return;
   if(!d) return;
   if(d.NODES&&Object.keys(d.NODES).length) NODES=d.NODES;
   if(d.OUT) OUT=d.OUT;
@@ -934,9 +939,29 @@ function adoptContent(d){
   /* DISC used to be one string. A file that still carries one is read as
      the standing bar line, so an old export keeps working. */
   if(typeof d.DISC==='string'&&d.DISC) DISC.bar=d.DISC;
-  else if(d.DISC) for(var k in d.DISC){ if(d.DISC[k]) DISC[k]=d.DISC[k]; }
-  if(d.CONTACT) for(var c in d.CONTACT){ if(typeof d.CONTACT[c]==='string') CONTACT[c]=d.CONTACT[c]; }
-  if(d.GUIDE&&d.GUIDE.length) GUIDE=d.GUIDE;
+  else if(d.DISC&&typeof d.DISC==='object'){
+    /* only the placements the page has; a stray key has nowhere to show */
+    for(var k in DISC){ if(typeof d.DISC[k]==='string'&&d.DISC[k]) DISC[k]=d.DISC[k]; }
+  }
+  if(d.CONTACT&&typeof d.CONTACT==='object'){
+    for(var c in CONTACT){ if(typeof d.CONTACT[c]==='string') CONTACT[c]=d.CONTACT[c]; }
+  }
+  if(!SHIPPED){
+    var base=clone(d.COPY&&typeof d.COPY==='object'?d.COPY:{});
+    for(var g in COPY){
+      if(Array.isArray(COPY[g])){ if(!Array.isArray(base[g])) base[g]=[]; }
+      else if(!base[g]||typeof base[g]!=='object'||Array.isArray(base[g])) base[g]={};
+    }
+    SHIPPED={GUIDE:mergeSections([],d.GUIDE),COPY:base,
+             THEME:LOOK?LOOK.clean(d.THEME):null};
+  }
+  GUIDE=mergeSections(SHIPPED.GUIDE,d.GUIDE);
+  COPY=mergeCopy(SHIPPED.COPY,d.COPY);
+  /* Without look.js nothing could vouch for a THEME, so only the shipped one
+     is kept, and it is not painted — theme.css already shows it. */
+  THEME=LOOK?LOOK.merge(SHIPPED.THEME,d.THEME):SHIPPED.THEME;
+  if(LOOK) LOOK.apply(THEME);
+  if(chromeReady) repaint();
 }
 (function(){
   try{ adoptContent(window.TAS_TREE); }catch(e){}
@@ -955,6 +980,11 @@ function adoptContent(d){
    trade, so a reader already down the tree keeps what they started with and
    gets the published copy next time.
 
+   It used to be skipped when its questions matched the shipped ones, which
+   was a fair shortcut while questions were most of what could be published.
+   Now the wording and the photograph can change on their own, so it is always
+   adopted, and the tree is only redrawn when what it draws has changed.
+
    A local /admin draft outranks it, because that draft is the editor's own
    work in progress and the whole point of previewing it. */
 (function(){
@@ -967,19 +997,17 @@ function adoptContent(d){
     .then(function(d){
       if(!d||!d.published||!d.data) return;
       if(path.length) return;                 /* someone is mid-answer */
-      if(JSON.stringify(d.data.NODES||{})===JSON.stringify(NODES)) return;
+      var before=JSON.stringify([NODES,OUT]);
       adoptContent(d.data);
-      var t=document.getElementById('noticeTxt');
-      if(t&&DISC.bar) t.textContent=DISC.bar;
-      guideBuilt=false;
-      if(started){ hushed={}; build(); focusFrontier(); }
+      if(started&&JSON.stringify([NODES,OUT])!==before){ hushed={}; build(); focusFrontier(); }
     })
     .catch(function(){ /* no API, or offline: the file is already in place */ });
 })();
 
 /* Nothing to ask. tree-data.js is the one hard content dependency this page
    has, so if it did not load there is no tree to draw and no honest way to
-   pretend otherwise. */
+   pretend otherwise. This message is the one piece of wording that cannot
+   come from COPY: it describes the file COPY would have come from failing. */
 (function(){
   if(NODES&&Object.keys(NODES).length) return;
   document.addEventListener('DOMContentLoaded',function(){
@@ -995,12 +1023,95 @@ function adoptContent(d){
   });
 })();
 
-/* The standing bar is content, so it comes from the data rather than being
-   frozen into the markup. */
-(function(){
+/* ---------------------------------------------------------------------------
+   PAINTING THE WORDING
+   The chrome's words live in COPY, not in the markup, so they are written in
+   here: once before the first frame, and again whenever adoptContent() takes
+   in new content. Each surface that renders from COPY on demand — the result,
+   the guide, the walkthrough, the Contact panel — is redrawn if it is open.
+   ------------------------------------------------------------------------- */
+/* "{name}" in a COPY string, filled in. A name not supplied is left as it is
+   written, so a typo in the braces shows rather than vanishing. */
+function fill(s,vals){
+  return String(s==null?'':s).replace(/\{(\w+)\}/g,function(m,k){
+    return vals&&Object.prototype.hasOwnProperty.call(vals,k)?String(vals[k]):m;
+  });
+}
+function setText(id,s){
+  var e=document.getElementById(id);
+  if(e) e.textContent=s==null?'':s;
+}
+/* A button's words and its tooltip. Buttons with an icon keep their words in
+   a .lb span, so the icon survives the words changing. */
+function setButton(id,words,tip){
+  var b=document.getElementById(id);
+  if(!b) return;
+  var lb=b.querySelector('.lb');
+  (lb||b).textContent=words==null?'':words;
+  if(tip!=null) b.title=tip;
+}
+function setAria(id,s){
+  var e=document.getElementById(id);
+  if(e&&s!=null) e.setAttribute('aria-label',s);
+}
+function paintChrome(){
+  var U=COPY.ui, B=COPY.brand;
+  if(hasWords(B.pageTitle)) document.title=B.pageTitle;
+  setText('brandKicker',B.kicker);
+  setText('brandTitle',B.title);
+  /* the top bar; Contact's tooltip belongs to updateContactCue, below */
+  setButton('btnGuide',U.guide,U.guideTip);
+  setButton('btnContact',U.contact,null);
+  var cue=document.getElementById('contactCue');
+  if(cue) cue.innerHTML=esc(COPY.contact.cue)+'<i></i>';
+  setButton('btnResult',U.result,null);
+  setButton('btnReset',U.startOver,null);
+  setSound(AUDIO.on);
+  paintSaveLabel();
+  setText('noticeLabel',U.noticeLabel);
   var t=document.getElementById('noticeTxt');
   if(t&&DISC.bar) t.textContent=DISC.bar;
-})();
+  setAria('zIn',U.zoomIn); setAria('zOut',U.zoomOut); setAria('zFit',U.zoomFit);
+  /* the result sheet's frame; its body is resultHtml() */
+  setAria('sheet',U.sheetLabel);
+  setText('sheetKicker',U.sheetKicker);
+  setButton('sheetPrint',U.print,U.printTip);
+  setButton('sheetSaveDoc',U.saveDoc,U.saveDocTip);
+  setButton('sheetClose',U.close+' ✕',null);
+  /* the walkthrough's frame; its screens are walkRender() */
+  setButton('walkGuide',U.walkFullGuide,U.walkFullGuideTip);
+  setButton('walkSkip',U.walkSkip+' ✕',null);
+  setButton('walkBack',U.walkBack,null);
+  /* the guide's frame; its sections are buildGuide() */
+  setText('guideKicker',U.guideKicker);
+  setText('guideTitle',U.guideHeading);
+  setButton('guideClose',U.close+' ✕',null);
+  setAria('guideClose',U.closeGuide);
+  setButton('guideWalk',U.guideWalk,U.guideWalkTip);
+  setButton('guideContact',U.contact,null);
+  var gf=document.getElementById('guideFoot');
+  if(gf) gf.innerHTML=U.guideFoot||'';
+  /* the Contact panel's frame; its body is renderContact() */
+  setText('contactKicker',U.contactKicker);
+  setText('contactTitle',U.contactHeading);
+  setButton('contactClose',U.close+' ✕',null);
+  setAria('contactClose',U.backToTree);
+  updateHint();
+  updateContactCue();
+}
+function repaint(){
+  paintChrome();
+  guideBuilt=false;
+  if(!guideEl.hidden){ buildGuide(); paintGuideGo(); }
+  if(!walkEl.hidden) walkRender();
+  if(!contactEl.hidden){
+    /* A mounted Calendly frame is left alone, for the reason mountCal()
+       gives: rebuilding it would reload the calendar under someone booking. */
+    if(document.querySelector('#calFrame[data-mounted]')) renderContactFoot();
+    else renderContact();
+  }
+  if(!sheet.hidden&&terminal) paintSheet();
+}
 
 /* ===========================================================================
    STATE
@@ -1141,12 +1252,13 @@ function build(){
     if(answered!==null){
       qEl.setAttribute('tabindex','0');
       qEl.setAttribute('role','button');
-      qEl.setAttribute('aria-label','Go back to '+n.tag+' — '+n.q+'. Retracts the tree so you can answer it again.');
+      qEl.setAttribute('aria-label',fill(COPY.ui.reopenLabel,{tag:n.tag,question:n.q}));
+      qEl.dataset.alt=COPY.ui.answerAgain;
     }
     qEl.innerHTML='<span class="tag">'+esc(n.tag)+'</span><span class="ttl">'+esc(n.q)+'</span>'
       +(n.note&&answered===null&&!hushed[id]
         ?'<span class="bubble"><span class="btxt">'+noteHtml(n.note)+'</span>'
-         +'<button type="button" class="bx" aria-label="Dismiss this note">&#10005;</button></span>'
+         +'<button type="button" class="bx" aria-label="'+esc(COPY.ui.dismissNote)+'">&#10005;</button></span>'
         :'');
     var bx=qEl.querySelector('.bx');
     if(bx){
@@ -1165,8 +1277,8 @@ function build(){
       back.type='button';
       back.className='rewind';
       back.innerHTML='&#10005;';
-      back.title='Cut the tree back to this question and answer it again';
-      back.setAttribute('aria-label','Cut the tree back to '+n.tag+' and answer it again');
+      back.title=COPY.ui.rewindTip;
+      back.setAttribute('aria-label',fill(COPY.ui.rewindLabel,{tag:n.tag}));
       /* Take the card from the event, never from a captured variable. build()
          declares both `id` and `back` with var, so anything closed over in
          here is the LAST question in the chain — which made every x cut back
@@ -1197,13 +1309,14 @@ function build(){
       oEl.dataset.node=id; oEl.dataset.ai=String(ai);
       oEl.innerHTML='<span class="ttl">'+esc(a.label)+'</span>'
         +(a.hint?'<span class="sub">'+esc(a.hint)+'</span>':'')
-        +(a.grants?'<span class="sub">unlocks '+esc(OUT[a.grants].name)+'</span>':'')
+        +(a.grants?'<span class="sub">'+esc(COPY.tree.unlocks)+' '+esc(OUT[a.grants].name)+'</span>':'')
         +(a.note&&answered===ai?'<span class="onote">'+noteHtml(a.note)+'</span>':'')
         +(answered===null?'<span class="kb">'+(ai+1)+'</span>':'');
+      if(answered!==null&&answered!==ai) oEl.dataset.alt=COPY.ui.switchBranch;
       oEl.setAttribute('tabindex','0'); oEl.setAttribute('role','button');
       oEl.setAttribute('aria-label',a.label
-        +(answered===ai?' — your current choice'
-          :(answered===null?'':' — switch the tree to this branch')));
+        +(answered===ai?' — '+COPY.ui.optionChosen
+          :(answered===null?'':' — '+COPY.ui.optionSwitch)));
       nodesEl.appendChild(oEl);
       var cx=startX+ai*(ow+hg)+ow/2;
       optRow.push({el:oEl,cx:cx});
@@ -1228,9 +1341,9 @@ function build(){
     rEl.style.width=(questionW()-20)+'px';
     rEl.id='resultNode';
     rEl.setAttribute('tabindex','0'); rEl.setAttribute('role','button');
-    rEl.setAttribute('aria-label','Your result: '+v.t+'. Open the full result.');
-    rEl.innerHTML='<span class="tag">Result</span><span class="ttl">'+esc(v.t)+'</span>'
-      +'<span class="go">'+TICK+' Open full result</span>';
+    rEl.setAttribute('aria-label',fill(COPY.ui.resultLabel,{result:v.t}));
+    rEl.innerHTML='<span class="tag">'+esc(COPY.result.nodeTag)+'</span><span class="ttl">'+esc(v.t)+'</span>'
+      +'<span class="go">'+TICK+' '+esc(COPY.result.nodeOpen)+'</span>';
     nodesEl.appendChild(rEl);
     rows.push({items:[{el:rEl,cx:anchor}],kind:'result'});
     if(prevChosenEl) edges.push({from:prevChosenEl,to:rEl,taken:true});
@@ -1253,9 +1366,7 @@ function updateContactCue(){
   var btn=document.getElementById('btnContact'), cue=document.getElementById('contactCue');
   if(!btn||!cue) return;
   btn.classList.toggle('needed',want);
-  btn.title=want
-    ? 'This question is worth a conversation — talk to a person'
-    : 'Talk to a person';
+  btn.title=want?COPY.ui.contactTipRisky:COPY.ui.contactTip;
   cue.hidden=!want||cueHushed;
   /* a question answered and then reopened deserves the cue again */
   if(!want) cueHushed=false;
@@ -1358,9 +1469,9 @@ function nodeKey(el){
   return 'q:'+id;
 }
 /* The arrival, drawn once and cleaned up after itself. A sunrise rather than
-   confetti: this tool ends a sovereignty decision, so the moment is marked in
-   the language the page already speaks — warm light rising behind the
-   ridgelines, and seed-light carried up on the air. */
+   confetti: this tool ends a sovereignty decision, so the moment is marked
+   quietly — warm light rising from the bottom of the scene, and seed-light
+   carried up on the air. */
 var partyTimer=null;
 function celebrate(){
   if(reduce||document.hidden) return;
@@ -1811,24 +1922,29 @@ function updateRail(){
   railFill.style.width=Math.round((done/Math.max(done+rem,1))*100)+'%';
 }
 function updateHint(){
-  if(terminal) hintEl.textContent='Complete — open the result, or click any greyed branch to re-route the tree.';
-  else if(path.length) hintEl.textContent='Click a branch to grow the tree · click a greyed branch to re-route';
-  else hintEl.textContent='Click a branch to grow the tree';
+  hintEl.textContent=terminal?COPY.tree.hintDone:(path.length?COPY.tree.hintGoing:COPY.tree.hintStart);
 }
 
 /* ===========================================================================
    RESULT
    ========================================================================= */
+/* One headline from COPY.verdicts, as a fresh {t, s}. */
+function verdictCopy(key){
+  var v=COPY.verdicts[key]||{};
+  return {t:v.t||'',s:v.s||''};
+}
+/* Which headline the path earned. The wording is content; which one applies
+   is logic, and stays here. A print-out or a document made before the path
+   reaches an ending asks for verdictCopy('progress') instead. */
 function verdict(kind){
-  if(kind==='END_NONTAS') return {t:'A non-TAS pathway fits best right now',
-    s:'You can protect your air and build capacity without TAS, and revisit once the boundary question is resolved.'};
+  if(kind==='END_NONTAS') return verdictCopy('nontas');
   var reg=collected.indexOf('regulatory')>=0,tgt=collected.indexOf('targeted')>=0,par=collected.indexOf('participatory')>=0;
-  if(reg&&par) return {t:'Regulatory + Administrative TAS',s:'You have sources to manage and reasons to influence what happens next door — seek both roles. They are not mutually exclusive.'};
-  if(tgt&&par) return {t:'Targeted + Administrative TAS',s:'A focused program at home, plus a formal voice in the decisions made around you.'};
-  if(reg) return {t:'Regulatory TAS',s:'Become the primary implementing authority for the air-pollution sources in your jurisdiction.'};
-  if(tgt) return {t:'Targeted Regulatory TAS',s:'A focused program can address your specific local air-quality issue.'};
-  if(par) return {t:'Administrative (good-neighbour) TAS',s:'Get a formal, early voice in the state and local decisions that affect your air quality.'};
-  return {t:'TAS may offer limited near-term benefit',s:'With few sources and no outside concern, non-TAS programs may serve you now — but the option stays open as things change.'};
+  if(reg&&par) return verdictCopy('regPar');
+  if(tgt&&par) return verdictCopy('tgtPar');
+  if(reg) return verdictCopy('reg');
+  if(tgt) return verdictCopy('tgt');
+  if(par) return verdictCopy('par');
+  return verdictCopy('none');
 }
 /* The answer given at the boundary-risk question, or null when the path never
    reached one. "Disputed" and "not sure" each have their own such question, so
@@ -1853,7 +1969,7 @@ function prosCons(x){
     return items&&items.length?'<div class="pk'+cls+'">'+k+'</div><ul class="pl">'
       +items.map(function(t){ return '<li>'+t+'</li>'; }).join('')+'</ul>':'';
   }
-  return list('Pros','',x.pros)+list('Cons',' con',x.cons);
+  return list(esc(COPY.result.pros),'',x.pros)+list(esc(COPY.result.cons),' con',x.cons);
 }
 function chipsHtml(a){ return '<div class="chips">'+a.map(function(s){return '<span class="sx">'+esc(s)+'</span>';}).join('')+'</div>'; }
 function checksHtml(a){ return '<ul class="check">'+a.map(function(c){
@@ -1866,13 +1982,13 @@ function outCard(k,kind){
     var pick=o.chooser?pickAt(o.chooser):-1;
     h+='<div class="two">'+o.options.map(function(x,i){
       return '<div class="mini'+(i===pick?' picked':'')+'">'
-        +(i===pick?'<div class="yc">Your choice</div>':'')
+        +(i===pick?'<div class="yc">'+esc(COPY.result.yourChoice)+'</div>':'')
         +'<div class="mh">'+x.h+'</div>'+(x.d?'<div class="md">'+x.d+'</div>':'')
         +prosCons(x)+'</div>';
     }).join('')+'</div>';
   }
   if(o.checks) h+=checksHtml(o.checks);
-  if(o.sections) h+='<p class="m" style="margin:9px 0 0">Sections you may seek:</p>'+chipsHtml(o.sections);
+  if(o.sections) h+='<p class="m" style="margin:9px 0 0">'+esc(COPY.result.sectionsLabel)+'</p>'+chipsHtml(o.sections);
   return h+'</div>';
 }
 /* What an answer adds to the full result, beyond the pathway it unlocks —
@@ -1887,71 +2003,76 @@ function detailSteps(){
 function answerDetails(){
   return detailSteps().map(function(p){
     var n=NODES[p.node],a=n.a[p.ai];
-    return '<div class="card soft"><div class="rk">'+esc(n.short||n.tag)+' · your answer</div>'
+    return '<div class="card soft"><div class="rk">'+esc(n.short||n.tag)+' · '+esc(COPY.result.yourAnswer)+'</div>'
       +'<h4>'+esc(a.label)+'</h4>'+a.detail+'</div>';
   }).join('');
 }
 function resultHtml(){
   var declined=terminal==='END_NONTAS', v=verdict(terminal), bd=boundaryAnswer();
+  var R=COPY.result, U=COPY.ui;
   var h='<p style="margin:0 0 4px;color:var(--muted)">'+esc(v.s)+'</p>';
   /* two short tiles give the bento its rhythm and answer the first two
      questions a reader actually has: how many sections, and how far in am I */
   var secCount=0;
   collected.forEach(function(k){ if(OUT[k].sections) secCount+=OUT[k].sections.length; });
   var realPaths=collected.filter(function(x){return x!=='capacity';}).length;
-  h+='<div class="card stat tile-half"><div class="rk">CAA sections</div>'
+  h+='<div class="card stat tile-half"><div class="rk">'+esc(R.statSections)+'</div>'
    + '<div><div class="big">'+secCount+'</div><div class="lbl">'
-   + (secCount?'to consider seeking':'none required for this route')+'</div></div></div>';
-  h+='<div class="card stat tile-half"><div class="rk">Pathways</div>'
+   + esc(secCount?R.statSectionsSome:R.statSectionsNone)+'</div></div></div>';
+  h+='<div class="card stat tile-half"><div class="rk">'+esc(R.statPathways)+'</div>'
    + '<div><div class="big">'+realPaths+'</div><div class="lbl">'
-   + (realPaths===1?'recommended route':(realPaths?'complementary routes':'non-TAS route'))+'</div></div></div>';
+   + esc(realPaths===1?R.statPathOne:(realPaths?R.statPathMany:R.statPathNone))+'</div></div></div>';
   if(bd){
-    h+='<div class="card danger"><div class="rk">Keep in view</div><h4>Your boundary showing is open to others</h4>'
+    h+='<div class="card danger"><div class="rk">'+esc(R.boundaryRk)+'</div><h4>'+esc(R.boundaryH)+'</h4>'
       +DISC.boundary+(bd.detail||'')+'</div>';
   }
   var real=collected.filter(function(x){return x!=='capacity';});
   if(!declined){
-    h+='<div class="sectitle">Recommended pathway'+(real.length>1?'s':'')+'</div>';
+    h+='<div class="sectitle">'+esc(real.length>1?R.pathwaysTitleMany:R.pathwaysTitle)+'</div>';
     ['regulatory','targeted','participatory'].forEach(function(k){ if(collected.indexOf(k)>=0) h+=outCard(k,'key'); });
-    if(!real.length) h+='<div class="card soft"><div class="rk">Worth knowing</div><h4>You have strong options without TAS today</h4>'
-      +'<p class="m">With little source activity and no outside concern right now, the non-TAS pathways below may meet your needs. TAS remains available whenever sources appear or priorities shift.</p></div>';
+    if(!real.length) h+='<div class="card soft"><div class="rk">'+esc(R.noneRk)+'</div><h4>'+esc(R.noneH)+'</h4>'
+      +'<p class="m">'+R.noneBody+'</p></div>';
     if(collected.indexOf('capacity')>=0) h+=outCard('capacity','warn');
     h+=answerDetails();
     /* the section chips above are what people paste into briefings, so the
        warning about them sits with them rather than only at the foot */
-    if(real.length) h+='<p style="margin:0;font-size:12.5px;color:var(--muted)">Section numbers point '
-      +'you to the right part of the law — they are not authority to quote. See the note at the foot '
-      +'of this panel.</p>';
+    if(real.length) h+='<p style="margin:0;font-size:12.5px;color:var(--muted)">'+R.sectionsNote+'</p>';
   }
-  h+='<div class="card soft"><div class="rk">No TAS required</div><h4>'
-    +(declined?'Your non-TAS pathway':'Also available — with or without TAS')+'</h4>'+checksHtml(NONTAS)+'</div>';
+  h+='<div class="card soft"><div class="rk">'+esc(R.nontasRk)+'</div><h4>'
+    +esc(declined?R.nontasHDeclined:R.nontasH)+'</h4>'+checksHtml(NONTAS)+'</div>';
   /* read before the criteria list, because it changes what the list is for:
      meeting all four makes the Tribe eligible, not yet authorised */
-  h+='<div class="sectitle">Eligibility is not authority</div>'
-    +'<div class="card warn"><div class="rk">Two stages</div>'+DISC.authority+'</div>';
-  h+='<div class="sectitle">Before you file — the four eligibility criteria</div>'
-    +'<div class="card"><p class="m" style="margin-top:0">To be approved, your Tribe must be able to demonstrate all four (40 CFR §§ 49.6 / 49.7):</p>'+checksHtml(CRITERIA)+'</div>';
-  h+='<div class="sectitle">Next steps</div><div class="card"><ol class="steps">'
+  h+='<div class="sectitle">'+esc(R.authorityTitle)+'</div>'
+    +'<div class="card warn"><div class="rk">'+esc(R.authorityRk)+'</div>'+DISC.authority+'</div>';
+  h+='<div class="sectitle">'+esc(R.criteriaTitle)+'</div>'
+    +'<div class="card"><p class="m" style="margin-top:0">'+R.criteriaLead+'</p>'+checksHtml(CRITERIA)+'</div>';
+  h+='<div class="sectitle">'+esc(R.nextTitle)+'</div><div class="card"><ol class="steps">'
     +NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?'<div class="d">'+s.d+'</div>':'')+'</li>';}).join('')+'</ol></div>';
-  h+='<div class="card"><div class="rk">Reference</div><div class="reflinks">'
-    +LINKS.map(function(l){return '<a href="'+l.u+'" target="_blank" rel="noopener">'+esc(l.t)+' ↗</a>';}).join('')+'</div></div>';
+  h+='<div class="card"><div class="rk">'+esc(R.referenceRk)+'</div><div class="reflinks">'
+    +LINKS.map(function(l){return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener">'+esc(l.t)+' ↗</a>';}).join('')+'</div></div>';
   h+='<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">'
-    +'<button class="btn solid" data-print="1">Print / Save PDF</button>'
+    +'<button class="btn solid" data-print="1">'+esc(U.printPdf)+'</button>'
     /* Saving is an account's to offer. A guest gets Print, which is the thing
        that actually keeps this result for them, rather than a button whose
        only outcome is a dialog explaining it cannot. */
-    +(canKeep()?'<button class="btn" data-savedoc="1">Save as document</button>':'')
-    +'<button class="btn" data-close="1">Back to the tree</button></div>';
+    +(canKeep()?'<button class="btn" data-savedoc="1">'+esc(U.saveDoc)+'</button>':'')
+    +'<button class="btn" data-close="1">'+esc(U.backToTree)+'</button></div>';
   h+='<div class="disc">'+DISC.result+DISC.cites+'</div>';
   return h;
 }
 var sheet=document.getElementById('sheet'), prevFocus=null;
-function openSheet(){
-  if(!terminal) return;
-  prevFocus=document.activeElement;
+/* The sheet's headline and body, from the current path and the current
+   wording. Shared by opening it, by someone signing in while it is open, and
+   by content arriving while it is open. */
+function paintSheet(){
   document.getElementById('sheetTitle').textContent=verdict(terminal).t;
   document.getElementById('sheetBody').innerHTML=resultHtml();
   paintKeepable();
+}
+function openSheet(){
+  if(!terminal) return;
+  prevFocus=document.activeElement;
+  paintSheet();
   sheet.hidden=false;
   /* the printout is of the result, so it is offered while the result is open */
   var c=sheet.querySelector('[data-close]'); if(c) c.focus({preventScroll:true});
@@ -1985,7 +2106,7 @@ function printTree(){
     rows.push({kind:'a',top:'',main:esc(a.label||''),grants:a.grants?esc((OUT[a.grants]||{}).name||''):''});
   });
   var v=verdict(terminal);
-  rows.push({kind:'r',top:'Result',main:esc(v.t)});
+  rows.push({kind:'r',top:esc(COPY.result.nodeTag),main:esc(v.t)});
 
   var y=PAD, parts=[];
   rows.forEach(function(r,i){
@@ -1993,10 +2114,9 @@ function printTree(){
     var w=(r.kind==='a')?360:520;
     var lx=x-w/2;
     var stroke=(r.kind==='a')?'#4a4a4a':'#111';
-    var dash=(r.kind==='a')?'':'';
     var fill=(r.kind==='r')?'#f0f0f0':'#fff';
     if(i>0) parts.push('<line x1="'+x+'" y1="'+(y-GAP)+'" x2="'+x+'" y2="'+y+'" stroke="#777" stroke-width="1.2"/>');
-    parts.push('<rect x="'+lx+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="7" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(r.kind==='a'?1:1.5)+'"'+dash+'/>');
+    parts.push('<rect x="'+lx+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="7" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(r.kind==='a'?1:1.5)+'"/>');
     var ty=y+(r.top?17:h/2+4);
     if(r.top) parts.push('<text x="'+(lx+12)+'" y="'+(y+15)+'" font-size="8.5" letter-spacing="1.1" fill="#666" font-family="sans-serif">'+r.top.toUpperCase()+'</text>');
     var main=r.main.length>68?r.main.slice(0,66)+'…':r.main;
@@ -2005,7 +2125,7 @@ function printTree(){
     y+=h+GAP;
   });
   var H=y-GAP+PAD;
-  return '<h3>The route taken</h3><svg class="ptree" viewBox="0 0 '+W+' '+H+'" width="100%" '
+  return '<h3>'+esc(COPY.print.route)+'</h3><svg class="ptree" viewBox="0 0 '+W+' '+H+'" width="100%" '
     +'preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg">'+parts.join('')+'</svg>';
 }
 /* The printed document, as HTML. Split out from doPrint() because the same
@@ -2018,20 +2138,21 @@ function printTree(){
 var MON=['January','February','March','April','May','June','July','August',
          'September','October','November','December'];
 function printableHtml(){
-  var v=terminal?verdict(terminal):{t:'TAS decision — in progress',s:'This path is not yet complete.'};
+  var v=terminal?verdict(terminal):verdictCopy('progress');
+  var P=COPY.print, R=COPY.result;
   var now=new Date();
   var h='<h2>'+esc(v.t)+'</h2>'
-   +'<p class="pstamp">Generated '+now.getDate()+' '+MON[now.getMonth()]+' '+now.getFullYear()
-   +' by the TAS Decision Tree</p><p>'+esc(v.s)+'</p>';
+   +'<p class="pstamp">'+esc(fill(P.stamp,{date:now.getDate()+' '+MON[now.getMonth()]+' '+now.getFullYear()}))
+   +'</p><p>'+esc(v.s)+'</p>';
   h+=printTree();
-  h+='<h3>Answers chosen</h3><div>';
+  h+='<h3>'+esc(P.answers)+'</h3><div>';
   path.forEach(function(p){
     var n=NODES[p.node],a=n.a[p.ai];
     h+='<span class="pc">'+esc(n.short+': '+(a.short||a.label))+'</span>';
   });
   h+='</div>';
   if(collected.length){
-    h+='<h3>Recommended pathways</h3>';
+    h+='<h3>'+esc(P.pathways)+'</h3>';
     collected.forEach(function(k){
       var o=OUT[k];
       h+='<p><b>'+esc(o.name)+' — '+esc(o.title)+'</b></p>';
@@ -2039,8 +2160,8 @@ function printableHtml(){
         var pick=o.chooser?pickAt(o.chooser):-1;
         h+='<ul>'+o.options.map(function(x,i){
           var pc=function(k,items){ return items&&items.length?'<br>'+k+': '+items.join('; ')+'.':''; };
-          return '<li><b>'+x.h+'</b>'+(i===pick?' (your choice)':'')+(x.d?' — '+x.d:'')
-            +pc('Pros',x.pros)+pc('Cons',x.cons)+'</li>';
+          return '<li><b>'+x.h+'</b>'+(i===pick?' '+esc(P.yourChoice):'')+(x.d?' — '+x.d:'')
+            +pc(esc(R.pros),x.pros)+pc(esc(R.cons),x.cons)+'</li>';
         }).join('')+'</ul>';
       }
       if(o.checks) h+='<ul>'+o.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
@@ -2049,18 +2170,18 @@ function printableHtml(){
   }
   /* the notes attached to answers — the boundary one, then the rest */
   var bd=boundaryAnswer(), notes=[];
-  if(bd&&bd.detail) notes.push({h:'Boundary risk: '+(bd.short||bd.label),d:bd.detail});
+  if(bd&&bd.detail) notes.push({h:P.boundaryPrefix+': '+(bd.short||bd.label),d:bd.detail});
   detailSteps().forEach(function(p){
     var n=NODES[p.node],a=n.a[p.ai];
     notes.push({h:(n.short||n.tag)+': '+(a.short||a.label),d:a.detail});
   });
-  if(notes.length) h+='<h3>About your answers</h3>'+notes.map(function(x){
+  if(notes.length) h+='<h3>'+esc(P.about)+'</h3>'+notes.map(function(x){
     return '<p><b>'+esc(x.h)+'</b></p>'+x.d;
   }).join('');
-  h+='<h3>Non-TAS options</h3><ul>'+NONTAS.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
-  h+='<h3>The four eligibility criteria (40 CFR §§ 49.6 / 49.7)</h3><ul>'+CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
-  h+='<h3>Next steps</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
-  h+='<h3>Reference</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+l.u+'</li>';}).join('')+'</ul>';
+  h+='<h3>'+esc(P.nontas)+'</h3><ul>'+NONTAS.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
+  h+='<h3>'+esc(P.criteria)+'</h3><ul>'+CRITERIA.map(function(c){return '<li><b>'+c.h+'</b> — '+c.d+'</li>';}).join('')+'</ul>';
+  h+='<h3>'+esc(P.next)+'</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
+  h+='<h3>'+esc(P.reference)+'</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+esc(l.u)+'</li>';}).join('')+'</ul>';
   h+='<div class="pd">'+DISC.print+'</div>';
   return h;
 }
@@ -2084,85 +2205,75 @@ function doPrint(){
    itself light and dark.
    ========================================================================= */
 var WALK_KEY='tas-walk-seen';
-var WALK=[
-  {h:'A tool for one decision',
-   art:'<svg viewBox="0 0 320 96" role="img" aria-label="A question card with three answers fanned beneath it">'
-      +'<rect class="wq" x="86" y="6" width="148" height="30" rx="7"/>'
-      +'<text class="wt on" x="97" y="25">Are any boundaries disputed?</text>'
-      +'<path class="wl" d="M160,36 C160,48 46,48 46,60"/><path class="wl" d="M160,36 L160,60"/>'
-      +'<path class="wl" d="M160,36 C160,48 274,48 274,60"/>'
-      +'<rect class="wo" x="6" y="60" width="80" height="26" rx="6"/><text class="wt" x="16" y="77">No — clear</text>'
-      +'<rect class="wo" x="120" y="60" width="80" height="26" rx="6"/><text class="wt" x="130" y="77">Disputed</text>'
-      +'<rect class="wo" x="234" y="60" width="80" height="26" rx="6"/><text class="wt" x="244" y="77">Not sure</text>'
-      +'</svg>',
-   html:'<p>This helps a Tribe think through whether to seek <b>treatment in the same manner as a state</b> under the Tribal Authority Rule — and if so, for which Clean Air Act sections.</p>'
-       +'<p>It asks four questions. Each opens beneath the last, and the answers you give draw a route through them.</p>'
-       +'<div class="wnote"><b>Read this first.</b> This is not an official EPA product and it is not legal advice. It determines nothing and sends nothing to EPA. What you get at the end is a written summary of the route you chose — something to open a conversation with Tribal legal counsel, leadership and Council.</div>'},
-
-  {h:'Answer, and the tree grows',
-   art:'<svg viewBox="0 0 320 118" role="img" aria-label="An answer chosen, with the next question growing beneath it">'
-      +'<rect class="wq" x="86" y="4" width="148" height="26" rx="7"/><text class="wt on" x="97" y="21">Question 1</text>'
-      +'<path class="wl" d="M160,30 C160,40 60,40 60,50"/><path class="wl pick" d="M160,30 L160,50"/>'
-      +'<rect class="wo grey" x="16" y="50" width="88" height="24" rx="6"/><text class="wt" x="26" y="66">Not taken</text>'
-      +'<rect class="wo pick" x="116" y="50" width="88" height="24" rx="6"/><text class="wt on" x="126" y="66">Your answer</text>'
-      +'<path class="wl pick" d="M160,74 L160,88"/>'
-      +'<rect class="wq" x="86" y="88" width="148" height="26" rx="7"/><text class="wt on" x="97" y="105">Question 2</text>'
-      +'</svg>',
-   html:'<p>Click an answer. The line to the next question draws itself, the question fades in, and its own answers arrive under it one at a time.</p>'
-       +'<p>You can also press the <b>number</b> of an answer, or move between cards with <code>tab</code> and choose with <code>enter</code>.</p>'
-       +'<p>Drag the background to move the canvas. Scrolling pans rather than zooms, so the tree never changes size by accident — hold <code>ctrl</code> and scroll to zoom, and <b>Fit</b> at the bottom right frames the whole thing.</p>'},
-
-  {h:'Nothing you do is stuck',
-   art:'<svg viewBox="0 0 320 100" role="img" aria-label="A greyed branch, and the x that cuts the tree back">'
-      +'<rect class="wq" x="86" y="8" width="148" height="28" rx="7"/><text class="wt on" x="97" y="26">An answered question</text>'
-      +'<circle cx="228" cy="14" r="8" fill="var(--surface)" stroke="var(--alert)" stroke-width="1.4"/>'
-      +'<path d="M225,11 L231,17 M231,11 L225,17" stroke="var(--alert)" stroke-width="1.6" stroke-linecap="round"/>'
-      +'<path class="wl" d="M160,36 C160,48 60,48 60,62"/><path class="wl pick" d="M160,36 C160,48 250,48 250,62"/>'
-      +'<rect class="wo grey" x="16" y="62" width="88" height="26" rx="6"/><text class="wt" x="26" y="79">Click to re-route</text>'
-      +'<rect class="wo pick" x="206" y="62" width="88" height="26" rx="6"/><text class="wt on" x="216" y="79">Chosen</text>'
-      +'</svg>',
-   html:'<p>The answers you did not take stay on the canvas, greyed. <b>Click a greyed answer</b> and the tree re-routes down that branch instead — which is how you show Council what the other choice would have led to.</p>'
-       +'<p>Every answered question carries a small <b>&#10005;</b>. Click it and the tree withdraws back to that question and reopens it, because everything below it no longer follows from your answers.</p>'
-       +'<p><b>Start over</b> in the top bar takes the whole tree back to question one.</p>'},
-
-  {h:'Pathways, and what you get',
-   art:'<svg viewBox="0 0 320 96" role="img" aria-label="Pathway labels above a result document">'
-      +'<rect class="wchip" x="6" y="6" width="88" height="17" rx="5"/><text class="wchip-t" x="14" y="18">Regulatory TAS</text>'
-      +'<rect class="wchip" x="102" y="6" width="96" height="17" rx="5"/><text class="wchip-t" x="110" y="18">Administrative TAS</text>'
-      +'<rect class="wchip" x="206" y="6" width="76" height="17" rx="5"/><text class="wchip-t" x="214" y="18">Capacity</text>'
-      +'<rect class="wq" x="86" y="34" width="148" height="56" rx="7"/>'
-      +'<text class="wt on" x="97" y="51">Your result</text>'
-      +'<rect x="97" y="59" width="112" height="4" rx="2" fill="var(--border-strong)"/>'
-      +'<rect x="97" y="67" width="126" height="4" rx="2" fill="var(--border-strong)"/>'
-      +'<rect x="97" y="75" width="88" height="4" rx="2" fill="var(--border-strong)"/>'
-      +'</svg>',
-   html:'<p>Some answers unlock a <b>pathway</b> — a route worth considering, with the Clean Air Act sections that go with it. They accumulate: many sources <i>and</i> a wish for a say in nearby permits finishes with two.</p>'
-       +'<p>At the end, <b>Result</b> opens a panel holding the pathways, the sections to consider seeking, the four eligibility criteria, next steps, and the notes that belong with them. <b>Print</b> turns it into a document written to stand on its own months later, in front of someone who was not at the screen.</p>'
-       +'<p>A pathway is a direction to consider, not a finding of eligibility — EPA decides that.</p>'},
-
-  {h:'Keeping what you do here',
-   art:null,
-   html:'<p>You can use every part of this as a <b>guest</b>: answer the questions, re-route, open the result, print it. Nothing is asked of you and nothing is sent anywhere.</p>'
-       +'<p>What a guest cannot do is <b>keep</b> it. Close the tab and the path is gone — so <b>Print</b> is how you take a copy away with you.</p>'
-       +'<p>Signing in adds somewhere to put it: the path you answered, and the result as a document you can edit and come back to next month. The account button in the top bar is there whenever you want it, and never before.</p>'
-       +'<p style="color:var(--muted);font-size:13.5px"><b>Full guide</b>, at the top of this box, goes into all of it properly — moving around the canvas, what each pathway means, editing a saved document, and who to ask. <b>Guide</b> in the top bar brings these five screens back at any point.</p>'}
+/* The drawings, one per screen by position; the words are COPY.walk, in
+   tree-data.js. The drawings stay here because they are not wording: they are
+   the tree drawn small, in its own classes, and belong with the CSS that
+   draws the tree. A screen past the end of this list, or one whose entry is
+   null, simply has no drawing — so the editor can add, remove or reorder
+   screens without anything breaking, though a drawing keeps its position. */
+var WALK_ART=[
+  /* 1 · A tool for one decision */
+  '<svg viewBox="0 0 320 96" role="img" aria-label="A question card with three answers fanned beneath it">'
+    +'<rect class="wq" x="86" y="6" width="148" height="30" rx="7"/>'
+    +'<text class="wt on" x="97" y="25">Are any boundaries disputed?</text>'
+    +'<path class="wl" d="M160,36 C160,48 46,48 46,60"/><path class="wl" d="M160,36 L160,60"/>'
+    +'<path class="wl" d="M160,36 C160,48 274,48 274,60"/>'
+    +'<rect class="wo" x="6" y="60" width="80" height="26" rx="6"/><text class="wt" x="16" y="77">No — clear</text>'
+    +'<rect class="wo" x="120" y="60" width="80" height="26" rx="6"/><text class="wt" x="130" y="77">Disputed</text>'
+    +'<rect class="wo" x="234" y="60" width="80" height="26" rx="6"/><text class="wt" x="244" y="77">Not sure</text>'
+    +'</svg>',
+  /* 2 · Answer, and the tree grows */
+  '<svg viewBox="0 0 320 118" role="img" aria-label="An answer chosen, with the next question growing beneath it">'
+    +'<rect class="wq" x="86" y="4" width="148" height="26" rx="7"/><text class="wt on" x="97" y="21">Question 1</text>'
+    +'<path class="wl" d="M160,30 C160,40 60,40 60,50"/><path class="wl pick" d="M160,30 L160,50"/>'
+    +'<rect class="wo grey" x="16" y="50" width="88" height="24" rx="6"/><text class="wt" x="26" y="66">Not taken</text>'
+    +'<rect class="wo pick" x="116" y="50" width="88" height="24" rx="6"/><text class="wt on" x="126" y="66">Your answer</text>'
+    +'<path class="wl pick" d="M160,74 L160,88"/>'
+    +'<rect class="wq" x="86" y="88" width="148" height="26" rx="7"/><text class="wt on" x="97" y="105">Question 2</text>'
+    +'</svg>',
+  /* 3 · Nothing you do is stuck */
+  '<svg viewBox="0 0 320 100" role="img" aria-label="A greyed branch, and the x that cuts the tree back">'
+    +'<rect class="wq" x="86" y="8" width="148" height="28" rx="7"/><text class="wt on" x="97" y="26">An answered question</text>'
+    +'<circle cx="228" cy="14" r="8" fill="var(--surface)" stroke="var(--alert)" stroke-width="1.4"/>'
+    +'<path d="M225,11 L231,17 M231,11 L225,17" stroke="var(--alert)" stroke-width="1.6" stroke-linecap="round"/>'
+    +'<path class="wl" d="M160,36 C160,48 60,48 60,62"/><path class="wl pick" d="M160,36 C160,48 250,48 250,62"/>'
+    +'<rect class="wo grey" x="16" y="62" width="88" height="26" rx="6"/><text class="wt" x="26" y="79">Click to re-route</text>'
+    +'<rect class="wo pick" x="206" y="62" width="88" height="26" rx="6"/><text class="wt on" x="216" y="79">Chosen</text>'
+    +'</svg>',
+  /* 4 · Pathways, and what you get */
+  '<svg viewBox="0 0 320 96" role="img" aria-label="Pathway labels above a result document">'
+    +'<rect class="wchip" x="6" y="6" width="88" height="17" rx="5"/><text class="wchip-t" x="14" y="18">Regulatory TAS</text>'
+    +'<rect class="wchip" x="102" y="6" width="96" height="17" rx="5"/><text class="wchip-t" x="110" y="18">Administrative TAS</text>'
+    +'<rect class="wchip" x="206" y="6" width="76" height="17" rx="5"/><text class="wchip-t" x="214" y="18">Capacity</text>'
+    +'<rect class="wq" x="86" y="34" width="148" height="56" rx="7"/>'
+    +'<text class="wt on" x="97" y="51">Your result</text>'
+    +'<rect x="97" y="59" width="112" height="4" rx="2" fill="var(--border-strong)"/>'
+    +'<rect x="97" y="67" width="126" height="4" rx="2" fill="var(--border-strong)"/>'
+    +'<rect x="97" y="75" width="88" height="4" rx="2" fill="var(--border-strong)"/>'
+    +'</svg>',
+  /* 5 · Keeping what you do here */
+  null
 ];
 
 var walkEl=document.getElementById('walk');
 var walkAt=0, walkFocus=null;
 function walkRender(){
-  var st=WALK[walkAt], last=walkAt===WALK.length-1;
-  document.getElementById('walkStep').textContent='Step '+(walkAt+1)+' of '+WALK.length;
+  var screens=COPY.walk;
+  /* content adopted while the walkthrough is open may have fewer screens */
+  if(walkAt>=screens.length) walkAt=Math.max(0,screens.length-1);
+  var st=screens[walkAt]||{h:'',html:''}, last=walkAt>=screens.length-1, art=WALK_ART[walkAt];
+  document.getElementById('walkStep').textContent=
+    fill(COPY.ui.walkStep,{n:walkAt+1,total:screens.length});
   document.getElementById('walkTitle').textContent=st.h;
   document.getElementById('walkBody').innerHTML=
-    (st.art?'<div class="wart">'+st.art+'</div>':'')+st.html;
+    (art?'<div class="wart">'+art+'</div>':'')+st.html;
   document.getElementById('walkBody').scrollTop=0;
   var dots='';
-  for(var i=0;i<WALK.length;i++) dots+='<i class="'+(i===walkAt?'on':(i<walkAt?'done':''))+'"></i>';
+  for(var i=0;i<screens.length;i++) dots+='<i class="'+(i===walkAt?'on':(i<walkAt?'done':''))+'"></i>';
   document.getElementById('walkDots').innerHTML=dots;
   document.getElementById('walkBack').disabled=walkAt===0;
   /* the last step's button is the promise the whole walkthrough is making */
-  document.getElementById('walkNext').textContent=last?'Begin the tree':'Next';
+  document.getElementById('walkNext').textContent=last?COPY.ui.walkBegin:COPY.ui.walkNext;
 }
 function openWalk(){
   walkFocus=document.activeElement;
@@ -2181,7 +2292,7 @@ function closeWalk(){
 function walkStep(d){
   var n=walkAt+d;
   if(n<0) return;
-  if(n>=WALK.length){ closeWalk(); return; }
+  if(n>=COPY.walk.length){ closeWalk(); return; }
   walkAt=n;
   walkRender();
 }
@@ -2224,7 +2335,7 @@ function buildGuide(){
     /* the first section says what the tool is for; this says what it is not,
        and it sits high enough that a reader who reads nothing else meets it.
        It repeats the standing bar on purpose — see the note by .notice. */
-    if(i===0) h+='<div class="gack"><div class="rk">What this tool is not</div>'+DISC.guide+'</div>';
+    if(i===0) h+='<div class="gack"><div class="rk">'+esc(COPY.ui.guideNot)+'</div>'+DISC.guide+'</div>';
   });
   guideBody.innerHTML=h;
   guideBody.querySelector('#gtoc').addEventListener('click',function(e){
@@ -2246,8 +2357,12 @@ function openGuide(){
   guideFocus=document.activeElement;
   guideEl.hidden=false;
   guideBody.scrollTop=0;
-  guideGo.textContent=started?'Back to the tree':'Start the tree';
+  paintGuideGo();
   try{ guideGo.focus({preventScroll:true}); }catch(e){}
+}
+/* the guide's main button says what pressing it will do from here */
+function paintGuideGo(){
+  guideGo.textContent=started?COPY.ui.backToTree:COPY.ui.guideStart;
 }
 function closeGuide(){
   guideEl.hidden=true;
@@ -2272,11 +2387,13 @@ document.getElementById('btnGuide').addEventListener('click',function(){
    CONTACT
    Two ways to reach a person, and nothing between the reader and either one:
 
-     Book a time     Calendly does the scheduling. The frame is only created
-                     when the reader asks for it, so nobody who came to type a
-                     question loads a third-party page they did not want. What
-                     they typed rides along as a Calendly prefill, so the
-                     question does not have to be written twice.
+     Book a time     Calendly does the scheduling. The frame goes up when the
+                     reader opens Contact — opening it is the invitation — and
+                     the note beside it says whose service it is. What they
+                     typed rides along as a Calendly prefill, so the question
+                     does not have to be written twice. A link to some other
+                     scheduling service is offered as a plain link instead,
+                     with no prefill; see calLink().
      Ask a question  One box for what they want to know, and a Send that opens
                      their own mail program. Nothing posts from this page.
 
@@ -2292,14 +2409,45 @@ var NLC=String.fromCharCode(10);
 /* what the reader has typed, kept across a re-render of the foot */
 var ASK={q:'',name:'',email:'',path:true};
 
-function haveCalendly(){ return !!(CONTACT.calendly||'').trim(); }
+/* What the configured scheduling link is allowed to be. It becomes an
+   iframe's src and an href, and neither escaping nor the markup filter looks
+   at a URL's scheme there: a javascript: value would run in this page the
+   moment Contact opened, and the server stores CONTACT.calendly as it was
+   typed. So it is parsed here, and only three outcomes exist:
+
+     embed   https on calendly.com or a subdomain of it — framed, with the
+             reader's question carried in as a prefill
+     link    any other https address — another scheduling service, offered
+             as a plain new-tab link, with nothing the reader typed attached
+             (their question is not that service's to receive unasked)
+     null    anything else, including http, credentials in the URL, or
+             something that is not a URL — treated as no link at all
+
+   Returns {kind, url}, url being the parsed, normalised address. */
+function calLink(){
+  var raw=(CONTACT.calendly||'').trim();
+  if(!raw||!window.URL) return null;
+  var u;
+  try{ u=new URL(raw); }catch(e){ return null; }
+  if(u.protocol!=='https:'||u.username||u.password||!u.hostname) return null;
+  var host=u.hostname.toLowerCase();
+  var cal=host==='calendly.com'||/\.calendly\.com$/.test(host);
+  return {kind:cal?'embed':'link',url:u.href};
+}
+function haveCalendly(){ var l=calLink(); return !!l&&l.kind==='embed'; }
 
 /* Calendly takes prefills as query params: name, email, and a1 for the first
    custom question on the event. Appended without assuming the configured URL
-   has no query of its own. */
+   has no query of its own. Only a Calendly link gets them, and only a
+   Calendly link can be embedded: for any other link this returns it bare,
+   or '' when asked for an embed. */
 function calUrl(embed){
-  var u=(CONTACT.calendly||'').trim();
-  if(!u) return '';
+  var l=calLink();
+  if(!l) return '';
+  if(l.kind!=='embed') return embed?'':l.url;
+  /* the query goes before any #fragment, where Calendly will read it */
+  var hash=l.url.indexOf('#');
+  var u=hash<0?l.url:l.url.slice(0,hash), frag=hash<0?'':l.url.slice(hash);
   var p=[];
   if(embed){
     p.push('embed_type=Inline');
@@ -2309,22 +2457,23 @@ function calUrl(embed){
   if(ASK.name) p.push('name='+encodeURIComponent(ASK.name));
   if(ASK.email) p.push('email='+encodeURIComponent(ASK.email));
   if(ASK.q) p.push('a1='+encodeURIComponent(ASK.q.slice(0,900)));
-  if(!p.length) return u;
-  return u+(u.indexOf('?')<0?'?':'&')+p.join('&');
+  if(!p.length) return l.url;
+  return u+(u.indexOf('?')<0?'?':'&')+p.join('&')+frag;
 }
 
 function whoHtml(){
   function row(k,v,todo){
     return '<li><span class="k">'+k+'</span><span class="v'+(todo?' todo':'')+'">'+v+'</span></li>'; }
+  var U=COPY.ui, C=COPY.contact;
   var any=CONTACT.name||CONTACT.role||CONTACT.email||CONTACT.phone;
-  if(!any) return '<p class="cpick">'+CCOPY.whoTodo+'</p>';
+  if(!any) return '<p class="cpick">'+C.whoTodo+'</p>';
   var h='<ul class="cwho">';
-  if(CONTACT.name) h+=row('Name',esc(CONTACT.name));
-  if(CONTACT.role) h+=row('Role',esc(CONTACT.role));
-  if(CONTACT.email) h+=row('Email','<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>');
-  if(CONTACT.phone) h+=row('Phone',esc(CONTACT.phone));
+  if(CONTACT.name) h+=row(esc(U.whoName),esc(CONTACT.name));
+  if(CONTACT.role) h+=row(esc(U.whoRole),esc(CONTACT.role));
+  if(CONTACT.email) h+=row(esc(U.whoEmail),'<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>');
+  if(CONTACT.phone) h+=row(esc(U.whoPhone),esc(CONTACT.phone));
   h+='</ul>';
-  if(!CONTACT.email) h+='<p class="cpick">'+CCOPY.whoTodo+'</p>';
+  if(!CONTACT.email) h+='<p class="cpick">'+C.whoTodo+'</p>';
   return h;
 }
 
@@ -2338,60 +2487,70 @@ function pathLines(){
     out.push((n.short||n.tag||st.node)+' \u2014 '+(a.label||'')+g);
   });
   /* no ending yet means no Result row \u2014 never invent one */
-  if(terminal) out.push('Result: '+verdict(terminal).t);
+  if(terminal) out.push(COPY.result.nodeTag+': '+verdict(terminal).t);
   return out;
 }
 
 function mailText(){
+  var C=COPY.contact;
   var b=(ASK.q||'').trim()+NLC;
   if(ASK.path){
     var ls=pathLines();
-    if(ls.length) b+=NLC+'Where this comes from \u2014 my answers in the tool:'+NLC+ls.join(NLC)+NLC;
+    if(ls.length) b+=NLC+C.mailIntro+NLC+ls.join(NLC)+NLC;
   }
-  b+=NLC+'\u2014'+NLC+(ASK.name||'[your name]');
+  b+=NLC+'—'+NLC+(ASK.name||COPY.ui.mailNoName);
   if(ASK.email) b+=NLC+ASK.email;
-  b+=NLC+'Sent from the TAS Decision Tree.'+NLC;
-  return {subject:'TAS decision tool \u2014 a question',body:b};
+  b+=NLC+C.mailSign+NLC;
+  return {subject:C.mailSubject,body:b};
 }
 
+/* Which COPY.contact strings are HTML and which are plain text is listed
+   beside them in tree-data.js; the plain ones are escaped here. */
 function renderContact(){
-  var h=haveCalendly()?CCOPY.lead:CCOPY.leadNoCal;
+  var C=COPY.contact, U=COPY.ui;
+  var cal=calLink();
+  var h=cal?C.lead:C.leadNoCal;
 
-  h+='<section class="gsec"><h4>Ask a question</h4>'
-   +'<label class="cfield"><span>What would you like to know?</span>'
-   +'<textarea id="askQ" placeholder="For example: what would a jurisdictional showing have to cover for us?"'
-   +' aria-label="What would you like to know?">'+esc(ASK.q)+'</textarea></label>'
+  h+='<section class="gsec"><h4>'+esc(C.askH)+'</h4>'
+   +'<label class="cfield"><span>'+esc(C.askLabel)+'</span>'
+   +'<textarea id="askQ" placeholder="'+esc(C.askPlaceholder)+'"'
+   +' aria-label="'+esc(C.askLabel)+'">'+esc(ASK.q)+'</textarea></label>'
    +'<div class="ctwo">'
-   +'<label class="cfield"><span>Your name</span>'
+   +'<label class="cfield"><span>'+esc(U.askName)+'</span>'
    +'<input type="text" id="askName" autocomplete="name" value="'+esc(ASK.name)+'"></label>'
-   +'<label class="cfield"><span>Your email, so they can reply</span>'
+   +'<label class="cfield"><span>'+esc(U.askEmail)+'</span>'
    +'<input type="email" id="askEmail" autocomplete="email" value="'+esc(ASK.email)+'"></label>'
    +'</div>'
    +'<label class="copt"><input type="checkbox" id="askPath"'+(ASK.path?' checked':'')+'>'
-   +'<span><b>Include my answers from the tree</b>'
-   +'<span class="d">The questions, what you chose, the pathways unlocked and the result.</span>'
+   +'<span><b>'+esc(U.askPath)+'</b>'
+   +'<span class="d">'+esc(U.askPathNote)+'</span>'
    +'</span></label>'
    +'</section>';
 
-  h+='<section class="gsec"><h4>Book a time</h4>';
-  if(haveCalendly()){
+  h+='<section class="gsec"><h4>'+esc(C.calH)+'</h4>';
+  if(cal&&cal.kind==='embed'){
     h+='<div class="calbox" id="calBox"><div class="calask">'
-     +'<p class="cpick">Calendly shows real availability, and carries across anything you '
-     +'have typed above. It is a service outside the Tribe.</p>'
-     +'<a class="btn" id="calTab" href="'+esc(calUrl(false))+'" target="_blank" rel="noopener">New tab</a>'
+     +'<p class="cpick">'+C.calNote+'</p>'
+     +'<a class="btn" id="calTab" href="'+esc(calUrl(false))+'" target="_blank" rel="noopener">'+esc(U.calNewTab)+'</a>'
      +'</div><div id="calFrame"></div></div>';
+  }else if(cal){
+    /* Another scheduling service: a link out, nothing framed, nothing the
+       reader typed attached. No id on it, so the input handler below, which
+       keeps a Calendly link's prefill current, leaves it alone. */
+    h+='<div class="calbox"><div class="calask">'
+     +'<p class="cpick">'+C.calLinkNote+'</p>'
+     +'<a class="btn" href="'+esc(cal.url)+'" target="_blank" rel="noopener noreferrer">'+esc(U.calLinkOpen)+'</a>'
+     +'</div></div>';
   }else{
     /* Said plainly rather than left as an empty heading. A reader needs to know
        the question box is the only way through; whoever deployed the tool needs
        to know why, and where to fix it. */
-    h+='<p class="cpick">There is no scheduling link on this deployment, so the question above '
-     +'is the way through. To offer a calendar here, paste a Calendly event link into '
-     +'<b>Content \u2192 Contact</b> at <code>/admin</code>.</p>';
+    h+='<p class="cpick">'+C.noCal+'</p>';
   }
   h+='</section>';
 
-  h+='<section class="gsec"><h4>Who this reaches</h4>'+whoHtml()+'</section>';
-  h+='<section class="gsec">'+CCOPY.counsel+CCOPY.privacy+'</section>';
+  h+='<section class="gsec"><h4>'+esc(C.whoH)+'</h4>'+whoHtml()+'</section>';
+  h+='<section class="gsec">'+C.counsel+C.privacy+'</section>';
 
   contactBody.innerHTML=h;
   /* The frame goes up with the panel. It was behind a Show button, on the
@@ -2404,34 +2563,37 @@ function renderContact(){
 }
 
 function renderContactFoot(){
+  var U=COPY.ui;
   var ready=!!(ASK.q||'').trim();
   var h='<button class="btn solid" id="cSend"'+(ready&&CONTACT.email?'':' disabled')+' title="'
-   +(!ready?'Write your question first'
-     :(CONTACT.email?'Opens this in your own email program'
-                    :'No email address is set up yet \u2014 copy the text instead'))
-   +'">Send question</button>'
+   +esc(!ready?U.writeFirstTip:(CONTACT.email?U.sendTip:U.sendNoEmailTip))
+   +'">'+esc(U.send)+'</button>'
    +'<button class="btn" id="cCopy"'+(ready?'':' disabled')+' title="'
-   +(ready?'Copy it to paste wherever you like':'Write your question first')
-   +'">Copy</button>'
-   +'<button class="btn" data-cclose="1">Back to the tree</button>'
+   +esc(ready?U.copyTip:U.writeFirstTip)
+   +'">'+esc(U.copy)+'</button>'
+   +'<button class="btn" data-cclose="1">'+esc(U.backToTree)+'</button>'
    +'<span class="grow"></span><span class="fnote">'
-   +(ready?'Nothing is sent until you press send in your own email program.'
-          :'Write a question, or book a time.')
+   +esc(ready?U.footReady:U.footEmpty)
    +'</span>';
   contactFoot.innerHTML=h;
 }
 
-/* The Calendly frame is built here rather than in renderContact, so it is
-   never created for a reader who only wanted the question box. Once it is up
-   it is left alone: rebuilding it on every keystroke would reload Calendly
-   under someone in the middle of choosing a time. */
+/* The Calendly frame goes up when Contact opens and the configured link is
+   a Calendly one (renderContact calls this). It is built as an element
+   rather than in renderContact's markup so that, once up, it is left alone:
+   the foot re-renders on every keystroke, and rebuilding the frame with it
+   would reload Calendly under someone in the middle of choosing a time.
+   calUrl(true) is '' for anything that is not https on calendly.com, and
+   then there is no frame at all. */
 function mountCal(){
   var slot=document.getElementById('calFrame');
   if(!slot||slot.dataset.mounted) return;
+  var src=calUrl(true);
+  if(!src) return;
   slot.dataset.mounted='1';
   var f=document.createElement('iframe');
-  f.setAttribute('src',calUrl(true));
-  f.setAttribute('title','Book a time \u2014 Calendly');
+  f.setAttribute('src',src);
+  f.setAttribute('title',COPY.ui.calFrameTitle);
   f.setAttribute('loading','lazy');
   slot.appendChild(f);
 }
@@ -2460,10 +2622,11 @@ function sendMail(){
 function copyMail(btn){
   if(!(ASK.q||'').trim()) return;
   var m=mailText();
-  var txt='To: '+(CONTACT.email||'[email address]')+NLC+'Subject: '+m.subject+NLC+NLC+m.body;
+  var U=COPY.ui;
+  var txt=U.mailTo+': '+(CONTACT.email||U.mailNoEmail)+NLC+U.mailSubjectLabel+': '+m.subject+NLC+NLC+m.body;
   function done(){
-    btn.textContent='Copied';
-    setTimeout(function(){ btn.textContent='Copy'; },1800);
+    btn.textContent=U.copied;
+    setTimeout(function(){ btn.textContent=U.copy; },1800);
   }
   function fallback(){
     var ta=document.createElement('textarea');
@@ -2473,7 +2636,7 @@ function copyMail(btn){
     var okc=false;
     try{ okc=document.execCommand('copy'); }catch(e){}
     document.body.removeChild(ta);
-    if(okc) done(); else btn.textContent='Could not copy';
+    if(okc) done(); else btn.textContent=U.copyFailed;
   }
   if(navigator.clipboard&&navigator.clipboard.writeText)
     navigator.clipboard.writeText(txt).then(done,fallback);
@@ -2540,9 +2703,11 @@ function paintKeepable(){
   var sd=sheet?sheet.querySelector('.head [data-savedoc]'):null;
   if(sd) sd.hidden=!canKeep();
 }
+/* Everything the reader was shown, wording and photograph included, so a
+   path reopened next year looks as it did when it was answered. */
 function treeSnapshot(){
   return {NODES:NODES,OUT:OUT,NONTAS:NONTAS,CRITERIA:CRITERIA,NEXT:NEXT,
-          LINKS:LINKS,DISC:DISC,CONTACT:CONTACT,GUIDE:GUIDE};
+          LINKS:LINKS,DISC:DISC,CONTACT:CONTACT,GUIDE:GUIDE,COPY:COPY,THEME:THEME};
 }
 function pathTitle(){
   if(terminal) return verdict(terminal).t;
@@ -2561,12 +2726,11 @@ function recollect(){
     if(g&&collected.indexOf(g)<0) collected.push(g);
   });
 }
-function setSaveLabel(txt,title){
-  var b=document.getElementById('btnSavePath');
-  if(!b) return;
-  var lb=b.querySelector('.lb');
-  if(lb) lb.textContent=txt;
-  if(title) b.title=title;
+/* Save says Update once this path is on the account, because pressing it
+   then changes that record rather than making a second one. */
+function paintSaveLabel(){
+  var U=COPY.ui;
+  setButton('btnSavePath',savedRunId?U.update:U.save,savedRunId?U.updateTip:U.saveTip);
 }
 
 function savePath(){
@@ -2588,7 +2752,7 @@ function savePath(){
       if(b) b.disabled=false;
       var isNew=!savedRunId;
       savedRunId=item.id;
-      setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+      paintSaveLabel();
       TAS.ui.toast(isNew?'Path saved to your account.':'Saved path updated.','good',{
         action:'My work',onAction:function(){ location.href='/work#runs'; }
       });
@@ -2612,7 +2776,7 @@ function saveDocument(){
     '<b>Guests cannot save.</b> Sign in and this result becomes a document you can edit, print and open again months from now. As a guest, <b>Print</b> is the way to keep it.'
   ).then(function(user){
     if(!user) return;
-    var v=terminal?verdict(terminal):{t:'TAS decision — in progress'};
+    var v=terminal?verdict(terminal):verdictCopy('progress');
     var meta={generatedFrom:'the decision tree',generatedAt:new Date().toISOString(),
               terminal:terminal||null,pathways:collected.slice(),
               answers:path.map(function(p){
@@ -2626,7 +2790,7 @@ function saveDocument(){
         terminal:terminal,snapshot:treeSnapshot(),treeId:loadedTreeId});
     first.then(function(run){
       savedRunId=run.id;
-      setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+      paintSaveLabel();
       return TAS.store.create('documents',{
         title:v.t,kind:'result',bodyHtml:printableHtml(),meta:meta,
         runId:savedRunId,treeId:loadedTreeId
@@ -2653,7 +2817,7 @@ function applyRun(item){
   stopReveal(); stopUnwind(); clearCelebration();
   build();
   view.s=1; focusFrontier();
-  setSaveLabel('Update','Save this path again — it has changed since you last saved it');
+  paintSaveLabel();
   restoring=false;
   if(path.length<wanted){
     TAS.ui.toast('Part of that saved path no longer fits the tree — '+(wanted-path.length)+
@@ -2666,13 +2830,10 @@ function applyTree(item){
   adoptContent(item.data);
   loadedTreeId=item.id; savedRunId=null;
   path=[]; collected=[]; terminal=null; hushed={};
-  var t=document.getElementById('noticeTxt');
-  if(t&&DISC.bar) t.textContent=DISC.bar;
-  guideBuilt=false;
   stopReveal(); stopUnwind(); clearCelebration();
   build();
   view.s=1; focusFrontier();
-  setSaveLabel('Save','Keep this path on your account and come back to it later');
+  paintSaveLabel();
   TAS.ui.toast('Showing your saved tree: “'+item.title+'”.','good');
 }
 
@@ -2713,12 +2874,12 @@ if(haveAccounts()){
      still attached to an account. */
   TAS.auth.on('signout',function(){
     savedRunId=null;
-    setSaveLabel('Save','Keep this path on your account and come back to it later');
+    paintSaveLabel();
   });
   TAS.auth.on('change',function(){
     paintKeepable();
     /* the result panel is open at the moment someone signs in from it */
-    if(!sheet.hidden&&terminal) document.getElementById('sheetBody').innerHTML=resultHtml();
+    if(!sheet.hidden&&terminal) paintSheet();
   });
   TAS.auth.ready().then(paintKeepable);
 }
@@ -2746,7 +2907,7 @@ function freshTree(){
   /* Start over begins a new path. The one on the account is left exactly as
      it was saved — this is not an edit to it. */
   savedRunId=null;
-  setSaveLabel('Save','Keep this path on your account and come back to it later');
+  paintSaveLabel();
   clearCelebration();
   nodesEl.innerHTML=''; edgesEl.innerHTML='';
   railFill.style.width='0%';
@@ -2799,7 +2960,8 @@ document.getElementById('btnSound').addEventListener('click',function(){
   setSound(!AUDIO.on);
   if(AUDIO.on) sndNode(2);              /* let the reader hear what they turned on */
 });
-setSound(AUDIO.on);
+/* the button's first state is painted with the rest of the wording, by
+   paintChrome() below */
 
 /* ===========================================================================
    DEPTH INTERACTIONS
@@ -2813,6 +2975,13 @@ setSound(AUDIO.on);
    label the reader is in the middle of reading, and this audience cannot be
    handed soft type. Depth comes from the receding not-taken plane instead —
    which touches no text the reader needs. */
+
+/* The wording goes on now, before anything opens, and from here on every
+   adoptContent() repaints it. It waits until this point because painting
+   touches the guide, the walkthrough and the sheet, which are only defined
+   above. */
+paintChrome();
+chromeReady=true;
 
 /* The tree runs the moment the page loads. This script is the last thing in
    the document, so the stage is already laid out and focusFrontier() can

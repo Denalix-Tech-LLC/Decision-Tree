@@ -4,9 +4,13 @@
    This exists because the tool gets opened on shared machines — a Council
    laptop, a conference-room desktop — and "am I still signed in over there"
    is otherwise unanswerable.
+
+   Signing the others out is sensitive too — from a borrowed session it
+   would throw the owner off every machine they use — so it needs the
+   password in `password` or a sign-in within the last ten minutes.
    ========================================================================= */
-import { json, route } from '../../_lib/http.js';
-import { requireUser, endAllSessions } from '../../_lib/auth.js';
+import { json, readJson, route } from '../../_lib/http.js';
+import { requireUser, requireRecentAuth, endAllSessions } from '../../_lib/auth.js';
 import { many } from '../../_lib/db.js';
 
 export default route({
@@ -34,6 +38,8 @@ export default route({
 
   async DELETE(req, res) {
     const user = await requireUser(req, res);
+    const body = (await readJson(req)) || {};
+    await requireRecentAuth(req, user, { password: String(body.password || '') });
     await endAllSessions(user.id, user.sessionId);
     json(res, 200, { ok: true });
   },
