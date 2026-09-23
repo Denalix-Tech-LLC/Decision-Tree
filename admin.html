@@ -584,7 +584,9 @@ function render(){
           (function(qid,idx,ans){
             oEl.appendChild(edArea('Option '+(idx+1)+' label',ans.label,2,function(v){ ans.label=v; }));
             oEl.appendChild(edText('Short form',ans.short,function(v){ ans.short=v; }));
-            oEl.appendChild(edArea('Note (optional)',ans.note,2,function(v){ ans.note=v; }));
+            oEl.appendChild(edText('Hint under the label (optional)',ans.hint,function(v){ ans.hint=v; }));
+            oEl.appendChild(edArea('Note once chosen (optional)',ans.note,2,function(v){ ans.note=v; }));
+            oEl.appendChild(edArea('Detail in the result (optional, HTML)',ans.detail,3,function(v){ ans.detail=v; }));
             oEl.appendChild(edSelect('Leads to',ans.to,targetOptions(),function(v){
               if(v==='__new__'){ addQuestion({id:qid,ai:idx}); return; }
               ans.to=v; markDirty(); render();
@@ -1167,7 +1169,12 @@ function renderPane(){
   pane.appendChild(hd);
   pane.appendChild(field('Label on the card',a.label,function(v){ a.label=v; render(); }));
   pane.appendChild(field('Short form',a.short,function(v){ a.short=v; },{hint:'Used in the printed summary of answers.'}));
-  pane.appendChild(field('Note under the label (optional)',a.note,function(v){ a.note=v; },{area:true,rows:3}));
+  pane.appendChild(field('Hint under the label (optional)',a.hint,function(v){ a.hint=v; },
+    {hint:'A short line shown on the card before anyone answers — examples, say.'}));
+  pane.appendChild(field('Note once chosen (optional)',a.note,function(v){ a.note=v; },{area:true,rows:3,
+    hint:'Shown on the card after this answer is picked. Plain text; “contact us” becomes a link to the Contact panel.'}));
+  pane.appendChild(field('Detail in the result (optional, HTML allowed)',a.detail,function(v){ a.detail=v; },{area:true,rows:5,
+    hint:'Its own card in the full result and a paragraph in the printout. <a href="#" data-open-contact>contact us</a> links to the Contact panel.'}));
   pane.appendChild(selectField('Where this leads',a.to,targetOptions(),function(v){
     if(v==='__new__'){ addQuestion({id:sel.id,ai:sel.ai}); return; }
     a.to=v; render();
@@ -1188,6 +1195,15 @@ function renderPaths(){
     pane.appendChild(field('Name',o.name,function(v){ o.name=v; render(); }));
     pane.appendChild(field('Headline',o.title,function(v){ o.title=v; }));
     pane.appendChild(field('Description (HTML allowed)',o.body,function(v){ o.body=v; },{area:true,rows:3}));
+    /* the ways of taking the pathway up, each with its pros and cons */
+    if(o.options) o.options.forEach(function(x,i){
+      var lines=function(a){ return (a||[]).join('\n'); };
+      var split=function(v){ return v.split('\n').map(function(t){return t.trim();}).filter(Boolean); };
+      pane.appendChild(field('Way '+(i+1)+' — heading',x.h,function(v){ x.h=v; }));
+      pane.appendChild(field('Way '+(i+1)+' — description (HTML allowed)',x.d,function(v){ x.d=v; },{area:true,rows:2}));
+      pane.appendChild(field('Way '+(i+1)+' — pros (one per line)',lines(x.pros),function(v){ x.pros=split(v); },{area:true,rows:4}));
+      pane.appendChild(field('Way '+(i+1)+' — cons (one per line)',lines(x.cons),function(v){ x.cons=split(v); },{area:true,rows:3}));
+    });
     if(o.sections) pane.appendChild(field('CAA sections (one per line)',o.sections.join('\n'),function(v){
       o.sections=v.split('\n').map(function(x){return x.trim();}).filter(Boolean);
     },{area:true,rows:6,hint:o.sections.length+' listed'}));

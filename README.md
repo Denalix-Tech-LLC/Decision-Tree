@@ -534,7 +534,10 @@ carried into every version:
 - §129 is **solid-waste combustion**; landfills fall under §111/§112
 - **Performance** Partnership Grant (not "Program Partnership Group")
 - §105 grants without TAS carry the standard **40%** match; TAS reduces it to 5%, then up to 10%
-- Boundary risk is to the **scope of recognized CAA regulatory jurisdiction**, not land title
+- Boundary risk: EPA's approval is a final Agency action subject to judicial challenge, and
+  an adverse ruling could impact the Tribe's jurisdictional boundaries, **including loss of
+  Tribal lands** (reviewer's wording, 2026 — this replaces an earlier line saying the risk
+  did not reach land title)
 - Decision logic: the boundary question is phrased so risk-weighing attaches to
   *disputed* boundaries (the source document had these branches inverted)
 
