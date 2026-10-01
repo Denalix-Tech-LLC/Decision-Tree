@@ -703,6 +703,18 @@ function render(){
         pos[id+'#'+ai]={x:runX+ws[ai]/2,y:oy,h:oEl.offsetHeight,w:ws[ai],el:oEl};
         runX+=ws[ai]+OGAP;
       });
+      /* The options of one question are siblings, so they are drawn one
+         height, as on the reader's tree. A card open for editing keeps its
+         own size: its fields would otherwise stretch every card beside it. */
+      var even=0;
+      opts.forEach(function(a,ai){
+        var p=pos[id+'#'+ai];
+        if(p&&!p.el.classList.contains('editing')) even=Math.max(even,p.h);
+      });
+      opts.forEach(function(a,ai){
+        var p=pos[id+'#'+ai];
+        if(p&&!p.el.classList.contains('editing')&&p.h<even){ p.el.style.minHeight=even+'px'; p.h=even; }
+      });
       /* add-option affordance */
       var add=document.createElement('button');
       add.className='addopt'; add.textContent='+'; add.title='Add an option to this question';
@@ -1284,14 +1296,13 @@ function renderPaths(){
     pane.appendChild(field('Description (HTML allowed)',o.body,function(v){ o.body=v; },{area:true,rows:3}));
     /* the ways of taking the pathway up, each with its pros and cons */
     if(o.options) o.options.forEach(function(x,i){
-      var lines=function(a){ return (a||[]).join('\n'); };
-      var split=function(v){ return v.split('\n').map(function(t){return t.trim();}).filter(Boolean); };
       pane.appendChild(field('Way '+(i+1)+' — heading',x.h,function(v){ x.h=v; }));
       pane.appendChild(field('Way '+(i+1)+' — description (HTML allowed)',x.d,function(v){ x.d=v; },{area:true,rows:2}));
-      pane.appendChild(field('Way '+(i+1)+' — pros (one per line)',lines(x.pros),function(v){ x.pros=split(v); },{area:true,rows:4}));
-      pane.appendChild(field('Way '+(i+1)+' — cons (one per line)',lines(x.cons),function(v){ x.cons=split(v); },{area:true,rows:3}));
+      pane.appendChild(field('Way '+(i+1)+' — pros (one per line)',lines(x.pros),function(v){ x.pros=splitLines(v); },{area:true,rows:4}));
+      pane.appendChild(field('Way '+(i+1)+' — cons (one per line)',lines(x.cons),function(v){ x.cons=splitLines(v); },{area:true,rows:3}));
     });
-    if(o.sections) pane.appendChild(field('CAA sections (one per line)',o.sections.join('\n'),function(v){
+    caaEditor(o,k);
+    if(o.sections) pane.appendChild(field('Section chips, when it has no CAA sections of its own (one per line)',o.sections.join('\n'),function(v){
       o.sections=v.split('\n').map(function(x){return x.trim();}).filter(Boolean);
     },{area:true,rows:6,hint:o.sections.length+' listed'}));
     if(o.checks) pane.appendChild(field('Bullet points — "heading :: detail" per line',
@@ -1301,6 +1312,74 @@ function renderPaths(){
         });
       },{area:true,rows:6}));
   });
+}
+
+/* A pathway's Clean Air Act sections: each a short label, a heading, what
+   it contains, how Tribes have applied it, and statements the Tribe can lift
+   into its application. All plain text — the reader escapes them — one point
+   per line. A statement can be tied to one answer of the pathway's chooser
+   question (by position), so the printout keeps the one that fits. */
+function lines(a){ return (a||[]).join('\n'); }
+function splitLines(v){ return v.split('\n').map(function(t){return t.trim();}).filter(Boolean); }
+function caaEditor(o,k){
+  var kind='caa:'+k, arr=Array.isArray(o.caa)?o.caa:[];
+  if(!(kind in OPENI)) OPENI[kind]=-1;
+  var sub=document.createElement('div'); sub.className='hint';
+  sub.textContent=arr.length
+    ?'CAA sections ('+arr.length+') — readers tick these in the result and in the panel its “unlocks” link opens.'
+    :'No CAA sections of its own. Add one, or point its link at another pathway’s below.';
+  pane.appendChild(sub);
+  var chooser=o.chooser&&T.NODES[o.chooser];
+  var ways=[{v:'',t:'Any route'}].concat(chooser?(chooser.a||[]).map(function(a,i){
+    return {v:String(i),t:'Only if they answer “'+(a.label||('option '+(i+1)))+'”'};
+  }):[]);
+  var list=document.createElement('div'); list.className='olist';
+  arr.forEach(function(sec,i){
+    var open=OPENI[kind]===i;
+    var it=document.createElement('div'); it.className='oitem';
+    var top=document.createElement('div'); top.className='top';
+    top.innerHTML='<span class="n">'+(i+1)+'</span><span class="lbl"></span>';
+    var lbl=top.querySelector('.lbl'); lbl.textContent=(sec.s?sec.s+' — ':'')+(sec.h||'(untitled)');
+    var up=button('↑',function(){ moveItem(arr,kind,i,-1); },'sm'); up.disabled=i===0; up.title='Move up';
+    var dn=button('↓',function(){ moveItem(arr,kind,i,1); },'sm'); dn.disabled=i===arr.length-1; dn.title='Move down';
+    var ed=button(open?'Close':'Edit',function(){ OPENI[kind]=open?-1:i; refreshPane(); },'sm');
+    var del=button('Delete',function(){ deleteItem(arr,kind,i,{noun:'section',min:0}); },'sm danger');
+    [up,dn,ed,del].forEach(function(b){ top.appendChild(b); });
+    it.appendChild(top);
+    if(open){
+      var body=document.createElement('div'); body.className='body';
+      var relabel=function(){ lbl.textContent=(sec.s?sec.s+' — ':'')+(sec.h||'(untitled)'); };
+      body.appendChild(field('Short label (on the chip)',sec.s,function(v){ sec.s=v; relabel(); }));
+      body.appendChild(field('Heading',sec.h,function(v){ sec.h=v; relabel(); }));
+      body.appendChild(field('Contents — one point per line',lines(sec.contents),function(v){ sec.contents=splitLines(v); },{area:true,rows:5}));
+      body.appendChild(field('TAS applications — one point per line',lines(sec.applications),function(v){ sec.applications=splitLines(v); },{area:true,rows:4}));
+      if(!Array.isArray(sec.language)) sec.language=[];
+      sec.language.forEach(function(l,j){
+        body.appendChild(field('Statement '+(j+1)+' — label (optional)',l.label,function(v){ if(v) l.label=v; else delete l.label; }));
+        body.appendChild(field('Statement '+(j+1)+' — language for the application',l.t,function(v){ l.t=v; },{area:true,rows:4}));
+        if(chooser) body.appendChild(selectField('Statement '+(j+1)+' — fits',typeof l.way==='number'?String(l.way):'',ways,
+          function(v){ if(v==='') delete l.way; else l.way=parseInt(v,10); }));
+        body.appendChild(button('Remove statement '+(j+1),function(){ sec.language.splice(j,1); markDirty(); refreshPane(); },'sm danger'));
+      });
+      body.appendChild(button('+ Add a statement',function(){ sec.language.push({t:''}); markDirty(); refreshPane(); },'sm'));
+      it.appendChild(body);
+    }
+    list.appendChild(it);
+  });
+  pane.appendChild(list);
+  pane.appendChild(button('+ Add a CAA section',function(){
+    if(!Array.isArray(o.caa)) o.caa=arr;
+    o.caa.push({s:'§',h:'New section',contents:[],applications:[],language:[]});
+    OPENI[kind]=o.caa.length-1;
+    markDirty(); refreshPane();
+  },'sm'));
+  if(!arr.length){
+    var opts=[{v:'',t:'Nothing — its name is plain text'}].concat(Object.keys(T.OUT).filter(function(x){
+      return x!==k&&Array.isArray(T.OUT[x].caa)&&T.OUT[x].caa.length;
+    }).map(function(x){ return {v:x,t:T.OUT[x].name||x}; }));
+    pane.appendChild(selectField('Its “unlocks” link opens the CAA sections of',o.sectionsFrom||'',opts,
+      function(v){ if(v) o.sectionsFrom=v; else delete o.sectionsFrom; }));
+  }
 }
 
 function listEditor(title,arr,hint){
@@ -1323,7 +1402,7 @@ function listEditor(title,arr,hint){
    of guide, so it is sectioned, with a row of pills to move between them.
    ========================================================================= */
 var CSECS=[
-  ['result','Result'],['disc','Disclaimers'],['contact','Contact'],['guide','Guide'],
+  ['elig','Eligibility'],['result','Result'],['disc','Disclaimers'],['contact','Contact'],['guide','Guide'],
   ['walk','Walkthrough'],['wording','Wording'],['look','Appearance']
 ];
 var CSEC_KEY='tas-admin-section';
@@ -1368,6 +1447,7 @@ function renderContent(){
     nav.appendChild(b);
   });
   pane.appendChild(nav);
+  if(csec==='elig') return renderElig();
   if(csec==='disc') return renderDisclaimers();
   if(csec==='contact') return renderContact();
   if(csec==='guide') return renderGuide();
@@ -1466,7 +1546,7 @@ var GUIDE_MAX=40, WALK_MAX=12;   /* what a published tree may carry — the serv
    position; there are four. They are drawn in the tree's own idiom rather than
    written as content, so they are not editable here — only described. */
 var WALK_ART_COUNT=4;
-var OPENI={guide:-1,walk:-1};
+var OPENI={guide:-1,walk:-1,elig:-1};
 function moveItem(arr,kind,i,d){
   var j=i+d;
   if(j<0||j>=arr.length) return;
@@ -1524,6 +1604,19 @@ function sectionsEditor(arr,kind,o){
   row.appendChild(add);
   pane.appendChild(row);
   if(arr.length>=o.max) note('That is as many as a published tree may carry ('+o.max+').');
+}
+
+function renderElig(){
+  contentHead('Eligibility','The box before Question 1, the information box under it, and the requirements the box opens.');
+  renderGroup(['elig','The two boxes before Question 1',
+    'Title, tag, sub and open are on the box; lead is the information box under it (plain text — “contact us” '
+    +'becomes a link to the Contact panel). intro takes HTML and heads the panel the box opens. Leave the '
+    +'title empty and readers get what tree-data.js ships, as everywhere in Wording.']);
+  pane.appendChild(sectionTitle('The requirements'));
+  note('What the panel lists, in order: a heading and some HTML each, like the guide.');
+  sectionsEditor(T.COPY.eligSec,'elig',{noun:'requirement',min:1,max:20,
+    minMsg:'The eligibility box needs at least one requirement to open onto.',
+    htmlHint:'<p> for paragraphs; <b>, <i>, <ul><li>; <a href="…" target="_blank" rel="noopener"> for a link.'});
 }
 
 function renderGuide(){
@@ -1640,7 +1733,7 @@ function verdictFields(V,BV,k,when){
   if(typeof v.s==='string') pane.appendChild(copyField('Sentence under it',v,'s',b.s,{area:true,rows:3}));
 }
 function wordingGroups(){
-  var out=[], seen={verdicts:1,walk:1};
+  var out=[], seen={verdicts:1,walk:1,elig:1,eligSec:1};
   GROUPS.forEach(function(g){ seen[g[0]]=1; if(isGroup(T.COPY[g[0]])) out.push(g); });
   Object.keys(BASE.COPY||{}).concat(Object.keys(T.COPY)).forEach(function(k){
     if(seen[k]) return;

@@ -195,6 +195,17 @@ a{color:var(--accent-ink)}
   color:var(--accent);display:block;margin-bottom:4px}
 .tnode .ttl{font-weight:650;font-size:14.5px;line-height:1.3;display:block}
 .tnode .sub{color:var(--muted);font-size:12.5px;margin-top:4px;display:block}
+/* An answer's example line ("e.g., …"). It supports the label rather than
+   continuing it, so it is set small and in the sans, not as a second
+   paragraph in the label's own face. */
+/* Answer cards squeezed by a small screen: a little smaller type and
+   padding, so a long label is four lines rather than six. */
+.tnode.opt.narrow{padding:10px 10px}
+.tnode.opt.narrow .ttl{font-size:13px;line-height:1.28;padding-right:16px}
+.tnode.opt.narrow .kb{top:7px;right:7px}
+.tnode.opt.narrow .sub{font-size:11.5px}
+.tnode.opt .sub.ex{font-family:var(--sans);font-size:11.5px;line-height:1.45;margin-top:7px;
+  padding-top:7px;border-top:1px solid var(--border);color:var(--muted)}
 /* a note the reader can put away */
 .bubble{position:relative;display:block;margin-top:9px;padding:9px 30px 9px 11px;
   border-radius:9px;background:var(--risk-bg);border:1px solid var(--risk-line);
@@ -242,7 +253,9 @@ a{color:var(--accent-ink)}
    before it. On a wide card the label never reached that far; on a narrow one
    it ran straight underneath. */
 .tnode.opt .ttl{padding-right:22px}
-.tnode.opt.chosen .ttl,.tnode.opt.notaken .ttl{padding-right:0}
+.tnode.opt.notaken .ttl{padding-right:0}
+/* the chosen card's tick takes the badge's corner, so the label still stops short of it */
+.tnode.opt.chosen .ttl{padding-right:16px}
 .tnode.opt:hover .kb{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 
 /* chosen / not taken */
@@ -293,6 +306,19 @@ a{color:var(--accent-ink)}
 .tnode svg,.check .cx svg{width:13px;height:13px;flex:none}
 .tnode.result{box-shadow:0 0 0 4px var(--good-bg),var(--sh2)}
 .tnode.result:hover{--lift:-3px;box-shadow:0 0 0 5px var(--good-bg),var(--sh2)}
+
+/* The box before Question 1, and the information box under it. */
+.tnode.intro{border-color:var(--accent);border-width:2px;cursor:pointer;box-shadow:var(--sh1)}
+.tnode.intro:hover{--lift:-3px;box-shadow:var(--sh2)}
+.tnode.intro:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+.tnode.intro .go{margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-size:12px;
+  font-weight:700;color:var(--accent);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.tnode.lead{background:var(--risk-bg);border:1px solid var(--risk-line);border-radius:11px;
+  padding:10px 13px;font-size:13px;line-height:1.45;color:var(--ink);box-shadow:none}
+.tnode.lead a{color:var(--accent-ink);font-weight:600}
+/* the pathway named on an answer opens its CAA sections */
+.tnode .plink{color:var(--accent-ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.tnode .plink:hover{color:var(--accent)}
 
 /* active pulse */
 .tnode.active{box-shadow:0 0 0 4px var(--accent-soft),var(--sh2)}
@@ -523,6 +549,28 @@ body.running .hint{opacity:1}
 .mini .pk.con{color:var(--risk)}
 .mini .pl{margin:0;padding-left:17px;font-size:12.5px;line-height:1.42}
 .mini .pl li{margin:2px 0}
+/* A pathway's CAA sections: one row each, ticked to go into the application,
+   opened for what the section contains, how Tribes apply it, and the
+   language to lift. The language is set apart in grey, as in the source. */
+.caa{margin:8px 0 0}
+.cs{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border)}
+.cs:first-child{border-top:none}
+.cs .cpk{flex:none;width:18px;padding-top:2px}
+.cs .cpk input{width:16px;height:16px;margin:0;accent-color:var(--accent);cursor:pointer}
+.cs details{flex:1;min-width:0}
+.cs summary{cursor:pointer;font-size:13.5px;line-height:1.38;list-style-position:outside}
+.cs summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.cs .csS{font-family:var(--sans);font-weight:700;font-size:11px;color:var(--accent-ink);background:var(--accent-soft);
+  border-radius:6px;padding:1px 6px;margin-right:6px;white-space:nowrap}
+.cs .csB{margin-top:6px;font-size:13px;line-height:1.5}
+.cs .csK{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:var(--track);text-transform:uppercase;
+  color:var(--muted);margin:10px 0 3px}
+.cs ul{margin:0;padding-left:18px} .cs li{margin:3px 0}
+.cs .lang{margin:5px 0 0;padding:8px 10px;background:var(--surface-2);border-left:3px solid var(--border-strong);
+  border-radius:6px;color:var(--ink)}
+.cs .lang.match{border-left-color:var(--accent)}
+.cs .ll{display:block;font-family:var(--sans);font-size:10.5px;font-weight:600;color:var(--muted);margin-bottom:3px}
+.cs .lang.match .ll{color:var(--accent-ink)}
 .card p a,.card .pl a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
 .sx{font-family:var(--sans);font-weight:600;font-size:11.5px;background:var(--accent-soft);color:var(--accent-ink);border-radius:6px;padding:3px 7px}
@@ -579,6 +627,8 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   #printOut .pc,#printOut .psx{display:inline-block;border:1px solid #999;border-radius:8pt;padding:1pt 6pt;margin:2pt 3pt 2pt 0;font-size:9pt}
   #printOut .psx{font-family:var(--mono);border-radius:3pt;border-color:#bbb}
   #printOut ul{margin:4pt 0;padding-left:16pt} #printOut li{margin:3pt 0}
+  /* the application language a reader ticked, set apart as in the source */
+  #printOut blockquote{margin:3pt 0 8pt;padding:4pt 8pt;border-left:2pt solid #999;background:#f1f1f1}
   /* citations are set in the running face, not a monospace the printer may
      not have — they are references, not code */
   #printOut code{font-family:inherit;font-weight:bold;white-space:nowrap}
@@ -722,6 +772,24 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   </div>
 </div>
 
+<!-- The eligibility requirements, and a pathway's CAA sections. Opened from
+     the box before Question 1 and from the pathway named on an answer. Before
+     Contact in the page, so a "contact us" link inside it opens on top. -->
+<div class="ovl" id="info" hidden role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+  <div class="bg" data-iclose="1"></div>
+  <div class="doc">
+    <div class="dhead">
+      <div><span class="kk" id="infoKicker"></span><h3 id="infoTitle"></h3></div>
+      <span class="grow"></span>
+      <button class="btn sm" id="infoClose" data-iclose="1"></button>
+    </div>
+    <div class="dbody" id="infoBody"></div>
+    <div class="dfoot">
+      <button class="btn solid" id="infoDone" data-iclose="1"></button>
+    </div>
+  </div>
+</div>
+
 <!-- Contact. Always available, unlike Result: a reader most needs a person
      mid-tree, at the boundary question. -->
 <div class="ovl" id="contact" hidden role="dialog" aria-modal="true" aria-labelledby="contactTitle">
@@ -854,7 +922,7 @@ var CONTACT={name:'',role:'',email:'',phone:'',calendly:''};
    page whose tree-data.js failed but which still has a draft to draw from
    renders blanks instead of throwing. */
 var GUIDE=[];
-var COPY={brand:{},verdicts:{},result:{},print:{},tree:{},contact:{},walk:[],ui:{}};
+var COPY={brand:{},verdicts:{},result:{},print:{},tree:{},elig:{},eligSec:[],contact:{},walk:[],ui:{}};
 var THEME=null;
 
 /* ---------------------------------------------------------------------------
@@ -1111,6 +1179,7 @@ function repaint(){
     else renderContact();
   }
   if(!sheet.hidden&&terminal) paintSheet();
+  if(infoEl&&!infoEl.hidden&&infoShown) openInfo(infoShown[0],infoShown[1],true);
 }
 
 /* ===========================================================================
@@ -1152,9 +1221,41 @@ function stageW(){
    there is not: at 320px the desktop gap alone was 36 of the 320. */
 function gapW(){ return stageW()<440?8:HGAP; }
 function questionW(){ return Math.min(QW, stageW()-EDGE*2); }
-function optionW(n){
+/* How wide one row of answers is drawn. Short answers get OW. A row whose
+   answer is written out in full ("Develop your own rules/programs to submit
+   to EPA for approval") or whose chosen answer carries a note grows, up to
+   OW_WIDE, so the label wraps to three lines at most instead of four or five and
+   the note is not poured down a narrow column. Measured from the text itself,
+   not from the rendered card, so a row keeps its width whether or not it has
+   been answered and nothing jumps sideways when it is. Every answer in the row
+   gets the same width, and the stage still has the last word. */
+var OW_WIDE=260;
+/* narrower than this, an answer card does not carry a note (see build) */
+var NOTE_MIN_W=180;
+var OPT_CHROME=53;   /* padding 28, the number badge 22, the border 3 */
+var measureCtx=null;
+function textWidth(s,font){
+  try{
+    measureCtx=measureCtx||document.createElement('canvas').getContext('2d');
+    measureCtx.font=font;
+    return measureCtx.measureText(s).width;
+  }catch(e){ return s.length*7.5; }
+}
+function optionW(node,answered){
+  var answers=node.a||[], n=answers.length||1;
   var room=stageW()-EDGE*2-(n-1)*gapW();
-  return Math.max(OW_MIN, Math.min(OW, Math.floor(room/n)));
+  var serif=getComputedStyle(document.documentElement).getPropertyValue('--serif')||'Georgia,serif';
+  var sans=getComputedStyle(document.documentElement).getPropertyValue('--sans')||'sans-serif';
+  var want=OW;
+  answers.forEach(function(a,i){
+    /* two and a half lines' worth, plus 15% for the slack word-wrapping
+       leaves at the end of each line: a long unbreakable word such as
+       "rules/programs" otherwise pushes a three-line estimate to four */
+    want=Math.max(want,Math.ceil(textWidth(a.label||'','650 14.5px '+serif)/2.5*1.15)+OPT_CHROME);
+    /* a chosen answer's note, at about six lines */
+    if(a.note&&answered===i) want=Math.max(want,Math.ceil(textWidth(a.note,'12px '+sans)/6*1.15)+OPT_CHROME);
+  });
+  return Math.max(OW_MIN, Math.min(want, OW_WIDE, Math.floor(room/n)));
 }
 var path=[], collected=[], started=false, terminal=null;
 /* notes the reader has dismissed, so they stay dismissed across re-renders */
@@ -1235,6 +1336,37 @@ function build(){
     else break;
   }
 
+  /* Before Question 1: the eligibility requirements every application has to
+     meet, and a word on what the questions after them are for. Drawn on every
+     build, so they stay at the head of the tree however far down it goes. */
+  var E=COPY.elig||{}, introLast=null;
+  if(hasWords(E.title)){
+    var eEl=document.createElement('div');
+    eEl.className='tnode intro';
+    eEl.dataset.node='__elig';
+    eEl.style.width=(questionW()-30)+'px';
+    eEl.setAttribute('tabindex','0'); eEl.setAttribute('role','button');
+    eEl.setAttribute('aria-label',COPY.ui.eligLabel||E.title);
+    eEl.innerHTML=(hasWords(E.tag)?'<span class="tag">'+esc(E.tag)+'</span>':'')
+      +'<span class="ttl">'+esc(E.title)+'</span>'
+      +(hasWords(E.sub)?'<span class="sub">'+esc(E.sub)+'</span>':'')
+      +(hasWords(E.open)?'<span class="go">'+esc(E.open)+' &rsaquo;</span>':'');
+    nodesEl.appendChild(eEl);
+    rows.push({items:[{el:eEl,cx:anchor}],kind:'intro'});
+    introLast=eEl;
+  }
+  if(hasWords(E.lead)){
+    var lEl=document.createElement('div');
+    lEl.className='tnode lead';
+    lEl.dataset.node='__lead';
+    lEl.style.width=questionW()+'px';
+    lEl.innerHTML=noteHtml(E.lead);
+    nodesEl.appendChild(lEl);
+    rows.push({items:[{el:lEl,cx:anchor}],kind:'intro'});
+    if(introLast) edges.push({from:introLast,to:lEl,taken:false});
+    introLast=lEl;
+  }
+
   var prevChosenEl=null;
   for(var li=0;li<chain.length;li++){
     var id=chain[li];
@@ -1242,6 +1374,13 @@ function build(){
     var n=NODES[id];
     var answered=null;
     for(var k=0;k<path.length;k++) if(path[k].node===id) answered=path[k].ai;
+    /* The row's width is settled first, because it decides where the chosen
+       answer's note goes. A card too narrow to hold a paragraph (three answers
+       on a phone are 110px each) would pour it down a column hundreds of
+       pixels tall, so there the note goes on the question card instead, which
+       is as wide as the screen allows. */
+    var ow=optionW(n,answered), narrow=ow<NOTE_MIN_W;
+    var ansNote=(answered!==null&&n.a[answered]&&n.a[answered].note)||'';
 
     /* ---- question node ---- */
     var qEl=document.createElement('div');
@@ -1259,7 +1398,8 @@ function build(){
       +(n.note&&answered===null&&!hushed[id]
         ?'<span class="bubble"><span class="btxt">'+noteHtml(n.note)+'</span>'
          +'<button type="button" class="bx" aria-label="'+esc(COPY.ui.dismissNote)+'">&#10005;</button></span>'
-        :'');
+        :'')
+      +(ansNote&&narrow?'<span class="onote">'+noteHtml(ansNote)+'</span>':'');
     var bx=qEl.querySelector('.bx');
     if(bx){
       bx.addEventListener('click',function(ev){
@@ -1294,9 +1434,10 @@ function build(){
     nodesEl.appendChild(qEl);
     rows.push({items:[{el:qEl,cx:anchor}],kind:'q'});
     if(prevChosenEl) edges.push({from:prevChosenEl,to:qEl,taken:true});
+    else if(introLast) edges.push({from:introLast,to:qEl,taken:false});
 
     /* ---- option nodes fanned under it ---- */
-    var ow=optionW(n.a.length), hg=gapW();
+    var hg=gapW();
     var optRow=[], total=n.a.length*ow+(n.a.length-1)*hg;
     var startX=anchor-total/2;
     var chosenEl=null;
@@ -1304,13 +1445,13 @@ function build(){
       var a=n.a[ai];
       var oEl=document.createElement('div');
       var state=(answered===null)?'':(answered===ai?' chosen':' notaken');
-      oEl.className='tnode opt'+state;
+      oEl.className='tnode opt'+state+(narrow?' narrow':'');
       oEl.style.width=ow+'px';
       oEl.dataset.node=id; oEl.dataset.ai=String(ai);
       oEl.innerHTML='<span class="ttl">'+esc(a.label)+'</span>'
-        +(a.hint?'<span class="sub">'+esc(a.hint)+'</span>':'')
-        +(a.grants?'<span class="sub">'+esc(COPY.tree.unlocks)+' '+esc(OUT[a.grants].name)+'</span>':'')
-        +(a.note&&answered===ai?'<span class="onote">'+noteHtml(a.note)+'</span>':'')
+        +(a.hint?'<span class="sub ex">'+esc(a.hint)+'</span>':'')
+        +(a.grants&&OUT[a.grants]?'<span class="sub">'+esc(COPY.tree.unlocks)+' '+pathwayLink(a.grants)+'</span>':'')
+        +(a.note&&answered===ai&&!narrow?'<span class="onote">'+noteHtml(a.note)+'</span>':'')
         +(answered===null?'<span class="kb">'+(ai+1)+'</span>':'');
       if(answered!==null&&answered!==ai) oEl.dataset.alt=COPY.ui.switchBranch;
       oEl.setAttribute('tabindex','0'); oEl.setAttribute('role','button');
@@ -1373,9 +1514,25 @@ function updateContactCue(){
 }
 
 /* measure, place, then draw the edges between real boxes */
+/* The answers to one question are siblings, so they are drawn one height. A
+   card whose label runs to four lines beside one that runs to two read as a
+   big choice and a small one, which is not what the question is asking. The
+   note shown under a chosen answer is left out of the measure, so only that
+   card grows to hold it and the greyed ones beside it stay their size. */
+function evenRow(items){
+  var base=0;
+  items.forEach(function(it){ it.el.style.minHeight=''; });
+  items.forEach(function(it){
+    var n=it.el.querySelector('.onote');
+    var extra=n?n.offsetHeight+(parseFloat(getComputedStyle(n).marginTop)||0):0;
+    base=Math.max(base,it.el.offsetHeight-extra);
+  });
+  items.forEach(function(it){ it.el.style.minHeight=base+'px'; });
+}
 function layout(rows,edges){
   var y=0, boxes=[];
   rows.forEach(function(row){
+    if(row.kind==='opts') evenRow(row.items);
     var h=0;
     row.items.forEach(function(it){ h=Math.max(h,it.el.offsetHeight); });
     row.items.forEach(function(it){
@@ -1718,6 +1875,7 @@ document.addEventListener('visibilitychange',function(){ if(document.hidden) set
 nodesEl.addEventListener('click',function(e){
   var t=e.target.closest('.tnode');
   if(!t) return;
+  if(t.dataset.node==='__elig'){ openInfo('elig'); return; }
   if(t.id==='resultNode'){ openSheet(); return; }
   if(t.classList.contains('reopenable')||t.classList.contains('chosen')){
     reopen(t.dataset.node); return;
@@ -1731,6 +1889,7 @@ nodesEl.addEventListener('keydown',function(e){
   var t=e.target.closest('.tnode');
   if(!t) return;
   e.preventDefault();
+  if(t.dataset.node==='__elig'){ openInfo('elig'); return; }
   if(t.id==='resultNode'){ openSheet(); return; }
   if(t.classList.contains('reopenable')||t.classList.contains('chosen')){
     reopen(t.dataset.node); return;
@@ -1745,10 +1904,11 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(!guideEl.hidden){ closeGuide(); return; }
     if(!contactEl.hidden){ closeContact(); return; }
+    if(!infoEl.hidden){ closeInfo(); return; }
     if(!sheet.hidden){ closeSheet(); return; }
   }
   /* a number key must not answer a question the reader cannot see */
-  if(!guideEl.hidden||!contactEl.hidden) return;
+  if(!guideEl.hidden||!contactEl.hidden||!infoEl.hidden) return;
   var n=parseInt(e.key,10);
   if(!n||!started) return;
   var q=currentQuestion();
@@ -1787,6 +1947,8 @@ function focusFrontier(){
   if(!target) return;
   var s=view.s, pad=24;
   var top=parseFloat(target.style.top||0);
+  var head=!path.length&&nodesEl.querySelector('.tnode.intro');
+  if(head) top=Math.min(top,parseFloat(head.style.top||0));
   var bottom=top+target.offsetHeight;
   var id=target.dataset&&target.dataset.node;
   if(id){
@@ -1971,6 +2133,126 @@ function prosCons(x){
   }
   return list(esc(COPY.result.pros),'',x.pros)+list(esc(COPY.result.cons),' con',x.cons);
 }
+/* ---- CAA sections -------------------------------------------------------
+   A pathway's sections live on it as caa (see tree-data.js). One that has
+   none of its own can borrow another's with sectionsFrom, the way Targeted
+   Regulatory TAS points at Regulatory TAS's. What the reader ticks is kept
+   for the visit, by pathway and position, and every tick box for the same
+   section moves together, in the result and in the panel alike. */
+var caaPicked={};
+function hasCaa(k){ return !!(OUT[k]&&Array.isArray(OUT[k].caa)&&OUT[k].caa.length); }
+function caaOf(k){
+  if(hasCaa(k)) return k;
+  var f=OUT[k]&&OUT[k].sectionsFrom;
+  return (f&&f!==k&&hasCaa(f))?f:null;
+}
+function sectionCount(k){
+  var o=OUT[k]||{};
+  return hasCaa(k)?o.caa.length:((o.sections&&o.sections.length)||0);
+}
+/* which of the chooser question's answers the reader picked: 0 builds their
+   own programs, 1 takes delegation, -1 not asked or not answered yet */
+function caaWay(k){ var o=OUT[k]; return o&&o.chooser?pickAt(o.chooser):-1; }
+function caaLangs(sec){ return (sec.language||[]).filter(function(l){ return l&&hasWords(l.t); }); }
+function pathwayLink(g){
+  var f=caaOf(g), nm=esc(OUT[g].name);
+  return f?'<a href="#" class="plink" data-caa-open="'+esc(f)+'">'+nm+'</a>':nm;
+}
+function caaListHtml(k){
+  var R=COPY.result, way=caaWay(k);
+  var li=function(t){ return '<li>'+esc(t)+'</li>'; };
+  return '<div class="caa">'+OUT[k].caa.map(function(sec,i){
+    var key=k+':'+i, langs=caaLangs(sec), b='';
+    if(sec.contents&&sec.contents.length) b+='<div class="csK">'+esc(R.caaContents)+'</div><ul>'+sec.contents.map(li).join('')+'</ul>';
+    if(sec.applications&&sec.applications.length) b+='<div class="csK">'+esc(R.caaApplications)+'</div><ul>'+sec.applications.map(li).join('')+'</ul>';
+    b+='<div class="csK">'+esc(R.caaLanguage)+'</div>';
+    b+=langs.length?langs.map(function(l){
+      var m=typeof l.way==='number'&&l.way===way;
+      var tag=(hasWords(l.label)?esc(l.label):'')+(m?(hasWords(l.label)?' · ':'')+esc(R.caaMatch):'');
+      return '<div class="lang'+(m?' match':'')+'">'+(tag?'<span class="ll">'+tag+'</span>':'')+esc(l.t)+'</div>';
+    }).join(''):'<p class="m" style="margin:0">'+esc(R.caaNoLanguage)+'</p>';
+    var pick=langs.length
+      ?'<label class="cpk" title="'+esc(R.caaPick)+'"><input type="checkbox" data-caa="'+esc(key)+'"'
+        +(caaPicked[key]?' checked':'')+' aria-label="'+esc(R.caaPick+': '+(sec.s||sec.h||''))+'"></label>'
+      :'<span class="cpk"></span>';
+    return '<div class="cs">'+pick+'<details><summary>'+(hasWords(sec.s)?'<span class="csS">'+esc(sec.s)+'</span>':'')
+      +esc(sec.h||'')+'</summary><div class="csB">'+b+'</div></details></div>';
+  }).join('')+'</div>';
+}
+/* The ticked sections' language, for the printout and a saved document:
+   the statement of the CAA sections the Tribe is requesting TAS for. Where
+   a section words it two ways, only the way that fits the reader's route is
+   kept; a reader who has not said leaves both in, to choose between. */
+function caaPrintHtml(){
+  var P=COPY.print, out='';
+  Object.keys(OUT).forEach(function(k){
+    if(!hasCaa(k)) return;
+    var way=caaWay(k);
+    OUT[k].caa.forEach(function(sec,i){
+      if(!caaPicked[k+':'+i]) return;
+      var langs=caaLangs(sec).filter(function(l){ return typeof l.way!=='number'||way<0||l.way===way; });
+      if(!langs.length) return;
+      out+='<p><b>'+esc((sec.s?sec.s+' — ':'')+(sec.h||''))+'</b></p>'
+        +langs.map(function(l){ return '<blockquote>'+esc(l.t)+'</blockquote>'; }).join('');
+    });
+  });
+  return out?'<h3>'+esc(P.caa)+'</h3><p>'+esc(P.caaLead)+'</p>'+out:'';
+}
+document.addEventListener('change',function(e){
+  var c=e.target;
+  if(!c||!c.getAttribute||c.getAttribute('data-caa')===null) return;
+  var key=c.getAttribute('data-caa');
+  if(c.checked) caaPicked[key]=1; else delete caaPicked[key];
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-caa]'),function(o){
+    if(o!==c&&o.getAttribute('data-caa')===key) o.checked=c.checked;
+  });
+});
+/* The pathway named on an answer, or a "see the sections" link in the
+   result, opens that pathway's sections. Caught on the way down, like the
+   contact links, so the answer card under it is not chosen as well. */
+['pointerdown','click'].forEach(function(type){
+  document.addEventListener(type,function(e){
+    var l=e.target&&e.target.closest&&e.target.closest('[data-caa-open]');
+    if(!l) return;
+    e.stopPropagation();
+    if(type==='click'){ e.preventDefault(); openInfo('caa',l.getAttribute('data-caa-open')); }
+  },true);
+});
+
+/* ---- the panel ------------------------------------------------------------ */
+var infoEl=document.getElementById('info'), infoBody=document.getElementById('infoBody');
+var infoFocus=null, infoShown=null;
+function openInfo(kind,k,again){
+  var U=COPY.ui, E=COPY.elig||{}, R=COPY.result, kick='', title='', h='';
+  if(kind==='elig'){
+    kick=E.tag; title=E.title;
+    h=(E.intro||'')+(COPY.eligSec||[]).map(function(sec){
+      return '<section class="gsec"><h4>'+esc(sec.h)+'</h4>'+sec.html+'</section>';
+    }).join('');
+  }else{
+    if(!hasCaa(k)) return;
+    kick=R.caaKicker; title=OUT[k].name;
+    h=(R.caaIntro||'')+'<p class="m"><b>'+esc(R.caaLabel)+'</b> — '+esc(R.caaHint)+'</p>'+caaListHtml(k);
+  }
+  infoShown=[kind,k];
+  setText('infoKicker',kick);
+  setText('infoTitle',title);
+  document.getElementById('infoClose').innerHTML=esc(U.close)+' &#10005;';
+  setText('infoDone',U.backToTree);
+  infoBody.innerHTML=h;
+  if(again) return;
+  infoFocus=document.activeElement;
+  infoEl.hidden=false;
+  infoBody.scrollTop=0;
+  try{ document.getElementById('infoClose').focus({preventScroll:true}); }catch(e){}
+}
+function closeInfo(){
+  infoEl.hidden=true;
+  infoShown=null;
+  if(infoFocus&&infoFocus.focus) try{ infoFocus.focus({preventScroll:true}); }catch(e){}
+}
+infoEl.addEventListener('click',function(e){ if(e.target.closest('[data-iclose]')) closeInfo(); });
+
 function chipsHtml(a){ return '<div class="chips">'+a.map(function(s){return '<span class="sx">'+esc(s)+'</span>';}).join('')+'</div>'; }
 function checksHtml(a){ return '<ul class="check">'+a.map(function(c){
   return '<li><span class="cx">'+TICK+'</span><span><b>'+c.h+'</b>'+(c.d?'<span class="d">'+c.d+'</span>':'')+'</span></li>';}).join('')+'</ul>'; }
@@ -1988,7 +2270,15 @@ function outCard(k,kind){
     }).join('')+'</div>';
   }
   if(o.checks) h+=checksHtml(o.checks);
-  if(o.sections) h+='<p class="m" style="margin:9px 0 0">'+esc(COPY.result.sectionsLabel)+'</p>'+chipsHtml(o.sections);
+  if(hasCaa(k)){
+    h+='<p class="m" style="margin:9px 0 0"><b>'+esc(COPY.result.caaLabel)+'</b> — '+esc(COPY.result.caaHint)+'</p>'
+      +caaListHtml(k);
+  }else if(o.sections&&o.sections.length){
+    h+='<p class="m" style="margin:9px 0 0">'+esc(COPY.result.sectionsLabel)+'</p>'+chipsHtml(o.sections);
+  }
+  var from=!hasCaa(k)&&caaOf(k);
+  if(from) h+='<p class="m" style="margin:9px 0 0"><a href="#" data-caa-open="'+esc(from)+'">'
+    +esc(fill(COPY.result.caaSeeAlso,{name:OUT[from].name}))+'</a></p>';
   return h+'</div>';
 }
 /* What an answer adds to the full result, beyond the pathway it unlocks —
@@ -2014,7 +2304,7 @@ function resultHtml(){
   /* two short tiles give the bento its rhythm and answer the first two
      questions a reader actually has: how many sections, and how far in am I */
   var secCount=0;
-  collected.forEach(function(k){ if(OUT[k].sections) secCount+=OUT[k].sections.length; });
+  collected.forEach(function(k){ secCount+=sectionCount(k); });
   var realPaths=collected.filter(function(x){return x!=='capacity';}).length;
   h+='<div class="card stat tile-half"><div class="rk">'+esc(R.statSections)+'</div>'
    + '<div><div class="big">'+secCount+'</div><div class="lbl">'
@@ -2165,9 +2455,11 @@ function printableHtml(){
         }).join('')+'</ul>';
       }
       if(o.checks) h+='<ul>'+o.checks.map(function(x){return '<li><b>'+x.h+'</b> — '+x.d+'</li>';}).join('')+'</ul>';
-      if(o.sections) h+='<div>'+o.sections.map(function(s){return '<span class="psx">'+esc(s)+'</span>';}).join('')+'</div>';
+      var chips=hasCaa(k)?o.caa.map(function(x){ return x.s||x.h; }):(o.sections||[]);
+      if(chips.length) h+='<div>'+chips.map(function(s){return '<span class="psx">'+esc(s)+'</span>';}).join('')+'</div>';
     });
   }
+  h+=caaPrintHtml();
   /* the notes attached to answers — the boundary one, then the rest */
   var bd=boundaryAnswer(), notes=[];
   if(bd&&bd.detail) notes.push({h:P.boundaryPrefix+': '+(bd.short||bd.label),d:bd.detail});
