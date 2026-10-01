@@ -44,7 +44,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-BSuNQDbd6hFc5cGz6z8nGPbGV0XsvHY3MPfitI4ebFI='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-yy5v9bu/EZg/S9a/q5KaVKJgeK0cq098XOnte7zd/9E='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },
@@ -53,7 +53,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-BSuNQDbd6hFc5cGz6z8nGPbGV0XsvHY3MPfitI4ebFI='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-yy5v9bu/EZg/S9a/q5KaVKJgeK0cq098XOnte7zd/9E='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-BSuNQDbd6hFc5cGz6z8nGPbGV0XsvHY3MPfitI4ebFI='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-yy5v9bu/EZg/S9a/q5KaVKJgeK0cq098XOnte7zd/9E='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },
@@ -71,7 +71,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-YgcpA4Z/AliheHdGPtwV5EnQls0Vd7/gTN0JoaQYZkk='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-MT6O9SqW7qSoM9uiD1/yVD4Bovo3XndKNZHMOAkqwUE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },
@@ -80,7 +80,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-YgcpA4Z/AliheHdGPtwV5EnQls0Vd7/gTN0JoaQYZkk='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-PuIPux0o/3jh5s2I0ac3A0kUtYCKtG7qBv6/+aeEazM=' 'sha256-MT6O9SqW7qSoM9uiD1/yVD4Bovo3XndKNZHMOAkqwUE='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },

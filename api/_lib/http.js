@@ -33,6 +33,10 @@ export const tooMany = (message, retryAfter) =>
    apart without parsing the sentence. */
 export const tooLarge = (message, code = 'too_large') =>
   new HttpError(413, code, message || 'That is too big.');
+/* A service this deployment depends on is not set up (503), or answered
+   with a refusal (502). Used by the Contact form's email. */
+export const unavailable = (code, message) => new HttpError(503, code, message);
+export const upstreamFailed = (code, message) => new HttpError(502, code, message);
 /* The whole database is near its ceiling (records.js databaseFull). 507
    Insufficient Storage: not this request's fault, and not fixed by
    retrying it smaller. */

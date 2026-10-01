@@ -98,6 +98,24 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .qcard .ttl{font-family:var(--serif);font-weight:600;font-size:14.5px;line-height:1.25;display:block}
 .ocard .ttl{font-weight:650;font-size:13px;line-height:1.3;display:block}
 .ocard .meta{font-family:var(--sans);font-size:11.5px;color:var(--muted);margin-top:4px;display:block}
+/* an answer's example line, and a question's note, as the reader shows them */
+.ocard .ohint{display:block;margin-top:5px;font-family:var(--sans);font-size:11px;line-height:1.4;color:var(--muted)}
+.qcard .qnote{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin-top:8px;
+  padding:7px 9px;border-radius:7px;border:1px solid var(--border);background:var(--bg);font-family:var(--sans);
+  font-size:11.5px;line-height:1.4;color:var(--muted)}
+.qcard.risky .qnote{border-color:var(--risk-line);background:var(--surface)}
+/* the two boxes the reader sees before Question 1; clicking one opens its editor */
+.introcard,.leadcard{position:absolute;border-radius:11px;cursor:pointer;transition:box-shadow .15s}
+.introcard{background:var(--surface);border:2px solid var(--accent);padding:10px 13px;box-shadow:var(--sh1)}
+.introcard .tag{font-family:var(--sans);font-weight:600;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);display:block;margin-bottom:3px}
+.introcard .ttl{font-family:var(--serif);font-weight:600;font-size:14.5px;line-height:1.25;display:block}
+.introcard .meta{font-family:var(--sans);font-size:11.5px;color:var(--muted);display:block;margin-top:3px}
+.introcard .go{display:block;margin-top:6px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.06em}
+.leadcard{background:var(--risk-bg);border:1px solid var(--risk-line);padding:9px 12px;font-size:12.5px;line-height:1.4}
+.introcard:hover,.leadcard:hover{box-shadow:var(--sh2)}
+.edge.intro{stroke-dasharray:4 4}
 .ocard .meta b{color:var(--good);font-weight:600}
 .ocard.unlinked{border-color:var(--alert-line);background:var(--alert-bg)}
 .qcard.orphan{border-style:dashed;opacity:.75}
@@ -425,12 +443,12 @@ var DISC_FIELDS=[
   ['authority','Eligibility is not authority','Its own card in the result, above the criteria. HTML.'],
   ['result','Foot of the result','Closing note in the result panel. HTML.'],
   ['print','On the print-out', 'This one has to stand alone months later with none of the tool around it. HTML.'],
-  ['cites','About the citations','Printed and shown at the foot of the result. HTML.']
+  ['cites','About the citations','Shown at the foot of the result panel (not in the print-out). HTML.']
 ];
 var CONTACT_FIELDS=[
   ['name','Name',''],
   ['role','Role or title',''],
-  ['email','Email','Without this the Contact panel can only offer \u201ccopy the text\u201d.'],
+  ['email','Email','Shown under \u201cWho this reaches\u201d. Where this deployment sends mail itself (RESEND_API_KEY), Send emails the form to CONTACT_TO, or else to this address once it is published. Otherwise Send opens the reader\u2019s own email program to this address, and without it only Copy is offered.'],
   ['phone','Phone',''],
   ['calendly','Calendly event link','The Calendly link for the event people should book \u2014 e.g. https://calendly.com/your-name/30min. It embeds in the Contact panel, and whatever the reader typed in the question box is carried into it as a prefill. Another scheduling service still works as a link, it just will not embed.']
 ];
@@ -443,6 +461,14 @@ function clone(o){ return JSON.parse(JSON.stringify(o)); }
    it would travel. Returns null for what is not a tree with questions, and
    when there is no filter to run (look.js did not load): the caller decides
    what that means for its source. */
+function hasWords(v){ return typeof v==='string'&&v.trim()!==''; }
+/* The eligibility box's wording as the reader will get it: an empty line
+   falls back to what tree-data.js ships, as mergeWords does on the reader. */
+function eligWords(){
+  var t=(T.COPY&&T.COPY.elig)||{}, b=(BASE.COPY&&BASE.COPY.elig)||{}, out={};
+  ['tag','title','sub','open','lead'].forEach(function(k){ out[k]=hasWords(t[k])?t[k]:(b[k]||''); });
+  return out;
+}
 function cleanContent(d){
   var L=window.TAS_LOOK;
   if(!L||typeof L.cleanTree!=='function') return null;
@@ -455,11 +481,12 @@ var T=clone(BASE), dirty=false, sel=null;   /* sel = {kind:'q'|'o', id, ai} */
    overwritten either, since the first edit would otherwise save over the
    only copy of someone's work. Reset (or an Import, or opening a saved tree)
    is the deliberate way past it. */
-var draftHeld=false;
+var draftHeld=false, hadDraft=false, fromPublished=false;
 (function(){
   var raw=null, d=null;
   try{ raw=localStorage.getItem(DRAFT_KEY); }catch(e){ return; }
   if(!raw) return;
+  hadDraft=true;
   try{ d=cleanContent(JSON.parse(raw)); }catch(e){ d=null; }
   if(d) T=d; else draftHeld=true;
 })();
@@ -632,7 +659,7 @@ function render(){
           qEl.appendChild(warn);
         }
         qbar.appendChild(edBtn('+ option',function(){ addOption(id); }));
-        qbar.appendChild(edBtn(n.risky?'Risk styling: on':'Risk styling: off',function(){
+        qbar.appendChild(edBtn(n.risky?'Risk decision: on':'Risk decision: off',function(){
           n.risky=!n.risky; markDirty(); render(); }));
         qbar.appendChild(edBtn('Delete',function(){ removeQuestion(id); },'danger'));
         var qsp=document.createElement('span'); qsp.className='spacer'; qbar.appendChild(qsp);
@@ -641,6 +668,7 @@ function render(){
         stopBubble(qEl);
       } else {
         qEl.innerHTML='<span class="tag">'+esc(n.tag||id)+'</span><span class="ttl">'+esc(n.q||'(no question text)')+'</span>'
+          +(n.note?'<span class="qnote" title="'+esc(n.note)+'">'+esc(n.note)+'</span>':'')
           +(reach[id]?'':'<span class="badge">unreachable</span>');
         qEl.onclick=function(ev){ ev.stopPropagation(); if(swallowClick) return; select({kind:'q',id:id}); };
         qEl.title="Drag onto another question in the same row to reorder it. A row is set by what points at the question — repoint an option to move it up or down.";
@@ -690,6 +718,7 @@ function render(){
           var dest=!a.to?'nowhere':(isTerminal(a.to)?TERMINALS[a.to]:(T.NODES[a.to]?(T.NODES[a.to].short||a.to):a.to+' (missing)'));
           oEl.innerHTML='<span class="tag">Option '+(ai+1)+'</span>'
             +'<span class="ttl">'+esc(a.label||'(no label)')+'</span>'
+            +(a.hint?'<span class="ohint">'+esc(a.hint)+'</span>':'')
             +'<span class="meta">→ '+esc(dest)+(a.grants?' · <b>+'+esc((T.OUT[a.grants]||{}).name||a.grants)+'</b>':'')+'</span>'
             +(bad?'<span class="badge">no target</span>':'');
           oEl.onclick=function(ev){ ev.stopPropagation(); if(swallowClick) return; select({kind:'o',id:id,ai:ai}); };
@@ -742,6 +771,36 @@ function render(){
     tpos[t]={x:-140+i*220+el.offsetWidth/2,y:termY,h:el.offsetHeight};
   });
 
+  /* The two boxes the reader draws before Question 1, in the wording readers
+     will get: an emptied line shows what tree-data.js ships, as on the
+     reader. Not part of the tree's wiring, so they take no drag and no port;
+     a click opens Content → Eligibility. */
+  var introEls=[];
+  if(pos[ROOT]){
+    var EL=eligWords(), yAbove=pos[ROOT].y;
+    var introCard=function(cls,html,w){
+      var el=document.createElement('div');
+      el.className=cls; el.style.width=w+'px'; el.innerHTML=html;
+      el.title='Edit under Content → Eligibility';
+      el.onclick=function(ev){ ev.stopPropagation(); if(swallowClick) return; goContent('elig'); };
+      nodesEl.appendChild(el);
+      return el;
+    };
+    var stack=[];
+    if(hasWords(EL.lead)) stack.push(introCard('leadcard',esc(EL.lead),QW));
+    if(hasWords(EL.title)) stack.push(introCard('introcard',
+      (hasWords(EL.tag)?'<span class="tag">'+esc(EL.tag)+'</span>':'')
+      +'<span class="ttl">'+esc(EL.title)+'</span>'
+      +(hasWords(EL.sub)?'<span class="meta">'+esc(EL.sub)+'</span>':'')
+      +(hasWords(EL.open)?'<span class="go">'+esc(EL.open)+' ›</span>':''),QW-30));
+    stack.forEach(function(el){
+      var h=el.offsetHeight;
+      yAbove-=VGAP+h;
+      el.style.left=(pos[ROOT].x-el.offsetWidth/2)+'px'; el.style.top=yAbove+'px';
+      introEls.unshift({x:pos[ROOT].x,y:yAbove,h:h});
+    });
+  }
+
   /* normalise to positive space */
   var all=Array.prototype.slice.call(nodesEl.children);
   var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
@@ -757,6 +816,7 @@ function render(){
   });
   Object.keys(pos).forEach(function(k){ pos[k].x+=dx; pos[k].y+=dy; });
   Object.keys(tpos).forEach(function(k){ tpos[k].x+=dx; tpos[k].y+=dy; });
+  introEls.forEach(function(b){ b.x+=dx; b.y+=dy; });
   var W=maxX-minX+padX*2, H=maxY-minY+padY*2;
   edgesEl.setAttribute('width',W); edgesEl.setAttribute('height',H);
   edgesEl.setAttribute('viewBox','0 0 '+W+' '+H);
@@ -778,6 +838,17 @@ function render(){
       edgesEl.appendChild(p);
     });
   });
+  /* box -> box -> Question 1, dashed: reading order, not wiring */
+  if(introEls.length&&pos[ROOT]){
+    introEls.concat([pos[ROOT]]).forEach(function(b,i,list){
+      if(!i) return;
+      var a=list[i-1], y1=a.y+a.h, y2=b.y;
+      var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('class','edge intro');
+      p.setAttribute('d','M'+a.x+','+y1+' L'+b.x+','+y2);
+      edgesEl.appendChild(p);
+    });
+  }
   /* question -> its own options */
   ids.forEach(function(id){
     var q=pos[id]; if(!q) return;
@@ -792,8 +863,15 @@ function render(){
     });
   });
   applyView();
-  renderPane();
+  if(!render.keepPane) renderPane();
   refreshWarning();
+}
+/* The canvas again, without the pane. Typing in the pane changes what a card
+   says, and rebuilding the pane on every keystroke took the caret out of the
+   field after the first letter. */
+function redraw(){
+  render.keepPane=true;
+  try{ render(); } finally{ render.keepPane=false; }
 }
 /* unreachable questions are the one mistake that looks like nothing is wrong,
    so it gets said in the toolbar rather than only inside a tab */
@@ -882,9 +960,35 @@ function reorderQuestions(fromId,toId){
   var next={}; ids.forEach(function(id){ next[id]=T.NODES[id]; });
   T.NODES=next; markDirty(); render();
 }
+/* A pathway's ways (OUT.x.options) and its statements' "fits" (language[].way)
+   follow the answers of its chooser question by position, so moving or
+   removing one of those answers moves or removes them too. map[i] is where
+   old answer i ends up, or -1 for one that is gone. */
+function remapChooser(qid,map){
+  Object.keys(T.OUT).forEach(function(k){
+    var o=T.OUT[k];
+    if(!o||o.chooser!==qid) return;
+    if(Array.isArray(o.options)){
+      var n=[];
+      o.options.forEach(function(x,i){ if(typeof map[i]==='number'&&map[i]>=0) n[map[i]]=x; });
+      o.options=n.filter(Boolean);
+    }
+    (o.caa||[]).forEach(function(sec){
+      (sec.language||[]).forEach(function(l){
+        if(typeof l.way!=='number') return;
+        var w=map[l.way];
+        if(typeof w==='number'&&w>=0) l.way=w; else delete l.way;
+      });
+    });
+  });
+}
 function reorderOptions(qid,from,to){
   var a=T.NODES[qid]&&T.NODES[qid].a;
   if(!a||from===to||from<0||to<0||from>=a.length||to>=a.length) return;
+  var order=a.map(function(x,i){ return i; });
+  order.splice(to,0,order.splice(from,1)[0]);
+  var map=[]; order.forEach(function(old,now){ map[old]=now; });
+  remapChooser(qid,map);
   a.splice(to,0,a.splice(from,1)[0]);
   markDirty(); sel={kind:'o',id:qid,ai:to}; render();
 }
@@ -1129,6 +1233,7 @@ function addOption(qid){
 function removeOption(qid,ai){
   var q=T.NODES[qid]; if(!q||!q.a) return;
   if(q.a.length<=1){ alert('A question needs at least one option. Delete the question instead.'); return; }
+  remapChooser(qid,q.a.map(function(x,i){ return i<ai?i:(i===ai?-1:i-1); }));
   q.a.splice(ai,1); markDirty(); select({kind:'q',id:qid});
 }
 function addQuestion(afterOpt){
@@ -1184,9 +1289,22 @@ function field(label,val,oninput,opt){
   if(opt.rows) el.rows=opt.rows;
   if(opt.cls) el.className=opt.cls;
   if(opt.spell===false) el.spellcheck=false;
-  el.oninput=function(){ oninput(el.value); markDirty(); };
+  el.oninput=function(){ oninput(el.value); markDirty(); if(warnEl) plainCheck(); };
   wrap.appendChild(el);
   if(opt.hint){ var h=document.createElement('div'); h.className='hint'; h.textContent=opt.hint; wrap.appendChild(h); }
+  /* Plain text still goes through the markup filter on its way to readers,
+     so text in < > is removed. Said as it is typed, not discovered later. */
+  var warnEl=null;
+  function plainCheck(){
+    var L=window.TAS_LOOK, v=el.value;
+    warnEl.hidden=!(L&&typeof L.cleanHtml==='function'&&L.cleanHtml(v)!==v);
+  }
+  if(opt.plain){
+    warnEl=document.createElement('div'); warnEl.className='hint';
+    warnEl.style.color='var(--alert)';
+    warnEl.textContent='Text in < > is removed when this is saved or published — use [ ] instead.';
+    wrap.appendChild(warnEl); plainCheck();
+  }
   return wrap;
 }
 function selectField(label,val,options,onchange,hint){
@@ -1232,14 +1350,17 @@ function renderPane(){
     var h=document.createElement('div');
     h.innerHTML='<h2>'+esc(q.tag||sel.id)+'</h2><p class="sub">Question · id <code>'+esc(sel.id)+'</code></p>';
     pane.appendChild(h);
-    pane.appendChild(field('Label above the question',q.tag,function(v){ q.tag=v; render(); }));
-    pane.appendChild(field('Short name (shown on other cards)',q.short,function(v){ q.short=v; render(); },{hint:'Used where an option says where it leads.'}));
-    pane.appendChild(field('The question',q.q,function(v){ q.q=v; render(); },{area:true,rows:3}));
+    pane.appendChild(field('Label above the question',q.tag,function(v){ q.tag=v; redraw(); }));
+    pane.appendChild(field('Short name (shown on other cards)',q.short,function(v){ q.short=v; redraw(); },
+      {hint:'Labels this question in the print-out’s answers, the result’s answer cards, saved-path titles and the Contact email, and on this canvas where an option says where it leads.'}));
+    pane.appendChild(field('The question',q.q,function(v){ q.q=v; redraw(); },{area:true,rows:3}));
     pane.appendChild(field('Note shown under it (optional)',q.note,function(v){ q.note=v; },{area:true,rows:4,hint:'Use for a risk warning or extra context.'}));
     var chk=document.createElement('label'); chk.className='chk f';
     var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!q.risky;
     cb.onchange=function(){ q.risky=cb.checked; markDirty(); render(); };
-    chk.appendChild(cb); chk.appendChild(document.createTextNode('Treat as a risk decision (amber styling)'));
+    chk.appendChild(cb); chk.appendChild(document.createTextNode('Treat as a risk decision — amber styling, the '
+      +'“worth a word with counsel” cue on Contact, and the Boundary-risk card in the result and print-out, '
+      +'which carries the chosen answer’s detail'));
     pane.appendChild(chk);
 
     pane.appendChild(sectionTitle('Options ('+(q.a||[]).length+')'));
@@ -1266,14 +1387,17 @@ function renderPane(){
   var hd=document.createElement('div');
   hd.innerHTML='<h2>Option '+(sel.ai+1)+'</h2><p class="sub">of '+esc(q2.tag||sel.id)+'</p>';
   pane.appendChild(hd);
-  pane.appendChild(field('Label on the card',a.label,function(v){ a.label=v; render(); }));
+  pane.appendChild(field('Label on the card',a.label,function(v){ a.label=v; redraw(); }));
   pane.appendChild(field('Short form',a.short,function(v){ a.short=v; },{hint:'Used in the printed summary of answers.'}));
-  pane.appendChild(field('Hint under the label (optional)',a.hint,function(v){ a.hint=v; },
-    {hint:'A short line shown on the card before anyone answers — examples, say.'}));
-  pane.appendChild(field('Note once chosen (optional)',a.note,function(v){ a.note=v; },{area:true,rows:3,
+  pane.appendChild(field('Hint under the label (optional)',a.hint,function(v){ a.hint=v; redraw(); },
+    {plain:true,hint:'A short line shown on the card under the label — examples, say.'}));
+  pane.appendChild(field('Note once chosen (optional)',a.note,function(v){ a.note=v; },{area:true,rows:3,plain:true,
     hint:'Shown on the card after this answer is picked. Plain text; “contact us” becomes a link to the Contact panel.'}));
   pane.appendChild(field('Detail in the result (optional, HTML allowed)',a.detail,function(v){ a.detail=v; },{area:true,rows:5,
-    hint:'Its own card in the full result and a paragraph in the printout. <a href="#" data-open-contact>contact us</a> links to the Contact panel.'}));
+    hint:(q2.risky
+      ?'This question is a risk decision, so its detail goes inside the Boundary-risk card in the full result, and under “Boundary risk” in the printout.'
+      :'Its own card in the full result and a paragraph in the printout.')
+      +' <a href="#" data-open-contact>contact us</a> links to the Contact panel.'}));
   pane.appendChild(selectField('Where this leads',a.to,targetOptions(),function(v){
     if(v==='__new__'){ addQuestion({id:sel.id,ai:sel.ai}); return; }
     a.to=v; render();
@@ -1291,21 +1415,26 @@ function renderPaths(){
   Object.keys(T.OUT).forEach(function(k){
     var o=T.OUT[k];
     pane.appendChild(sectionTitle(o.name||k));
-    pane.appendChild(field('Name',o.name,function(v){ o.name=v; render(); }));
+    pane.appendChild(field('Name',o.name,function(v){ o.name=v; redraw(); }));
     pane.appendChild(field('Headline',o.title,function(v){ o.title=v; }));
     pane.appendChild(field('Description (HTML allowed)',o.body,function(v){ o.body=v; },{area:true,rows:3}));
     /* the ways of taking the pathway up, each with its pros and cons */
     if(o.options) o.options.forEach(function(x,i){
-      pane.appendChild(field('Way '+(i+1)+' — heading',x.h,function(v){ x.h=v; }));
+      pane.appendChild(field('Way '+(i+1)+' — heading (HTML allowed)',x.h,function(v){ x.h=v; }));
       pane.appendChild(field('Way '+(i+1)+' — description (HTML allowed)',x.d,function(v){ x.d=v; },{area:true,rows:2}));
-      pane.appendChild(field('Way '+(i+1)+' — pros (one per line)',lines(x.pros),function(v){ x.pros=splitLines(v); },{area:true,rows:4}));
-      pane.appendChild(field('Way '+(i+1)+' — cons (one per line)',lines(x.cons),function(v){ x.cons=splitLines(v); },{area:true,rows:3}));
+      pane.appendChild(field('Way '+(i+1)+' — pros (one per line, HTML allowed)',lines(x.pros),function(v){ x.pros=splitLines(v); },{area:true,rows:4}));
+      pane.appendChild(field('Way '+(i+1)+' — cons (one per line, HTML allowed)',lines(x.cons),function(v){ x.cons=splitLines(v); },{area:true,rows:3}));
     });
+    if(Array.isArray(o.options)&&o.options.length) pane.appendChild(selectField(
+      'The question whose answer marks one of these ways as the reader’s choice',o.chooser||'',
+      [{v:'',t:'None'}].concat(questionIds().map(function(id){ return {v:id,t:(T.NODES[id].tag||id)}; })),
+      function(v){ if(v) o.chooser=v; else delete o.chooser; refreshPane(); },
+      'By position: its first answer marks way 1, its second way 2. Statements below can be tied to one of its answers.'));
     caaEditor(o,k);
     if(o.sections) pane.appendChild(field('Section chips, when it has no CAA sections of its own (one per line)',o.sections.join('\n'),function(v){
       o.sections=v.split('\n').map(function(x){return x.trim();}).filter(Boolean);
     },{area:true,rows:6,hint:o.sections.length+' listed'}));
-    if(o.checks) pane.appendChild(field('Bullet points — "heading :: detail" per line',
+    if(o.checks) pane.appendChild(field('Bullet points — "heading :: detail" per line (HTML allowed)',
       o.checks.map(function(c){return c.h+' :: '+(c.d||'');}).join('\n'),function(v){
         o.checks=v.split('\n').filter(Boolean).map(function(line){
           var bits=line.split('::'); return {h:(bits[0]||'').trim(),d:(bits[1]||'').trim()};
@@ -1349,14 +1478,14 @@ function caaEditor(o,k){
     if(open){
       var body=document.createElement('div'); body.className='body';
       var relabel=function(){ lbl.textContent=(sec.s?sec.s+' — ':'')+(sec.h||'(untitled)'); };
-      body.appendChild(field('Short label (on the chip)',sec.s,function(v){ sec.s=v; relabel(); }));
-      body.appendChild(field('Heading',sec.h,function(v){ sec.h=v; relabel(); }));
-      body.appendChild(field('Contents — one point per line',lines(sec.contents),function(v){ sec.contents=splitLines(v); },{area:true,rows:5}));
-      body.appendChild(field('TAS applications — one point per line',lines(sec.applications),function(v){ sec.applications=splitLines(v); },{area:true,rows:4}));
+      body.appendChild(field('Short label (on the chip)',sec.s,function(v){ sec.s=v; relabel(); },{plain:true}));
+      body.appendChild(field('Heading',sec.h,function(v){ sec.h=v; relabel(); },{plain:true}));
+      body.appendChild(field('Contents — one point per line',lines(sec.contents),function(v){ sec.contents=splitLines(v); },{area:true,rows:5,plain:true}));
+      body.appendChild(field('TAS applications — one point per line',lines(sec.applications),function(v){ sec.applications=splitLines(v); },{area:true,rows:4,plain:true}));
       if(!Array.isArray(sec.language)) sec.language=[];
       sec.language.forEach(function(l,j){
-        body.appendChild(field('Statement '+(j+1)+' — label (optional)',l.label,function(v){ if(v) l.label=v; else delete l.label; }));
-        body.appendChild(field('Statement '+(j+1)+' — language for the application',l.t,function(v){ l.t=v; },{area:true,rows:4}));
+        body.appendChild(field('Statement '+(j+1)+' — label (optional)',l.label,function(v){ if(v) l.label=v; else delete l.label; },{plain:true}));
+        body.appendChild(field('Statement '+(j+1)+' — language for the application',l.t,function(v){ l.t=v; },{area:true,rows:4,plain:true}));
         if(chooser) body.appendChild(selectField('Statement '+(j+1)+' — fits',typeof l.way==='number'?String(l.way):'',ways,
           function(v){ if(v==='') delete l.way; else l.way=parseInt(v,10); }));
         body.appendChild(button('Remove statement '+(j+1),function(){ sec.language.splice(j,1); markDirty(); refreshPane(); },'sm danger'));
@@ -1475,8 +1604,8 @@ function renderResultContent(){
 
 function renderDisclaimers(){
   contentHead('Disclaimers','Seven placements, because they do different jobs.');
-  note('Leave one blank and that placement simply carries nothing — which for the bar and the '
-    +'print-out means a reader sees no disclaimer at all, so blank them deliberately or not at all.');
+  note('A placement left blank shows readers what tree-data.js ships, so a disclaimer can be reworded '
+    +'here but not removed.');
   DISC_FIELDS.forEach(function(f){
     pane.appendChild(field(f[1],T.DISC[f[0]],function(v){ T.DISC[f[0]]=v; },
       {area:true,rows:f[0]==='bar'?3:6,hint:f[2]}));
@@ -1602,6 +1731,17 @@ function sectionsEditor(arr,kind,o){
   },'solid');
   add.disabled=arr.length>=o.max;
   row.appendChild(add);
+  /* A list from an older draft or published tree is kept whole, so a change
+     to the shipped one never reaches it on its own; this puts it back. */
+  if(o.shipped&&JSON.stringify(arr)!==JSON.stringify(o.shipped)){
+    var rs=button('Reset to shipped',function(){
+      if(!confirm('Replace every '+o.noun+' here with what tree-data.js ships? Your changes to this list are lost.')) return;
+      arr.length=0; clone(o.shipped).forEach(function(x){ arr.push(x); });
+      OPENI[kind]=-1; markDirty(); refreshPane();
+    },'sm');
+    rs.title='This list differs from the one tree-data.js ships';
+    row.appendChild(rs);
+  }
   pane.appendChild(row);
   if(arr.length>=o.max) note('That is as many as a published tree may carry ('+o.max+').');
 }
@@ -1614,7 +1754,7 @@ function renderElig(){
     +'title empty and readers get what tree-data.js ships, as everywhere in Wording.']);
   pane.appendChild(sectionTitle('The requirements'));
   note('What the panel lists, in order: a heading and some HTML each, like the guide.');
-  sectionsEditor(T.COPY.eligSec,'elig',{noun:'requirement',min:1,max:20,
+  sectionsEditor(T.COPY.eligSec,'elig',{noun:'requirement',min:1,max:20,shipped:(BASE.COPY||{}).eligSec,
     minMsg:'The eligibility box needs at least one requirement to open onto.',
     htmlHint:'<p> for paragraphs; <b>, <i>, <ul><li>; <a href="…" target="_blank" rel="noopener"> for a link.'});
 }
@@ -1624,7 +1764,7 @@ function renderGuide(){
   note('Each section is a heading and some HTML. The reader shows it to everyone, so anything that '
     +'could run — scripts, event attributes, javascript: links — is stripped by the server on '
     +'Publish, and the preview here strips it too. The “what this tool is not” box is under Disclaimers.');
-  sectionsEditor(T.GUIDE,'guide',{noun:'section',min:1,max:GUIDE_MAX,
+  sectionsEditor(T.GUIDE,'guide',{noun:'section',min:1,max:GUIDE_MAX,shipped:BASE.GUIDE,
     minMsg:'The guide keeps at least one section. An empty guide would be read as an older draft that '
       +'never had one, and the shipped guide would quietly come back in its place.',
     htmlHint:'<p> for paragraphs; <b>, <i>, <code>, <ul><li>. <a href="#" data-open-contact>contact us</a> opens the Contact panel.'});
@@ -1637,7 +1777,7 @@ function renderWalk(){
     +'the drawing stays where it was. A screen past position '+WALK_ART_COUNT+' has no drawing.');
   note('The last screen’s button starts the tree, whatever that screen says — so end on the screen '
     +'people should leave from. The buttons’ own labels are under Wording → Buttons and controls.');
-  sectionsEditor(T.COPY.walk,'walk',{noun:'screen',min:1,max:WALK_MAX,
+  sectionsEditor(T.COPY.walk,'walk',{noun:'screen',min:1,max:WALK_MAX,shipped:(BASE.COPY||{}).walk,
     minMsg:'The walkthrough needs at least one screen — its button is what starts the tree.',
     meta:function(i,n){
       return (i<WALK_ART_COUNT?'Shown with drawing '+(i+1):'No drawing at this position')
@@ -1677,12 +1817,28 @@ var COPY_HINTS={
   'tree.unlocks':'The word before a pathway’s name on an answer card.',
   'tree.hintStart':'Under the canvas before the first answer.',
   'tree.hintGoing':'Under the canvas part-way down.',
-  'tree.hintDone':'Under the canvas once the path reaches an ending.',
+  'tree.hintDone':'Under the canvas once the path reaches an ending, for a signed-in reader.',
+  'tree.hintDoneGuest':'Under the canvas at an ending, before the reader has signed in.',
   'result.nodeTag':'The label on the result card at the foot of the tree.',
-  'result.nodeOpen':'The button on that card.',
+  'result.nodeOpen':'The button on that card, once the reader has signed in.',
+  'result.lockedH':'The result card at the end of the tree, before the reader has signed in.',
+  'result.lockedGo':'The button on that card, before sign-in.',
+  'result.lockedReason':'Heads the sign-in dialog that card opens. HTML.',
+  'result.caaSeeAlso':'{name} becomes the pathway whose sections it lends — keep it in.',
+  'result.caaIntro':'Heads a pathway’s CAA sections in the panel its “unlocks” link opens. HTML.',
+  'result.noneBody':'HTML.',
+  'result.sectionsNote':'HTML.',
+  'result.criteriaLead':'HTML.',
   'contact.cue':'The callout that points at Contact while a question marked risky is open.',
-  'contact.noCal':'Shown in place of the calendar when there is no Calendly link. HTML.',
-  'contact.mailSubject':'The subject line of the email Send question drafts.'
+  'contact.noCal':'Shown in place of the calendar when there is no https scheduling link at all. HTML.',
+  'contact.whoTodo':'HTML.',
+  'contact.calNote':'HTML.',
+  'contact.calLinkNote':'HTML.',
+  'contact.mailSubject':'Used only when Send opens the reader’s own email program, and in Copy — not in mail this deployment sends itself.',
+  'contact.mailIntro':'Used only when Send opens the reader’s own email program, and in Copy.',
+  'contact.mailSign':'Used only when Send opens the reader’s own email program, and in Copy.',
+  'ui.sentOk':'{email} becomes the reader’s address — keep it in.',
+  'ui.sendFailed':'{message} becomes the reason it was not sent — keep it in.'
 };
 function isGroup(o){ return !!o&&typeof o==='object'&&!Array.isArray(o); }
 function humanise(k){
@@ -1709,10 +1865,9 @@ function copyField(label,obj,key,shipped,opt){
   paint();
   return w;
 }
+/* only the keys the reader reads, in the order tree-data.js keeps them */
 function orderedKeys(obj,base){
-  var out=Object.keys(base).filter(function(k){ return obj.hasOwnProperty(k); });
-  Object.keys(obj).forEach(function(k){ if(out.indexOf(k)<0) out.push(k); });
-  return out;
+  return Object.keys(base).filter(function(k){ return obj.hasOwnProperty(k); });
 }
 function wordField(path,label,obj,k,shipped){
   var v=obj[k], html=isHtml(v)||isHtml(shipped);
@@ -1735,7 +1890,9 @@ function verdictFields(V,BV,k,when){
 function wordingGroups(){
   var out=[], seen={verdicts:1,walk:1,elig:1,eligSec:1};
   GROUPS.forEach(function(g){ seen[g[0]]=1; if(isGroup(T.COPY[g[0]])) out.push(g); });
-  Object.keys(BASE.COPY||{}).concat(Object.keys(T.COPY)).forEach(function(k){
+  /* only groups the reader reads; a group from another deployment's import
+     would be a field that changes nothing */
+  Object.keys(BASE.COPY||{}).forEach(function(k){
     if(seen[k]) return;
     seen[k]=1;
     if(isGroup(T.COPY[k])) out.push([k,humanise(k),
@@ -2054,6 +2211,7 @@ function normaliseCopy(){
     if(!T[k]) T[k]=Array.isArray(BASE[k])?[]:{};
   });
   if(!T.NODES||typeof T.NODES!=='object') T.NODES=clone(BASE.NODES||{});
+  backfillCaa(T.OUT,BASE.OUT);
 
   /* The guide, the wording and the photograph, by the merge rule the reader
      applies too. A draft, a published tree, a saved tree or an import can be
@@ -2066,10 +2224,12 @@ function normaliseCopy(){
   if(!isGroup(T.COPY)) T.COPY={};
   Object.keys(BC).forEach(function(g){
     var b=BC[g], t=T.COPY[g];
-    if(Array.isArray(b)) T.COPY[g]=mergeSections(t,b,g==='walk');
+    if(Array.isArray(b)) T.COPY[g]=mergeSections(t,b,g==='walk'||g==='eligSec');
     else if(isGroup(b)){ if(!isGroup(t)) t=T.COPY[g]={}; mergeShipped(t,b); }
     else if(typeof t!==typeof b) T.COPY[g]=b;
   });
+  /* a line renamed in tree-data.js leaves its old key behind in older records */
+  if(isGroup(T.COPY.contact)) delete T.COPY.contact.privacy;
   var shippedLook=lookClean(BASE.THEME), incoming=isGroup(T.THEME)?T.THEME:{}, merged={};
   Object.keys(shippedLook).forEach(function(k){
     merged[k]=incoming.hasOwnProperty(k)?incoming[k]:shippedLook[k];
@@ -2081,10 +2241,27 @@ function normaliseCopy(){
 function mergeSections(arr,shipped,titled){
   if(!Array.isArray(arr)||!arr.length) return clone(shipped);
   if(!titled) return arr;
-  var ok=arr.filter(isGroup).map(function(s){
+  /* the reader's rule: an entry with neither a heading nor a body is skipped */
+  var ok=arr.filter(function(s){ return isGroup(s)&&(hasWords(s.h)||hasWords(s.html)); }).map(function(s){
     return {h:typeof s.h==='string'?s.h:'',html:typeof s.html==='string'?s.html:''};
   });
   return ok.length?ok:clone(shipped);
+}
+/* A record with no CAA sections anywhere predates them, so it takes the
+   shipped ones; once any pathway has them (even emptied), the record is
+   the editor's and is left alone. The reader applies the same rule. */
+function backfillCaa(out,shipped){
+  if(!isGroup(out)||!isGroup(shipped)) return;
+  var old=Object.keys(out).every(function(k){
+    var t=out[k]; return !isGroup(t)||(!('caa' in t)&&!('sectionsFrom' in t));
+  });
+  if(!old) return;
+  Object.keys(shipped).forEach(function(k){
+    var t=out[k], b=shipped[k];
+    if(!isGroup(t)||!isGroup(b)) return;
+    if(Array.isArray(b.caa)) t.caa=clone(b.caa);
+    if(b.sectionsFrom) t.sectionsFrom=b.sectionsFrom;
+  });
 }
 function mergeShipped(t,b){
   Object.keys(b).forEach(function(k){
@@ -2120,11 +2297,26 @@ function contentPlaces(){
   Object.keys(T.COPY||{}).forEach(function(g){
     var v=T.COPY[g];
     if(Array.isArray(v)) v.forEach(function(s,i){
-      out.push({where:(g==='walk'?'walkthrough screen ':humanise(g)+' ')+(i+1),sec:g==='walk'?'walk':'wording',
+      out.push({where:(g==='walk'?'walkthrough screen ':(g==='eligSec'?'eligibility requirement ':humanise(g)+' '))+(i+1),
+        sec:g==='walk'?'walk':(g==='eligSec'?'elig':'wording'),
         text:stringLeaves(s).map(stripTags).join(' \n ')});
     });
-    else if(isGroup(v)) out.push({where:g==='verdicts'?'the verdicts':'Wording → '+humanise(g),sec:'wording',
+    else if(isGroup(v)) out.push({where:g==='verdicts'?'the verdicts':(g==='elig'?'the eligibility box':'Wording → '+humanise(g)),
+      sec:g==='elig'?'elig':'wording',
       text:stringLeaves(v).map(stripTags).join(' \n ')});
+  });
+  Object.keys(T.NODES||{}).forEach(function(id){
+    var n=T.NODES[id];
+    out.push({where:(n.tag||id),go:{kind:'q',id:id},text:[n.tag,n.q,n.note].map(stripTags).join(' \n ')});
+    (n.a||[]).forEach(function(a,ai){
+      out.push({where:(n.tag||id)+' option '+(ai+1),go:{kind:'o',id:id,ai:ai},
+        text:[a.label,a.hint,a.note,a.detail].map(stripTags).join(' \n ')});
+    });
+  });
+  Object.keys(T.OUT||{}).forEach(function(k){
+    var o=T.OUT[k], copy={};
+    Object.keys(o||{}).forEach(function(x){ if(x!=='name') copy[x]=o[x]; });
+    out.push({where:'Pathways → '+(o&&o.name||k),paths:true,text:stringLeaves(copy).map(stripTags).join(' \n ')});
   });
   return out;
 }
@@ -2147,9 +2339,10 @@ function renamedPathways(out){
     if(!hits.length) return;
     var where=hits.slice(0,3).map(function(h){ return h.where; }).join(', ')
       +(hits.length>3?' and '+(hits.length-3)+' more':'');
-    out.push({bad:false,t:(hits[0].guide?'The guide':'The wording')+' still says “'+was+'”',
+    out.push({bad:false,t:(hits[0].guide?'The guide':'The content')+' still says “'+was+'”',
       d:'That pathway is called “'+(now||'(no name)')+'” now, but '+where+' still use'
-        +(hits.length===1?'s':'')+' the old name.',content:hits[0].sec});
+        +(hits.length===1?'s':'')+' the old name. The walkthrough’s pictures name it too, and cannot be edited.',
+      content:hits[0].sec,go:hits[0].go,paths:hits[0].paths});
   });
 }
 
@@ -2168,6 +2361,17 @@ function checks(){
     });
     if(!reach[id]) out.push({bad:false,t:(q.tag||id)+' is unreachable',d:'No option leads to it, so a reader can never see it.',go:{kind:'q',id:id}});
   });
+  /* a pathway whose ways are picked by a question's answers, by position */
+  Object.keys(T.OUT||{}).forEach(function(k){
+    var o=T.OUT[k];
+    if(!o||!o.chooser) return;
+    var cq=T.NODES[o.chooser];
+    if(!cq) out.push({bad:true,t:(o.name||k)+' is chosen by a missing question',
+      d:'Its ways are picked by "'+o.chooser+'", which no longer exists. Pick the question under Pathways.',paths:true});
+    else if(Array.isArray(o.options)&&(cq.a||[]).length!==o.options.length) out.push({bad:false,
+      t:(o.name||k)+' has '+o.options.length+' ways, but '+(cq.tag||o.chooser)+' has '+(cq.a||[]).length+' answers',
+      d:'Answer N marks way N as the reader’s choice, so the two lists need the same length and order.',paths:true});
+  });
   renamedPathways(out);
   /* An uploaded photograph lives in this deployment's database. With none,
      every reader's request for it is a 404. Nothing breaks — the plain
@@ -2181,6 +2385,13 @@ function checks(){
       content:'look'});
   }
   return out;
+}
+function openTab(k){
+  tab=k.toLowerCase();
+  ['Inspect','Paths','Content','Check'].forEach(function(o){
+    document.getElementById('tab'+o).setAttribute('aria-selected',String(o===k));
+  });
+  renderPane();
 }
 function goContent(sec){
   tab='content';
@@ -2202,6 +2413,7 @@ function renderChecks(){
       document.getElementById('tabCheck').setAttribute('aria-selected','false');
       select(i.go); };
     else if(i.content) d.onclick=function(){ goContent(i.content); };
+    else if(i.paths) d.onclick=function(){ openTab('Paths'); };
     wrap.appendChild(d);
   });
   pane.appendChild(wrap);
@@ -2253,6 +2465,7 @@ document.getElementById('bImport').onclick=function(){
 document.getElementById('bReset').onclick=function(){
   if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  fromPublished=false;
   draftHeld=false;
   T=clone(BASE); normaliseCopy(); applyLook(); sel=null; markDirty(false); render();
 };
@@ -2910,6 +3123,9 @@ function publishDialog(){
         : 'Nothing is published yet, so readers are seeing <b>tree-data.js</b>, the file the repo ships. '
           +'Publishing puts this working copy in front of them instead.',
       pub&&pub.published?'good':null));
+    if(pub&&pub.published&&!fromPublished&&!hadDraft) m.body.appendChild(TAS.ui.message(
+      '<b>This working copy did not start from the published tree.</b> It is the file the repo ships. '
+      +'Publishing it replaces every change published since — reload with no draft in this browser to start from the published tree instead.','bad'));
     /* Offering a Publish the server is certain to refuse, and explaining
        afterwards, is the wrong way round: with no editor named, say why now
        and offer nothing but the way out. */
@@ -2980,5 +3196,22 @@ function paintPublish(){
 render();
 fit();
 if(draftHeld) setStatus('failed',HELD_TEXT);
+/* With no draft in this browser, the editor opens on what readers see: the
+   published tree, when there is one, rather than the shipped file. Editing
+   the file and publishing from here would otherwise replace every change
+   published since. An edit made before the answer arrives wins. */
+if(!hadDraft&&!draftHeld&&window.fetch){
+  fetch('/api/tree',{cache:'no-store',headers:{Accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(p){
+      if(!p||!p.published||!p.data||dirty) return;
+      var d=cleanContent(p.data);
+      if(!d) return;
+      T=d; normaliseCopy(); applyLook(); sel=null; fromPublished=true;
+      render(); fit();
+      if(window.TAS) TAS.ui.toast('Opened the published tree — what readers see now.',null,{ms:5000});
+    })
+    .catch(function(){});
+}
 window.addEventListener('resize',function(){ fit(); });
 </script>
