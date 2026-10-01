@@ -27,10 +27,21 @@
    An export from /admin writes these out as literal strings, which is fine. */
 var PEACOCK='<a href="https://www.epa.gov/tribal/strategy-reviewing-tribal-eligibility-applications-administer-epa-regulatory-programs" target="_blank" rel="noopener">Peacock memo</a>';
 var CONTACT_US='<a href="#" data-open-contact>contact us</a>';
+/* The memo by its full title, where the eligibility box introduces it, and
+   the TAS cheat sheet: EPA's fuller list of what each section means for a
+   Tribe. */
+var PEACOCK_FULL='<a href="https://www.epa.gov/tribal/strategy-reviewing-tribal-eligibility-applications-administer-epa-regulatory-programs" target="_blank" rel="noopener">Strategy for Reviewing Tribal Eligibility Applications to Administer EPA Regulatory Programs</a>';
+var CHEAT_SHEET='<a href="https://www.epa.gov/tribal-air/clean-air-act-summary-content-applicability-tas-titles-i-iii-and-v" target="_blank" rel="noopener">Clean Air Act: Summary of Content and Applicability for TAS for Titles I, III and V</a>';
 
 /* Said of the undisputed-only route in two places — on the option in the tree
    and in the full result — so it is written once. */
 var UNDISPUTED='The Tribe may develop a TAS request for only the undisputed areas; however, the Tribe should include a statement that says something like: “The Tribe is not including [describe the disputed area] at this time but may add this area in future.” Please discuss the appropriate language with your Tribal lawyers and leadership.';
+
+/* Said once either way of implementing is chosen: Regulatory TAS stands on
+   its own, and the next question is only for a Tribe that also wants a say in
+   what happens around it. The same words on both routes, because both are
+   Regulatory TAS. */
+var REG_ALONE='You can have Regulatory TAS by itself, or you can also apply for Administrative TAS as well if you want to have input on State/local actions that impact your area. If so, continue with the decision tree.';
 
 /* The boundary question is asked from two answers now, and says something
    different to each: a Tribe that knows a boundary is disputed is warned about
@@ -40,6 +51,7 @@ var BOUNDARY_OPTIONS=function(){
   return [{label:'Undisputed areas only',short:'Undisputed only',to:'q2',
            note:UNDISPUTED,detail:'<p>'+UNDISPUTED+'</p>'},
           {label:'Our full jurisdictional boundaries',short:'Full boundaries',to:'q2',
+           note:'Please consider carefully moving forward with disputed jurisdiction! This could pose significant risk to the Tribe. Please contact your Tribal lawyers and Council.',
            detail:'<p>You chose to proceed over your <b>full jurisdictional boundaries</b> \u2014 have your Tribal lawyers prepare for a possible challenge.</p>'},
           {label:'Don\u2019t pursue TAS now',short:'Don\u2019t pursue',to:'END_NONTAS'}];
 };
@@ -69,9 +81,11 @@ var NODES={
   q2b:{tag:'Question 2b \u00b7 Implement CAA programs',short:'Implementation',
     q:'How would you like to implement CAA programs?',
     a:[{label:'Develop your own rules/programs to submit to EPA for approval',short:'Own programs',to:'q3',
-        hint:'e.g., Tribal Implementation Plan, NSR permitting, Title V permitting, stationary source standards'},
-       {label:'Take delegation of federal rules/programs',short:'Delegation',to:'q3'}]},
-  q3:{tag:'Question 3 · Good neighbour',short:'Good neighbour',
+        hint:'e.g., Tribal Implementation Plan, NSR permitting, Title V permitting, stationary source standards',
+        note:REG_ALONE},
+       {label:'Take delegation of federal rules/programs',short:'Delegation',to:'q3',
+        note:REG_ALONE}]},
+  q3:{tag:'Question 3 · Outside sources',short:'Outside sources',
     q:'Do outside sources affect your air, or do you want a say in nearby permits or State Implementation Plans (SIPs)?',
     a:[{label:'Yes',short:'Yes',to:'q4',grants:'participatory'},
        {label:'No',short:'No',to:'q4'}]},
@@ -82,8 +96,221 @@ var NODES={
        {label:'Not yet — we’d build it',short:'Building',to:'END',grants:'capacity',
         detail:'<p>In order to demonstrate that you have capacity for the eligibility determination, you do not have to have the full capacity to implement the program. For TAS, the Tribe can demonstrate how it will develop the capacity to run the program, which can include a plan for hiring and training. See the '+PEACOCK+'. If you want to discuss this in more detail, please '+CONTACT_US+'.</p>'},
        {label:'Unsure',short:'Unsure',to:'END',grants:'capacity',
-        detail:'<p>If you are unsure about the status of your capacity, please review the '+PEACOCK+' or '+CONTACT_US+' or your EPA project officer.</p>'}]}
+        detail:'<p>Please consult with your EPA Project Officer, or '+CONTACT_US+', to determine how to develop and demonstrate your capacity.</p>'}]}
 };
+/* The Clean Air Act sections Tribes most commonly apply for TAS under, from
+   the reviewer's "TAS CAA sections" document. Each is what the section
+   contains, how Tribes have applied it, and language the Tribe can lift into
+   its own application ("Language for the document") — the reason it is
+   applying for that section. A reader ticks the ones that fit; the printout
+   and a saved document gather the ticked sections' language.
+
+   language[].way, where present, ties a statement to one answer of the
+   pathway's chooser question (OUT.regulatory.chooser, q2b) by position:
+   0 develops the Tribe's own programs, 1 takes delegation. The reader's own
+   route is marked, and the printout keeps only the statements that fit it. */
+var ADMIN_CAA=[
+  {s:'§105',h:'Section 105 – Programmatic grants for support of air pollution planning and control programs',
+   contents:['This section makes grants available to air pollution control agencies to implement activities related to developing and maintaining air pollution programs.',
+             'This section also describes the criteria for the grant program, including amounts, limitations, terms, conditions, maintenance of effort, reduction of payments, and opportunity for hearing.',
+             'Also see 40 CFR Parts 35.570–35.578, which govern air pollution control grants to tribes (as defined in section 302(r) of the CAA) authorized under sections 105 and 301(d) of the Act.',
+             'Air pollution control grants are awarded to develop and administer programs that prevent and control air pollution on the reservation or other areas within the tribe’s jurisdiction.',
+             'The CFR contains definitions of expenditures and describes eligibility and financial assistance.'],
+   applications:['Since the CAA Amendments of 1990, Section 105 provides grants to tribes to continue implementing programs for the control of air pollution or implementation of air quality standards, subject to certain limitations.',
+                 'The CAA defines implementation as “any activity related to the planning, developing, establishing, carrying-out, improving, or maintaining of such programs.”',
+                 'Tribes must have a TAS eligibility determination to receive a 95% match for a CAA 105 grant.',
+                 'If the tribe does not have TAS, they are still eligible for a CAA 105 grant but must provide a 50% match for the first 2 years moving to a 40% tribal match; waivers are available for hardship.',
+                 'An intertribal consortium consisting of tribes that have demonstrated eligibility is also eligible for financial assistance.'],
+   language:[{t:'The Tribe is applying for TAS for section 105 to support ongoing CAA programs with the reduced grant match obligation. This does not preclude the Tribe from including 105 grants in a PPG.'}]},
+  {s:'§107 / 107(d)',h:'Section 107 – Air quality control regions; 107(d) – Designation for the National Ambient Air Quality Standards',
+   contents:['Each state (tribes may) is responsible for achieving and maintaining air quality standards within the state.',
+             'Each state (tribes may) will submit an implementation plan that delineates how air quality standards will be achieved and maintained.',
+             'States will divide up the geographic area into air quality control regions.',
+             'Whenever the EPA establishes a new or revised national ambient air quality standard (NAAQS), the EPA designates areas in a state as attainment, nonattainment, or unclassifiable (not able to be classified on the basis of available information as meeting or not meeting the air quality standard).',
+             'States submit recommendations to the EPA on designation and boundary for each area.',
+             'Areas can be redesignated as air quality conditions change.',
+             'States will submit plans to meet regional haze requirements.'],
+   applications:['Although CAA section 107(d) does not explicitly reference Indian tribes or Indian country, tribes are able to participate in the designation process.',
+                 'Tribes do not need TAS to participate in the designation process.',
+                 'Tribes may submit designation recommendations and requests for redesignation.',
+                 'Tribes may submit a plan that delineates how air quality standards will be achieved and maintained.',
+                 'Tribes may divide up their geographic area into air quality regions.'],
+   language:[{label:'Section 107',t:'The Tribe is applying for TAS for section 107 to determine a separate air quality control region for air quality planning purposes.'},
+             {label:'Section 107(d)',t:'The Tribe is applying for TAS for section 107(d) to participate in the designation process for future National Ambient Air Quality Standards, instead of deferring to the State’s recommendations for the designation.'}]},
+  {s:'§121',h:'Section 121 – Consultation',
+   contents:['The state shall consult with local governments and any affected federal land managers in implementing state plans.'],
+   applications:['Tribes should include state and local governments in implementation planning. TAS may encourage state consultation with tribes on SIP development.'],
+   language:[{t:'The Tribe is applying for TAS for section 121 to further the opportunity to coordinate with state/local and other federal agencies on TIP/SIP development.'}]},
+  {s:'§126',h:'Section 126 – Interstate pollution abatement (the good neighbor provisions)',
+   contents:['(a) Written notice to all nearby states — states must provide notice to neighboring states of new major emissions sources that may negatively affect the air quality of neighboring states.',
+             '(b) Petition for finding that major sources emit or would emit prohibited air pollutants — any state or political subdivision may petition EPA for a finding that a major source or group of stationary sources emits or would emit any air pollutant in violation of CAA section 110(a)(2)(D)(i).',
+             '(c) Violations; allowable continued operation — major new or modified sources, notwithstanding any permit, are in violation of this section and the state implementation plan if a finding is made (see 126(b) above). Major existing sources may not operate more than three months after a finding has been made with respect to them. A source may continue operation if it complies with emissions limits and schedules provided by the EPA to meet the section 110(a)(2)(D)(i) requirements.'],
+   applications:['In many cases pollution within Indian country is caused by transport from upwind state-located sources. TAS for this CAA section allows tribes to be treated as a neighboring state and to submit a petition (commonly known as a “section 126 petition”) to the EPA to review the upwind state implementation plans, as specified under section 110 of the CAA.',
+                 'A section 126 petition that is submitted by a tribe and approved by the EPA may result in a federal rulemaking which places specific emission limits on the source(s) addressed in the petition.',
+                 'Tribes should provide notice to the state in which they are located and any neighboring states of new major emissions sources in their jurisdiction that may negatively affect the state’s air quality.'],
+   language:[{label:'Section 126(a)',t:'The Tribe is applying for TAS for section 126(a) to be able to petition EPA to require State/local air agencies to revise their SIP where sources in their jurisdiction impact the Tribe’s air quality.'},
+             {label:'Section 126(b)',t:'The Tribe is applying for TAS for section 126(b) in order to be treated as a neighboring jurisdiction: to be notified by surrounding State/local air agencies, and to provide comments on State/local agency preconstruction permits and on requirements for existing sources making modifications that impact our air quality.'}]},
+  {s:'§127',h:'Section 127 – Public notification',
+   contents:['States shall notify the public of times when air quality standards are not met, of health hazards associated with such pollution, and enhance public awareness of measures that the public may take to improve air quality.',
+             'The EPA may provide grants to assist in carrying out these requirements.'],
+   applications:['Notify the public of the health hazards related to pollution when air quality standards are not met. Enhance awareness of the measures tribal members can take to improve air quality.',
+                 'Tribes may apply for funding to carry out public notification regarding air quality.'],
+   language:[{t:'The Tribe is applying for TAS for section 127 to support its efforts to better inform Tribal members of health hazards related to unhealthy air quality events.'}]},
+  {s:'§164',h:'Section 164 – Area redesignation (Class I redesignation)',
+   contents:['States may redesignate areas as Class I or II.',
+             'Lands within the boundaries of Indian reservations may only be redesignated by the appropriate Indian governing body.',
+             'If there are designation disagreements between states and Indian tribes, the parties may appeal to the EPA to resolve the dispute.'],
+   applications:['Tribes may redesignate their lands as Class I areas.',
+                 'Designation as a Class I area may provide increased protection for air quality in and around tribal lands because of the smaller increments (PSD increments) of allowable increases in pollution concentrations.',
+                 'With a Class I designation, a tribe is notified when a permit application is submitted for review by the state. The permit will provide valuable information to determine any potential impacts from the permittee.',
+                 'Comments from a tribe with a Class I designation may carry greater authority than comments from a tribe without a Class I designation.',
+                 'Outlines rules regarding area redesignation disputes between Indian tribes and states.'],
+   language:[{t:'The Tribe is applying for TAS for section 164 in order to redesignate our area as Class I and provide the highest level of air quality protection. Further, Class I designation allows for early review of permits for major modifications and new sources within a 50-mile radius of our lands. (If the Tribe wants further protection for important cultural or natural resources associated with the NAAQS pollutants, it can identify “air quality related values” here, but this is not necessary until the program implementation stage.)'}]},
+  {s:'§169B',h:'Section 169B – Visibility',
+   contents:['The EPA will conduct an assessment of visibility in Class I areas every five years.',
+             'The EPA will establish visibility transport regions made up of states who contribute visibility pollution to Class I areas.',
+             'The visibility transport commissions shall prepare reports concerning visibility challenges and remedies in their region.',
+             'The Grand Canyon visibility transport commission is established.'],
+   applications:['Tribes may choose to be involved in their regional visibility transport commissions (TAS not required) and develop TIPs (TAS required).'],
+   language:[{t:'The Tribe is applying for TAS for section 169B to support the Tribe’s participation with State/local agencies in the development of visibility protection plans.'}]},
+  {s:'§319',h:'Section 319 – Air quality monitoring',
+   contents:['The EPA will establish a national air quality monitoring system for collecting air quality data throughout the United States.',
+             'Defines “exceptional events” and exclusions.',
+             'The air quality monitoring database is made available to the public.'],
+   applications:['Tribes may establish air quality monitoring systems on their lands.',
+                 'Tribes can access the monitoring data collected by the EPA.',
+                 'TAS is not required.'],
+   language:[]},
+  {s:'§505(a)(2)',h:'Section 505(a)(2) – Treated as a neighboring jurisdiction for notification of Title V permits from surrounding state and local agencies',
+   contents:[],
+   applications:['Tribes have the opportunity (even without their own permitting program) to get TAS for 505(a)(2). This means that state and local permitting authorities need to treat the tribe as an affected state and follow the notice requirements in 505(a): “The permitting authority shall notify all States — (a) whose air quality may be affected and that are contiguous to the State in which the emission originates, or (b) that are within 50 miles of the source.”'],
+   language:[{t:'The Tribe is applying for TAS for section 505(a)(2) to be notified by nearby State and local permitting authorities of upcoming Title V permits.'}]}
+];
+var REG_CAA=[
+  {s:'§110',h:'Section 110 – State implementation plans for national primary and secondary ambient air quality standards; 110(o) Tribal implementation plans; 110(a)(2)(D)(i) good neighbor provisions',
+   contents:['(a) Adoption of plan by state; submission to Administrator; content of plan; revision; new sources; indirect source review program; supplemental or intermittent control systems — states are required to submit plans within three years of the EPA setting or revising air quality standards. Each plan will include: enforceable emission limitations and control measures; establishment of air monitoring; a program to prevent significant deterioration of the air quality of other states; adequate state funding, personnel, and authority to carry out the plan; air quality modeling; plan revisions; and a requirement that major stationary sources pay for permits.',
+             '(b) Extension of period for submission of plans — the EPA may grant an extension of 18 months for submission of a plan.',
+             '(c) Preparation and publication by Administrator of proposed regulations setting forth implementation plan; transportation regulations study and report; parking surcharge; suspension authority; plan implementation — the EPA will create a federal plan for states that fail to submit an approved plan. The EPA cannot require a parking surcharge or certain bridge tolls as part of a state’s plan.',
+             '(d), (e) Repealed. Pub. L. 101-549, title I, 101(d)(4), (5), Nov. 15, 1990, 104 Stat. 2409.',
+             '(f) National or regional energy emergencies, determination by President — the President may suspend any part of an implementation plan to respond to national or regional energy emergencies. States may petition for this.',
+             '(g) Governor’s authority to issue temporary emergency suspensions — state governors have the authority to issue temporary emergency suspensions of plans.',
+             '(h) Publication of comprehensive document for each state setting forth requirements of applicable implementation plan — the EPA will publish implementation plan requirements.',
+             '(i) Modification of requirements prohibited — implementation plan requirements for stationary sources may not be changed unless exceptional or emergency situations exist.',
+             '(j) Technological systems of continuous emission reduction on new or modified stationary sources; compliance with performance standards — owners or operators of stationary sources must use continuous emission reduction techniques and demonstrate compliance with the Clean Air Act.',
+             '(k) Environmental Protection Agency action on plan submissions — (1)–(6) cover implementation plan completeness criteria, completeness finding, finding of incompleteness, timeline for the EPA action on a plan submission, approval, disapproval, and conditional approval, plan revisions, and corrections.',
+             '(l) Plan revisions — plan revisions must be adopted by the state after reasonable notice and public hearing.',
+             '(m) Sanctions — the EPA may apply sanctions or prohibit construction of major stationary sources to ensure plan requirements are met.',
+             '(n) Savings clauses — (1)–(3) cover existing plan provisions, attainment dates, and retention of construction moratorium which were in place prior to November 15, 1990.',
+             '(o) Indian tribes — if a tribe submits an implementation plan, it shall be reviewed the same way state plans are. If a tribe’s plan is approved, the plan will apply to all areas located within the exterior boundaries of the reservation, including rights-of-way running through the reservation.',
+             '(p) Reports — states must submit reports, such as relating to emission reduction, vehicle miles traveled, and congestion levels.'],
+   applications:['CAA Section 110 lays out the basic requirements for tribal implementation plans (TIP).',
+                 'CAA section 110(a)(2)(D) requires that state implementation plans contain provisions to “prevent significant deterioration of the air quality of other states” by complying with CAA section 126, which covers interstate transport of pollution. This is potentially important to tribes whose air quality is impacted by pollution transported from a source(s) in a neighboring state(s).'],
+   language:[{t:'The Tribe is applying for TAS to develop a Tribal Implementation Plan to ensure the NAAQS are protected in our jurisdiction. Our TIP will be focused on [pollutant – ozone, particulate matter, sulfur dioxide, lead, carbon monoxide, nitrogen oxide(s); or air quality issues such as burn permitting or minor source permitting; or the TIP may be comprehensive].'}]},
+  {s:'§111',h:'Section 111 – Standards of performance for new stationary sources',
+   contents:['The EPA will create a list of categories of stationary sources and set standards for their performance and emissions.',
+             'Each state may submit their plan for standards of emissions and enforcement for new stationary sources.',
+             'Governors can ask for regulation of stationary sources that aren’t already on federal lists of regulated sources.'],
+   applications:['Tribes with an EPA approved plan can take delegation to administer the program or develop tribal standards that replace federal standards.'],
+   language:[{way:1,label:'Taking delegation',t:'The Tribe is applying for TAS for section 111 in order to take delegation of the New Source Performance Standards. [The Tribe may list specific standards, or take delegation of all of 111.]'},
+             {way:0,label:'Developing your own requirements',t:'The Tribe is applying for TAS for section 111 in order to develop alternate, but at least equivalent, requirements to EPA’s New Source Performance Standards.'}]},
+  {s:'§112',h:'Section 112 – Hazardous air pollutants',
+   contents:['The EPA will regulate the emission of hazardous chemicals that represent public health risks.',
+             'Each state can submit their own plan of regulation and enforcement of hazardous chemical emissions if the standards are at least as stringent as the federal standard.',
+             'The EPA will monitor atmospheric depositions of major lakes and waterways.'],
+   applications:['Tribes may submit plans for regulation and enforcement of hazardous chemical emissions if the standards are at least as stringent as the federal standard.',
+                 'Tribes may take administrative delegation for implementing hazardous chemical regulation and enforcement plans.'],
+   language:[{way:1,label:'Taking delegation',t:'The Tribe is applying for TAS for section 112 in order to take delegation of the National Emission Standards for Hazardous Air Pollutants. [The Tribe may list specific standards, or take delegation of all of 112.]'},
+             {way:0,label:'Developing your own requirements',t:'The Tribe is applying for TAS for section 112 in order to develop alternate, but at least equivalent, requirements to EPA’s National Emission Standards for Hazardous Air Pollutants.'}]},
+  {s:'§113',h:'Section 113 – Federal enforcement',
+   contents:['The EPA may enforce state implementation plans and emissions limits through administrative orders, civil action, and in select cases, criminal penalties.'],
+   applications:['Tribes can enter into memoranda of agreement with EPA regarding enforcement of TIPs and other approved tribal programs.',
+                 'Tribal plans must be fully enforceable by the EPA and where appropriate by the tribe.'],
+   language:[{way:0,label:'Developing your own programs, instead of taking delegation',t:'The Tribe is applying for TAS for section 113 in order to take enforcement action on our approved programs, including inspection, issuing notices of violation and enforcement actions. The Tribe understands it will need to develop a Memorandum of Understanding with EPA to conduct criminal enforcement over non-Tribal members.'}]},
+  {s:'§114',h:'Section 114 – Recordkeeping, inspections, monitoring, and entry',
+   contents:['The EPA may require owners/operators of emissions sources to keep records, reports, and samples of emissions and controls.',
+             'The EPA may inspect emissions sites, control equipment, or records.'],
+   applications:['Tribes with an EPA approved plan can take over the administration of the program, except for criminal enforcement on non-Tribal members.'],
+   language:[{way:0,label:'Developing your own programs, instead of taking delegation',t:'The Tribe is applying for TAS for section 114 in order to collect the information necessary to ensure compliance with our approved programs, including accessing source records, reports, and samples of emissions and controls, as well as conducting on-site inspections. The Tribe understands that in the event of the need for a criminal notice of violation of a source owned by a non-Tribal member, the enforcement needs to be referred to EPA.'},
+             {way:1,label:'Taking delegation of EPA programs',t:'The Tribe is applying for TAS for section 114 in order to collect the information necessary to ensure compliance with our approved programs, including accessing source records, reports, and samples of emissions and controls, as well as conducting on-site inspections. The Tribe understands that in the event of the need for a notice of violation, all enforcement actions need to be referred to EPA.'}]},
+  {s:'§167',h:'Section 167 – Enforcement',
+   contents:['The EPA and states can enforce requirements of construction or modification of major emitting facilities.'],
+   applications:['Tribes with enforcement provisions in their plan can address civil enforcement requirements of major emitting facilities (TAS required).',
+                 'To address criminal enforcement, tribes will need a memorandum of agreement with the EPA.'],
+   language:[{way:0,label:'Developing your own programs, instead of taking delegation',t:'The Tribe is applying for TAS for section 167 to enforce requirements of construction or modification of major emitting facilities for our approved program. The Tribe understands that in the event of the need for a criminal notice of violation of a source owned by a non-Tribal member, the enforcement needs to be referred to EPA.'}]},
+  {s:'§165',h:'Section 165 – Preconstruction requirements for attainment areas (Prevention of Significant Deterioration)',
+   contents:['This section outlines requirements for constructing major emitting facilities (PSD, Nonattainment NSR).'],
+   applications:['Tribes may take delegation or develop a TIP to implement these requirements.'],
+   language:[{way:0,label:'Developing your own PSD preconstruction permitting program',t:'The Tribe is applying for TAS for section 165 to develop our own PSD permitting program. The Tribe understands that it will need to have a memorandum of understanding with EPA to conduct criminal enforcement for permit violations for sources owned by non-Tribal members.'},
+             {way:1,label:'Taking delegation of EPA’s PSD preconstruction permitting program',t:'The Tribe is applying for TAS for section 165 to take delegation of EPA’s PSD permitting program. The Tribe understands that it will need to have a memorandum of understanding with EPA to conduct criminal enforcement for permit violations for sources owned by non-Tribal members.'}]},
+  {s:'§169A',h:'Section 169A – Visibility protection for federal Class I areas',
+   contents:['This section states the goal of protecting visibility in Class I areas.',
+             'State implementation plans must address this goal.'],
+   applications:['Tribes may choose to develop a TIP to address regional haze.'],
+   language:[{label:'Developing a regional haze program',t:'The Tribe is applying for TAS for section 169A in order to work with the States and develop a Tribal Implementation Plan to address regional haze.'}]},
+  {s:'§172',h:'Section 172 – Nonattainment plan provisions',
+   contents:['Nonattainment areas have five years to become attainment. The EPA can extend that up to ten years.',
+             'The EPA can provide up to two one-year extensions if the state is meeting all the requirements of its implementation plan.',
+             'Nonattainment plans shall include implementation of control measures, emissions inventory, and issuing of permits.'],
+   applications:['TIPs are not required, but if the tribe develops a TIP, then TAS is required.',
+                 'Tribal nonattainment plans are not required to meet the same attainment dates as states.',
+                 'Tribes can establish their own schedules.',
+                 'The EPA will expect tribes to diligently implement their plans.'],
+   language:[{label:'Developing a Tribal Implementation Plan for nonattainment',t:'The Tribe is applying for TAS for section 172 in order to develop a Tribal Implementation Plan to attain the [ozone, particulate matter, sulfur dioxide, lead, carbon monoxide or nitrogen oxides] NAAQS.'}]},
+  {s:'§173',h:'Section 173 – Permit requirements (Nonattainment NSR)',
+   contents:['This section lists requirements of permit programs.'],
+   applications:['Tribes may take delegation of the federal implementation plan or develop TIPs to implement permit requirements.'],
+   language:[{way:0,label:'Developing a nonattainment NSR plan',t:'The Tribe is applying for TAS for section 173 in order to develop a Tribal Implementation Plan for a nonattainment NSR program.'},
+             {way:1,label:'Taking delegation of EPA’s nonattainment NSR plan',t:'The Tribe is applying for TAS for section 173 in order to take delegation of EPA’s nonattainment NSR program.'}]},
+  {s:'§502 (Title V)',h:'Title V operating permit programs – Section 502 Permit programs',
+   contents:['(a) Violations — explains the parameters of the permit program and what constitutes a violation by a source.',
+             '(b) Regulations — establishes the minimum elements of a permit program, including permit applications, monitoring and reporting, program fees to be paid by the source owner or operator, program personnel, authority to administer a permit program, permit review, public comment on and availability of permit documents, and permit revisions.',
+             '(c) Single permit — single permits may be issued for a facility with multiple sources.',
+             '(d) Submission and approval — establishes timing for states to develop permit programs under state or local law and for the EPA Administrator to approve/disapprove the program. States may face sanctions for not submitting approvable permit programs.',
+             '(e) Suspension — approved state permit programs will replace federal permit programs; however, the EPA Administrator retains the ability to enforce permits issued by a state.',
+             '(f) Prohibition — establishes the requirements of a partial permit program.',
+             '(g) Interim approval — interim permit program approval may be granted under certain conditions.',
+             '(h) Effective date — the effective date of the permit programs is the date of approval by the EPA Administrator.',
+             '(i) Administration and enforcement — if a permitting authority is not adequately administering and enforcing a program, EPA will provide notice and enforce sanctions. If a state does not correct program deficiencies, the EPA will promulgate, administer and enforce a permit program.'],
+   applications:['Tribes can administer their own EPA-approved permit programs. Tribes can decide how much of the permitting program they are willing and/or able to implement. The EPA’s federal implementation plan (FIP) will administer the permit program in Indian country until tribes take on all or portions of the program.',
+                 'Tribes are not subject to the same timeline as states for developing an approvable permit program. Tribes are not subject to sanctions for not developing an approvable permit program.',
+                 'Tribes can also take delegation of the EPA’s federal permitting program. With delegation, the EPA remains responsible for enforcement.'],
+   language:[{way:0,label:'Developing your own Part 70 operating permit program (the Section 500 subsections need not be listed)',t:'The Tribe is applying for TAS for section 500 to develop our own Title V permit program. The Tribe recognizes that it will need to have a memorandum of understanding with EPA to conduct criminal enforcement for sources owned by non-Tribal members.'},
+             {way:1,label:'Taking delegation of EPA’s Part 71 operating permit program (the Section 500 subsections need not be listed)',t:'The Tribe is applying for TAS for section 500 to take delegation of EPA’s Title V permit program. The Tribe recognizes that it will need to have a memorandum of understanding with EPA to conduct enforcement for violations of the operating permits.'}]},
+  {s:'§503',h:'Section 503 – Permit applications',
+   contents:['(a) Applicable date — specifies the date that sources must have a permit in place.',
+             '(b) Compliance plan — the source’s permit application must be submitted with a plan that specifies how the source will comply with all the requirements. The source must also certify, at least annually, that the facility is in compliance with the permit requirements and promptly report any deviations from the requirements.',
+             '(c) Deadline — establishes deadlines for the permitting authority to approve/disapprove a completed permit application.',
+             '(d) Timely and complete applications — if the permitting authority does not take timely final action on a permit application, the source’s failure to have a permit is not a violation.',
+             '(e) Copies; availability — copies of each permit application and accompanying information must be available to the public.'],
+   applications:['The tribal permitting authority should issue or deny a permit within 18 months after the receipt of a completed permit application.',
+                 'The tribal permitting authority may establish a phased schedule for acting on permit applications within the first full year of their permit program.',
+                 'The tribal permitting authority must make copies of the permit application and all accompanying information available to the public.'],
+   language:[]},
+  {s:'§504',h:'Section 504 – Permit requirements and conditions',
+   contents:['(a) Conditions — establishes requirements that each permit issued include: enforceable emission limits and standards, a schedule of compliance, a requirement that the permittee submit, at least every 6 months, monitoring results, and other conditions to assure compliance.',
+             '(b) Monitoring and analysis — the EPA Administrator may establish procedures for determining compliance and for the monitoring and analysis of pollutants.',
+             '(c) Inspection, entry, monitoring, certification, and reporting — each permit issued must include requirements for inspection, entry, monitoring, compliance certification, and reporting to ensure compliance with the permit.',
+             '(d) General permits — the permitting authority may issue a general permit covering numerous similar sources. The general permit must comply with all requirements and the source must still file an application.',
+             '(e) Temporary sources — the permitting authority can issue a single permit authorizing emissions from similar operations at multiple temporary locations. The permit must include conditions that will assure compliance with all requirements at all authorized locations. The owner/operator must notify the permitting authority of each change in location. The permitting authority may require a separate permit fee for operations at each location.',
+             '(f) Permit shield — deems when an issued permit is in compliance with the applicable provisions of Title V. It can protect a source from enforcement of an applicable requirement under two circumstances: 1) where that applicable requirement has been included in the permit (and is therefore enforced through the permit); or 2) where it has been determined that the requirement does not apply to the source. Under no circumstances should a permit shield be used to exempt a source from a requirement to which it is subject.'],
+   applications:['The tribal permitting authority should ensure that each permit they issue includes the enforceable emission limits, schedule of compliance, monitoring results, and any other requirements of CAA 504(a) as needed.',
+                 'The tribal permitting authority must ensure that each permit includes the inspection, entry, monitoring certification, and reporting requirements of CAA 504(c) as needed.',
+                 'The tribal permitting authority may issue general permits that cover numerous similar sources.',
+                 'The tribal permitting authority may issue a single permit authorizing emissions from similar operations at multiple temporary locations.'],
+   language:[]},
+  {s:'§505',h:'Section 505 – Notification to Administrator and contiguous states',
+   contents:['(a) Transmission and notice — the permitting authority must submit to the EPA a copy of the permit application with the compliance plan and a copy of each proposed and final permit. The permitting authority must also notify states, whose air quality may be affected by the source and which are contiguous to the state in which the emissions originate or within 50 miles of the source, of each permit application. The permitting authority must also provide an opportunity for the affected states to submit written recommendations on the permit issuance and notification.',
+             '(b) Objection by the EPA — EPA can object to any permit that is determined as not in compliance with the requirements. Also provides the parameters that allow anyone to petition EPA to object to the issuance of a permit.',
+             '(c) Issuance or denial — the permitting authority must submit for the EPA review a revised permit within 90 days after the date of an objection.',
+             '(d) Waiver of notification requirements — the EPA may waive the requirements of (a) and (b) of this section for any category of sources other than major sources. EPA may also establish categories of sources (except for major sources) to which the requirements of (a) and (b) of this section do not apply. In addition, the EPA may waive the state notification requirements of (a) of this section.',
+             '(e) Refusal of permitting authority to terminate, modify, or revoke and reissue — the EPA will notify the permitting authority if the EPA finds cause to terminate, modify or revoke and reissue a permit. If the permitting authority fails to take action within the prescribed timeframe, the EPA may, after notice and in accordance with fair and reasonable procedures, terminate, modify, or revoke and reissue the permit.'],
+   applications:['The tribal permitting authority must submit a copy of the proposed and final permit to the EPA for review. The tribal permitting authority must also notify states/tribes whose air quality may be affected by the source of each permit application and proposed permit and allow the state/tribe the opportunity to submit recommendations on the permit. If the recommendations are not accepted by the tribal permitting authority, the authority must explain why in writing.',
+                 'The EPA may object to any permit that is determined as not in compliance with the requirements. Any person can petition the EPA to object to a permit — the petition must identify all the reasons for the objection.',
+                 'If the EPA finds that a permit is not in compliance with the requirements, the tribal permitting authority must submit a revised permit to the EPA.',
+                 'With appropriate cause, the EPA may terminate, modify, or revoke and reissue a permit. The EPA will notify the tribal permitting authority and provide the authority the opportunity to take action.',
+                 'Tribes have the opportunity (even without their own permitting program) to get TAS for 505(a)(2) — see Administrative TAS.'],
+   language:[]}
+];
 var OUT={
   regulatory:{name:'Regulatory TAS',title:'Be the primary implementing authority',
     body:'Develop and run the programs that permit, inspect and enforce on the sources in your jurisdiction. You choose <b>how</b>:',
@@ -103,15 +330,18 @@ var OUT={
                     'Fewer resources needed up front for developing the rules and programs'],
               cons:['Somewhat less assertion of Tribal sovereignty',
                     'The Tribe must refer all potential violations to EPA for enforcement']}],
-    sections:['§110 TIP','O₃ plans §§181–185','PM plans §§188–189','SO₂/NO₂/Pb §§191–192','CO plans §§186–187','Regional haze §169A','PSD §165','NSR §173','§167 enforcement','Title V §§501–507','§111 NSPS','§112 air toxics','§114 records','§129 solid-waste combustion','§303 emergency powers']},
+    caa:REG_CAA},
   targeted:{name:'Targeted Regulatory TAS',title:'Address a specific, localized issue',
     body:'Even with only a few sources a focused program can help — for example a burning ordinance for wood smoke under a Tribal Implementation Plan.',
-    sections:['§110 TIP','PM NAAQS']},
+    sections:['§110 TIP','PM NAAQS'],
+    /* its "unlocks" link, and its card in the result, open Regulatory TAS's
+       CAA sections: a focused program draws on the same ones */
+    sectionsFrom:'regulatory'},
   /* Shown to readers as Administrative TAS. The key stays `participatory`:
      saved paths store it, and renaming the key would orphan every one. */
-  participatory:{name:'Administrative TAS',title:'A formal “good neighbour” voice',
+  participatory:{name:'Administrative TAS',title:'A formal voice in the decisions around you',
     body:'Get early review of, and standing to comment on, neighbouring states’ plans and permits — and petition EPA when outside sources affect your air.',
-    sections:['§126(a)/(b)','§110(a)(2)(D)(i)','§505(a)','§105 grants','§319 monitoring','§107(d) designations']},
+    caa:ADMIN_CAA},
   capacity:{name:'Capacity building',title:'You can pursue TAS while you build capacity',
     body:'Not being “ready” is not a barrier. Options that lower the lift:',
     checks:[{h:'Submit a capability plan',d:'Show EPA how you will gain the technical expertise over time.'},
@@ -225,7 +455,7 @@ var COPY={
     tgt:{t:'Targeted Regulatory TAS',
       s:'A focused program can address your specific local air-quality issue.'},
     /* Only Administrative unlocked */
-    par:{t:'Administrative (good-neighbour) TAS',
+    par:{t:'Administrative TAS',
       s:`Get a formal, early voice in the state and local decisions that affect your air quality.`},
     /* No pathway unlocked */
     none:{t:'TAS may offer limited near-term benefit',
@@ -269,7 +499,21 @@ var COPY={
     nextTitle:'Next steps',
     referenceRk:'Reference',
     nodeTag:'Result',
-    nodeOpen:'Open full result'
+    nodeOpen:'Open full result',
+    /* a pathway's Clean Air Act sections, in its card and in the panel its
+       "unlocks" link opens. caaIntro takes HTML. caaSeeAlso is the link on a
+       pathway that borrows another's sections; {name} is that pathway. */
+    caaLabel:'CAA sections Tribes most commonly seek',
+    caaHint:'Tick the sections to include in your application. The printout and a saved document gather the language for each one you tick.',
+    caaIntro:'<p>The Clean Air Act sections Tribes most commonly apply for TAS under: what each section contains, how Tribes have applied it, and language the Tribe can lift into its application. Choose as many or as few as are appropriate. For a more comprehensive list, see the TAS cheat sheet, '+CHEAT_SHEET+'.</p>',
+    caaKicker:'Clean Air Act sections',
+    caaContents:'Contents',
+    caaApplications:'TAS applications',
+    caaLanguage:'Language for your application',
+    caaPick:'Include in my application',
+    caaMatch:'matches your choice',
+    caaNoLanguage:'No application language of its own.',
+    caaSeeAlso:'See the CAA sections under {name}'
   },
   /* headings in the printout, plain text; {date} is replaced with the day it
      is printed */
@@ -284,7 +528,9 @@ var COPY={
     nontas:'Non-TAS options',
     criteria:'The four eligibility criteria (40 CFR §§ 49.6 / 49.7)',
     next:'Next steps',
-    reference:'Reference'
+    reference:'Reference',
+    caa:'CAA sections for your application',
+    caaLead:'Draft language for the statement of the CAA sections for which the Tribe is requesting TAS eligibility. Adapt it to the Tribe before it goes into the application.'
   },
   /* the line under the canvas, and the word before a pathway on an answer.
      Plain text. */
@@ -294,6 +540,32 @@ var COPY={
     hintGoing:'Click a branch to grow the tree · click a greyed branch to re-route',
     hintDone:`Complete — open the result, or click any greyed branch to re-route the tree.`
   },
+  /* The box before Question 1, and the information box between it and the
+     question. title, tag, sub and open are on the box; lead is the
+     information box, plain text ("contact us" becomes a link). intro takes
+     HTML and heads the panel the box opens. */
+  elig:{
+    tag:'Before you start',
+    title:'Eligibility requirements',
+    sub:'What every TAS application has to show, from EPA’s Peacock memo.',
+    open:'Read the requirements',
+    intro:'<p>EPA’s '+PEACOCK_FULL+', or “the Peacock memo”, has guidance on how Tribes can meet the four requirements for TAS eligibility determinations, with examples of the documentation Tribes have provided to meet them.</p><p>Each Tribe develops this part of its application on its own. The examples and guidance below are there to help the Tribe put together its TAS application.</p>',
+    lead:'The following questions are designed to help you determine which sections of the CAA to consider in developing your TAS application.'
+  },
+  /* The eligibility requirements themselves, as the panel shows them: a
+     heading and some HTML each, like the guide. */
+  eligSec:[
+    {h:'1) Demonstration the Tribe is federally recognized',
+     html:'<p><b>Regulatory provision.</b> The Indian tribe is recognized by the Secretary of the Interior and exercises governmental authority over a reservation. 40 CFR 131.8(a)(1); see 131.3(k) and (l). An application must include a statement that the tribe is recognized by the Secretary of the Interior. 40 CFR 131.8(b)(1).</p><p><b>Examples of documentation.</b> The Secretary of the Interior publishes in the Federal Register (FR) a list of federally recognized Indian tribes (<a href="http://www.usa.gov/Government/Tribal_Sites/" target="_blank" rel="noopener">usa.gov/Government/Tribal_Sites</a>). Applicants often submit a recent copy of the FR list to establish that the tribe has federal recognition.</p>'},
+    {h:'2) Demonstration the Tribe has a governing body carrying out substantial governmental duties and powers',
+     html:'<p><b>Regulatory provision.</b> 40 CFR 131.8(a)(2). An application must include a descriptive statement demonstrating that the tribal government is carrying out substantial governmental duties and powers over a defined area. 40 CFR 131.8(b)(2). The statement should:</p><ul><li>Describe the form of the tribal government. 40 CFR 131.8(b)(2)(i).</li><li>Describe the types of governmental functions currently performed by the tribal government, such as, but not limited to, the exercise of police powers affecting (or relating to) the health, safety, or welfare of the affected population, taxation, and the exercise of eminent domain. 40 CFR 131.8(b)(2)(ii).</li><li>Identify the source of the tribal government’s authority to carry out the governmental functions currently being performed. 40 CFR 131.8(b)(2)(iii).</li></ul><p><b>Examples of documentation.</b> Applications discuss the organizational structure of the tribe and identify and describe the entities that exercise the executive, legislative, and judicial functions of government. Applications discuss specific regulatory, legislative, executive and judicial activities the tribe undertakes, including actions to exercise its police power to protect the environment, e.g. establishing regulatory programs or carrying out permitting and enforcement activities. Applications identify sources of the tribal government’s authority, which may include oral or written tradition, an oral or written tribal constitution, tribal ordinances, codes, by-laws, charters, and resolutions, relevant provisions of federal treaties, executive orders or statutes, etc.</p>'},
+    {h:'3) Demonstration of Tribal jurisdiction',
+     html:'<p><b>Regulatory provision.</b> The functions to be exercised by the Indian tribe pertain to the management and protection of air resources within the exterior boundaries of the reservation or other areas within the tribe’s jurisdiction. 40 CFR 49.6(c). A tribe’s application should include a descriptive statement of the Indian tribe’s authority to regulate air quality. 40 CFR 49.7(a)(3). For applications covering areas within the exterior boundaries of the applicant’s reservation, the statement must identify with clarity and precision the exterior boundaries of the reservation including, for example, a map and legal description of the area. 40 CFR 49.7(a)(3).</p><p>For tribal applications covering areas outside the boundaries of the reservation, the statement should include:</p><ul><li>A map or legal description of the area over which the application asserts authority. 40 CFR 49.7(a)(3)(i).</li><li>A statement by the applicant’s legal counsel (or equivalent official) that describes the basis for the tribe’s assertion of authority (including the nature or subject matter of the asserted regulatory authority), which may include a copy of documents such as tribal constitutions, by-laws, charters, executive orders, codes, ordinances, and/or resolutions that support the tribe’s assertion of authority. 40 CFR 49.7(a)(3)(ii).</li></ul><p><b>Examples of documentation.</b> EPA interprets CAA § 301(d) as a Congressional delegation of authority to eligible federally recognized tribes for all air resources within a reservation. Thus, a tribe’s application must establish the reservation’s location and boundaries. Applications include maps showing the area and air resources over which the tribe asserts authority.</p><ul><li>A map may be based on an official survey by the U.S. Department of the Interior or an official map of the reservation prepared by the Bureau of Indian Affairs.</li><li>A written legal description discusses with some specificity the locations of the boundaries of the reservation areas over which the tribe asserts authority.</li><li>Legal counsel statements identify and discuss the legal basis for the tribe’s assertions of authority over areas covered by the application, with special attention to showing the tribe has jurisdiction over nonmember activities, if applicable.</li></ul>'},
+    {h:'4) Demonstration the Tribe is reasonably expected to be capable of effectively administering the Clean Air Act program',
+     html:'<p><b>Regulatory provision.</b> The tribe is reasonably expected to be capable of effectively administering the Clean Air Act program for which the tribe is seeking approval. 40 CFR 49.6(d). The application should include a narrative statement describing the capability of the applicant to administer effectively the Clean Air Act program for which the tribe is seeking approval. The narrative statement must demonstrate the applicant’s capability consistent with the applicable provisions of the Clean Air Act and implementing regulations. 40 CFR 49.7(a)(4). And, if requested by the Regional Administrator, the statement may include:</p><ul><li>A description of the Indian tribe’s previous management experience, which may include the administration of programs and services authorized by the Indian Self-Determination and Education Assistance Act (25 U.S.C. 450, et seq.), the Indian Mineral Development Act (25 U.S.C. 2101, et seq.), or the Indian Sanitation Facility Construction Activity Act (42 U.S.C. 2004a). 40 CFR 49.7(a)(4)(i).</li><li>A list of existing environmental or public health programs administered by the tribal governing body and a copy of related tribal laws, policies, and regulations. 40 CFR 49.7(a)(4)(ii).</li><li>A description of the entity (or entities) that exercise the executive, legislative, and judicial functions of the tribal government. 40 CFR 49.7(a)(4)(iii).</li><li>A description of the existing, or proposed, agency of the Indian tribe that will assume primary responsibility for administering a Clean Air Act program (including a description of the relationship between the existing or proposed agency and its regulated entities). 40 CFR 49.7(a)(4)(iv).</li></ul><p><b>Examples of documentation.</b> In addition to experience with the federal programs listed in the regulation, tribal applications may also discuss the tribe’s previous management experience with its own tribal programs. This discussion need not address environmental program management experience, which is included in the next heading. Applications describe a tribal air, water, or waste management program, or any other environmental or public health programs administered by the tribe, as well as tribal experience with resource management. Relevant documents include copies or summaries of tribal laws and regulations governing the described program(s). A tribe is not required to have experience in administering environmental programs, but a tribe with such experience may wish to provide such information. Applications describe the tribal governmental system. This information may overlap with or duplicate information about the tribal governmental structure and functions discussed under 40 CFR 49.7(a)(2) above, and a tribe may refer to, rather than repeat, that information. Applications describe the tribe’s environmental management program.</p>'},
+    {h:'5) A statement of the sections of the CAA for which the Tribe is requesting TAS eligibility',
+     html:'<p>The decision tree helps you choose them. Each pathway in the full result, and every “unlocks” link in the tree, opens the Clean Air Act sections Tribes most commonly apply for under it, with language you can lift into this statement. Tick the sections that fit your Tribe, as many or as few as are appropriate: the printout and a saved document gather the language for each section you tick.</p><p>For a more comprehensive list, see the TAS cheat sheet, '+CHEAT_SHEET+'.</p>'}
+  ],
   /* the Contact panel, and the email it drafts. lead, leadNoCal, calNote,
      calLinkNote, noCal, whoTodo, counsel and privacy take HTML; the rest are plain text,
      and the three mail lines go into an email, where tags would show. cue is
@@ -371,6 +643,7 @@ var COPY={
     optionChosen:'your current choice',
     optionSwitch:'switch the tree to this branch',
     resultLabel:'Your result: {result}. Open the full result.',
+    eligLabel:'Open the eligibility requirements',
     /* the walkthrough */
     walkStep:'Step {n} of {total}',
     walkFullGuide:'Full guide',

@@ -597,9 +597,11 @@ carried into every version:
 
 - Regional haze is **§169A** (not "169(a)(1)" — §169 is PSD definitions)
 - Title V is **§§501–507** (there is no CAA §500)
-- §129 is **solid-waste combustion**; landfills fall under §111/§112
 - **Performance** Partnership Grant (not "Program Partnership Group")
 - §105 grants without TAS carry the standard **40%** match; TAS reduces it to 5%, then up to 10%
+- The CAA sections and their application language under Regulatory and Administrative TAS
+  are the reviewer's "TAS CAA sections" document (2026). It writes Title V as "section 500"
+  in the application language, which is how it appears in Tribes' applications
 - Boundary risk: EPA's approval is a final Agency action subject to judicial challenge, and
   an adverse ruling could impact the Tribe's jurisdictional boundaries, **including loss of
   Tribal lands** (reviewer's wording, 2026 — this replaces an earlier line saying the risk
@@ -615,13 +617,21 @@ send a charset mangle every em-dash, curly quote and `§`.
 Everything a reader sees lives in `tree-data.js`: the questions and options, the
 pathways, the result content, the seven disclaimers, the contact details, the guide,
 the walkthrough, the wording of every label and heading (`COPY`), and the backdrop
-(`THEME`). Edit it by hand, or visually at **`/admin`**.
+(`THEME`), plus the eligibility box before Question 1 and each pathway's Clean Air Act
+sections — what each contains, how Tribes apply it, and language a Tribe can lift into its
+application. Edit it by hand, or visually at **`/admin`**.
+
+A reader ticks the CAA sections that fit, in the full result or in the panel the pathway
+named on an answer opens; the printout and a saved document gather the ticked sections'
+language. Where a section words it two ways (developing the Tribe's own program, or taking
+delegation), only the way that fits the reader's answer to Question 2b is kept.
 
 The editor draws the whole tree — every question with its options fanned
 beneath it — and you edit by clicking a card. You can retitle anything, add or
 remove options, point an option at any question or ending, and give an option a hint,
 a note shown once it is chosen, and a detail for the full result. The Content tab holds
-the rest: Result, Disclaimers, Contact, Guide, Walkthrough, Wording and Appearance. A
+the rest: Eligibility, Result, Disclaimers, Contact, Guide, Walkthrough, Wording and
+Appearance; a pathway's CAA sections are edited under Pathways. A
 Checks tab flags options that lead nowhere, questions with no text, and questions
 nothing can reach.
 
