@@ -233,8 +233,8 @@ try {
       extra.length ? 'in the table with no file: ' + extra.join(', ') : ''
     );
     ok(
-      'twenty endpoints, one function',
-      onDisk.length === 20 && inTable.length === 20,
+      'twenty-one endpoints, one function',
+      onDisk.length === 21 && inTable.length === 21,
       'on disk ' + onDisk.length + ', in table ' + inTable.length
     );
 
@@ -2069,6 +2069,86 @@ try {
         ok('but signing in still works', signIn.status === 200, String(signIn.status));
         const after = await register(jar(), tag('ceiling-after'), 'ceiling passphrase 3');
         ok('and with the ceiling back where it was, registering works again', after.status === 201, String(after.status));
+      }
+      {
+        /* ---- the Contact form, by email ----
+           The provider is not called: fetch is wrapped so a request to Resend
+           is answered here and kept, and everything else (this test's own
+           calls to the server) goes through untouched. */
+        const env = { key: process.env.RESEND_API_KEY, to: process.env.CONTACT_TO, from: process.env.CONTACT_FROM };
+        const realFetch = globalThis.fetch;
+        const sent = [];
+        let providerStatus = 200;
+        globalThis.fetch = async (url, init) => {
+          if (String(url).startsWith('https://api.resend.com/')) {
+            sent.push({ url: String(url), headers: init.headers, body: JSON.parse(init.body) });
+            return new Response(JSON.stringify({ id: 'test' }), { status: providerStatus });
+          }
+          return realFetch(url, init);
+        };
+        const ask = (body, ip) => xcall(jar(), '/api/contact', { method: 'POST', body, ip: ip || freshIp() });
+        const good = {
+          question: 'Do we need TAS for section 105 grants?\n<script>alert(1)</script>',
+          name: 'Mary <b>O\'Brien</b>',
+          email: 'Mary@Tribe.example',
+          phone: '+1 (555) 010-2030',
+          answers: ['Boundaries — No — boundaries are clear', 'Sources — Many  (+ Regulatory TAS)'],
+          result: 'Regulatory TAS',
+        };
+        try {
+          delete process.env.RESEND_API_KEY;
+          delete process.env.CONTACT_TO;
+          const off = await xcall(jar(), '/api/contact');
+          ok('without RESEND_API_KEY the form says it cannot email', off.status === 200 && off.data.email === false, JSON.stringify(off.data));
+          const offPost = await ask(good);
+          ok('and a send is refused as mail_unconfigured, not lost', offPost.status === 503 && offPost.data.error === 'mail_unconfigured', offPost.status + ' ' + JSON.stringify(offPost.data));
+
+          process.env.RESEND_API_KEY = 're_test_key';
+          process.env.CONTACT_TO = 'office@tribe.example';
+          process.env.CONTACT_FROM = 'TAS Decision Tree <contact@tribe.example>';
+          const on = await xcall(jar(), '/api/contact');
+          ok('with a key and a recipient it says it can', on.data && on.data.email === true, JSON.stringify(on.data));
+
+          const missing = await ask({ question: 'hi', email: 'nope', phone: '12' });
+          ok('a question, an email address and a phone number are all checked',
+            missing.status === 400 && missing.data.fields && missing.data.fields.question && missing.data.fields.email && missing.data.fields.phone,
+            JSON.stringify(missing.data));
+          ok('and nothing went to the provider for it', sent.length === 0, String(sent.length));
+
+          const r = await ask(good);
+          const m = sent[0] && sent[0].body;
+          ok('a good question is sent', r.status === 200 && sent.length === 1, r.status + ' ' + sent.length);
+          ok('to the configured recipient, never one from the request', m && m.to.length === 1 && m.to[0] === 'office@tribe.example', JSON.stringify(m && m.to));
+          ok('from the configured sender, with the reader as Reply-To',
+            m && m.from === 'TAS Decision Tree <contact@tribe.example>' && m.reply_to === 'mary@tribe.example', m && (m.from + ' / ' + m.reply_to));
+          ok('the subject names who asked', m && /Question from Mary <b>O'Brien<\/b> — TAS Decision Tree/.test(m.subject), m && m.subject);
+          ok('the email carries the question, the phone and the answers',
+            m && m.html.includes('section 105') && m.html.includes('+1 (555) 010-2030') && m.html.includes('Sources — Many') && m.html.includes('Regulatory TAS') && m.text.includes('Phone: +1 (555) 010-2030'),
+            m && m.text);
+          ok('and everything the reader typed is escaped in it',
+            m && !m.html.includes('<script>') && m.html.includes('&lt;script&gt;') && !m.html.includes('<b>O'), m && m.html.slice(0, 200));
+          ok('the bearer key goes in the header', sent[0] && sent[0].headers.Authorization === 'Bearer re_test_key');
+
+          const bot = await ask({ ...good, website: 'http://spam.example' });
+          ok('a filled hidden field is told it worked, and nothing is sent', bot.status === 200 && sent.length === 1, bot.status + ' ' + sent.length);
+
+          providerStatus = 422;
+          const refused = await ask(good);
+          ok('a refusal by the provider is reported, not swallowed', refused.status === 502 && refused.data.error === 'mail_failed', refused.status + ' ' + JSON.stringify(refused.data));
+          providerStatus = 200;
+
+          const ip = freshIp();
+          const burst = [];
+          for (let i = 0; i < 6; i++) burst.push((await ask(good, ip)).status);
+          ok('five sends an hour from one address, then a 429', burst.slice(0, 5).every((x) => x === 200) && burst[5] === 429, burst.join(','));
+        } finally {
+          globalThis.fetch = realFetch;
+          for (const [k, v] of [['RESEND_API_KEY', env.key], ['CONTACT_TO', env.to], ['CONTACT_FROM', env.from]]) {
+            if (v === undefined) delete process.env[k];
+            else process.env[k] = v;
+          }
+          await pool.query(`delete from auth_attempts where bucket like 'contact:%'`);
+        }
       }
       {
         const u = { jar: jar(), email: tag('pwcheck'), password: 'pwcheck passphrase', ip: freshIp() };

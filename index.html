@@ -308,6 +308,11 @@ a{color:var(--accent-ink)}
 .tnode.result:hover{--lift:-3px;box-shadow:0 0 0 5px var(--good-bg),var(--sh2)}
 
 /* The box before Question 1, and the information box under it. */
+/* the Contact form's hidden field, and what its foot says after a send */
+.hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}
+.fnote.err{color:var(--alert)} .fnote.ok{color:var(--good);font-weight:600}
+/* the end of the tree, before the reader has signed in */
+.tnode.result.locked .ttl{font-size:17px}
 .tnode.intro{border-color:var(--accent);border-width:2px;cursor:pointer;box-shadow:var(--sh1)}
 .tnode.intro:hover{--lift:-3px;box-shadow:var(--sh2)}
 .tnode.intro:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
@@ -992,6 +997,18 @@ function mergeCopy(base,inc){
    filter, and then only tree-data.js — the file this deployment shipped,
    and always the first call — is taken; anything else is ignored. */
 var chromeReady=false;
+function backfillCaa(out,shipped){
+  if(!out||typeof out!=='object') return;
+  var keys=Object.keys(out);
+  var old=keys.every(function(k){ var t=out[k]; return !t||typeof t!=='object'||(!('caa' in t)&&!('sectionsFrom' in t)); });
+  if(!old) return;
+  keys.forEach(function(k){
+    var t=out[k], b=shipped[k];
+    if(!t||typeof t!=='object'||!b) return;
+    if(Array.isArray(b.caa)) t.caa=clone(b.caa);
+    if(b.sectionsFrom) t.sectionsFrom=b.sectionsFrom;
+  });
+}
 function adoptContent(d){
   if(!d) return;
   var LOOK=window.TAS_LOOK||null;
@@ -999,7 +1016,13 @@ function adoptContent(d){
   else if(SHIPPED) return;
   if(!d) return;
   if(d.NODES&&Object.keys(d.NODES).length) NODES=d.NODES;
-  if(d.OUT) OUT=d.OUT;
+  if(d.OUT){
+    OUT=d.OUT;
+    /* A record with no CAA sections anywhere predates them, so it gets the
+       shipped ones rather than none; once any pathway has them, even emptied,
+       the record is the editor's. /admin applies the same rule. */
+    if(SHIPPED&&SHIPPED.OUT) backfillCaa(OUT,SHIPPED.OUT);
+  }
   if(d.NONTAS) NONTAS=d.NONTAS;
   if(d.CRITERIA) CRITERIA=d.CRITERIA;
   if(d.NEXT) NEXT=d.NEXT;
@@ -1020,7 +1043,7 @@ function adoptContent(d){
       if(Array.isArray(COPY[g])){ if(!Array.isArray(base[g])) base[g]=[]; }
       else if(!base[g]||typeof base[g]!=='object'||Array.isArray(base[g])) base[g]={};
     }
-    SHIPPED={GUIDE:mergeSections([],d.GUIDE),COPY:base,
+    SHIPPED={GUIDE:mergeSections([],d.GUIDE),COPY:base,OUT:clone(d.OUT||{}),
              THEME:LOOK?LOOK.clean(d.THEME):null};
   }
   GUIDE=mergeSections(SHIPPED.GUIDE,d.GUIDE);
@@ -1065,9 +1088,11 @@ function adoptContent(d){
     .then(function(d){
       if(!d||!d.published||!d.data) return;
       if(path.length) return;                 /* someone is mid-answer */
-      var before=JSON.stringify([NODES,OUT]);
+      /* the wording counts too: the boxes before Question 1 and every card
+         label are drawn by build() */
+      var before=JSON.stringify([NODES,OUT,COPY]);
       adoptContent(d.data);
-      if(started&&JSON.stringify([NODES,OUT])!==before){ hushed={}; build(); focusFrontier(); }
+      if(started&&JSON.stringify([NODES,OUT,COPY])!==before){ hushed={}; build(); focusFrontier(); }
     })
     .catch(function(){ /* no API, or offline: the file is already in place */ });
 })();
@@ -1482,16 +1507,14 @@ function build(){
     rEl.style.width=(questionW()-20)+'px';
     rEl.id='resultNode';
     rEl.setAttribute('tabindex','0'); rEl.setAttribute('role','button');
-    rEl.setAttribute('aria-label',fill(COPY.ui.resultLabel,{result:v.t}));
-    rEl.innerHTML='<span class="tag">'+esc(COPY.result.nodeTag)+'</span><span class="ttl">'+esc(v.t)+'</span>'
-      +'<span class="go">'+TICK+' '+esc(COPY.result.nodeOpen)+'</span>';
+    paintResultNode(rEl);
     nodesEl.appendChild(rEl);
     rows.push({items:[{el:rEl,cx:anchor}],kind:'result'});
     if(prevChosenEl) edges.push({from:prevChosenEl,to:rEl,taken:true});
   } else { terminal=null; }
 
   layout(rows,edges);
-  document.getElementById('btnResult').hidden=!terminal;
+  document.getElementById('btnResult').hidden=!terminal||resultLocked();
   updateRail();
   updateHint();
   updateContactCue();
@@ -2084,7 +2107,36 @@ function updateRail(){
   railFill.style.width=Math.round((done/Math.max(done+rem,1))*100)+'%';
 }
 function updateHint(){
-  hintEl.textContent=terminal?COPY.tree.hintDone:(path.length?COPY.tree.hintGoing:COPY.tree.hintStart);
+  hintEl.textContent=terminal?(resultLocked()?COPY.tree.hintDoneGuest:COPY.tree.hintDone)
+    :(path.length?COPY.tree.hintGoing:COPY.tree.hintStart);
+}
+/* The full result and its print-out are for a reader who has signed in,
+   wherever there are accounts to sign in to. A deployment with no database,
+   or one whose database is down, has nobody to sign in, so it shows the
+   result to everyone as it always has. Until the account check answers, the
+   result counts as locked, so a guest never glimpses it on the way. */
+function resultLocked(){
+  if(!haveAccounts()) return false;
+  var st=TAS.auth.state;
+  if(!st.ready) return true;
+  return st.storage==='ready'&&!st.user;
+}
+/* The card at the end of the tree: the headline for a signed-in reader, an
+   invitation to sign in for anyone else. */
+function paintResultNode(rEl){
+  var R=COPY.result, locked=resultLocked(), v=verdict(terminal);
+  rEl.classList.toggle('locked',locked);
+  rEl.setAttribute('aria-label',locked?R.lockedH:fill(COPY.ui.resultLabel,{result:v.t}));
+  rEl.innerHTML='<span class="tag">'+esc(R.nodeTag)+'</span><span class="ttl">'+esc(locked?R.lockedH:v.t)+'</span>'
+    +'<span class="go">'+(locked?'':TICK+' ')+esc(locked?R.lockedGo:R.nodeOpen)+'</span>';
+}
+/* Signing in or out changes what the end of the tree may show. */
+function paintResultLock(){
+  var r=document.getElementById('resultNode');
+  if(r&&terminal) paintResultNode(r);
+  document.getElementById('btnResult').hidden=!terminal||resultLocked();
+  updateHint();
+  if(resultLocked()&&!sheet.hidden) closeSheet();
 }
 
 /* ===========================================================================
@@ -2361,15 +2413,17 @@ function paintSheet(){
 }
 function openSheet(){
   if(!terminal) return;
+  if(resultLocked()){
+    TAS.auth.requireSignIn(COPY.result.lockedReason).then(function(user){
+      if(user&&!resultLocked()) openSheet();
+    });
+    return;
+  }
   prevFocus=document.activeElement;
   paintSheet();
   sheet.hidden=false;
   /* the printout is of the result, so it is offered while the result is open */
   var c=sheet.querySelector('[data-close]'); if(c) c.focus({preventScroll:true});
-  /* Said once, at the only moment it matters: there is now something worth
-     keeping, and a guest is about to close the tab on it. */
-  if(window.TAS) TAS.auth.guestNudge(
-    'You are a guest, so this result is not saved anywhere. Print it, or sign in to keep it as a document.');
 }
 function closeSheet(){
   sheet.hidden=true;
@@ -2438,7 +2492,7 @@ function printableHtml(){
   h+='<h3>'+esc(P.answers)+'</h3><div>';
   path.forEach(function(p){
     var n=NODES[p.node],a=n.a[p.ai];
-    h+='<span class="pc">'+esc(n.short+': '+(a.short||a.label))+'</span>';
+    h+='<span class="pc">'+esc((n.short||n.tag||'')+': '+(a.short||a.label))+'</span>';
   });
   h+='</div>';
   if(collected.length){
@@ -2478,6 +2532,7 @@ function printableHtml(){
   return h;
 }
 function doPrint(){
+  if(resultLocked()) return;
   document.getElementById('printOut').innerHTML=printableHtml();
   window.print();
 }
@@ -2699,7 +2754,27 @@ var contactFoot=document.getElementById('contactFoot');
 var contactFocus=null;
 var NLC=String.fromCharCode(10);
 /* what the reader has typed, kept across a re-render of the foot */
-var ASK={q:'',name:'',email:'',path:true};
+var ASK={q:'',name:'',email:'',phone:'',path:true};
+/* Whether this deployment emails the form itself (GET /api/contact), and how
+   the last send went. on is null until asked: until then, and wherever it is
+   false, Send opens the reader's own email program as it always did. */
+var MAIL={on:null,sending:false,sent:'',err:''};
+function askReady(){
+  var digits=(ASK.phone||'').replace(/\D/g,'');
+  return {
+    q:(ASK.q||'').trim().length>=5,
+    email:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((ASK.email||'').trim()),
+    phone:/^[+()\d\s.\-]+$/.test((ASK.phone||'').trim())&&digits.length>=7&&digits.length<=15
+  };
+}
+function checkMail(){
+  if(MAIL.on!==null||!window.fetch) return;
+  MAIL.on=false;
+  fetch('/api/contact',{cache:'no-store',headers:{Accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ MAIL.on=!!(d&&d.email); if(!contactEl.hidden) renderContactFoot(); })
+    .catch(function(){});
+}
 
 /* What the configured scheduling link is allowed to be. It becomes an
    iframe's src and an href, and neither escaping nor the markup filter looks
@@ -2778,8 +2853,9 @@ function pathLines(){
     var g=(a.grants&&OUT[a.grants])?'  (+ '+OUT[a.grants].name+')':'';
     out.push((n.short||n.tag||st.node)+' \u2014 '+(a.label||'')+g);
   });
-  /* no ending yet means no Result row \u2014 never invent one */
-  if(terminal) out.push(COPY.result.nodeTag+': '+verdict(terminal).t);
+  /* no ending yet means no Result row \u2014 never invent one; and a reader
+     who may not see the result is not shown it here either */
+  if(terminal&&!resultLocked()) out.push(COPY.result.nodeTag+': '+verdict(terminal).t);
   return out;
 }
 
@@ -2792,6 +2868,7 @@ function mailText(){
   }
   b+=NLC+'—'+NLC+(ASK.name||COPY.ui.mailNoName);
   if(ASK.email) b+=NLC+ASK.email;
+  if(ASK.phone) b+=NLC+ASK.phone;
   b+=NLC+C.mailSign+NLC;
   return {subject:C.mailSubject,body:b};
 }
@@ -2811,8 +2888,14 @@ function renderContact(){
    +'<label class="cfield"><span>'+esc(U.askName)+'</span>'
    +'<input type="text" id="askName" autocomplete="name" value="'+esc(ASK.name)+'"></label>'
    +'<label class="cfield"><span>'+esc(U.askEmail)+'</span>'
-   +'<input type="email" id="askEmail" autocomplete="email" value="'+esc(ASK.email)+'"></label>'
+   +'<input type="email" id="askEmail" autocomplete="email" required value="'+esc(ASK.email)+'"></label>'
    +'</div>'
+   +'<div class="ctwo">'
+   +'<label class="cfield"><span>'+esc(U.askPhone)+'</span>'
+   +'<input type="tel" id="askPhone" autocomplete="tel" required value="'+esc(ASK.phone)+'"></label>'
+   +'</div>'
+   /* a field no person sees or fills in; a bot that fills every field does */
+   +'<input type="text" id="askHp" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
    +'<label class="copt"><input type="checkbox" id="askPath"'+(ASK.path?' checked':'')+'>'
    +'<span><b>'+esc(U.askPath)+'</b>'
    +'<span class="d">'+esc(U.askPathNote)+'</span>'
@@ -2842,7 +2925,7 @@ function renderContact(){
   h+='</section>';
 
   h+='<section class="gsec"><h4>'+esc(C.whoH)+'</h4>'+whoHtml()+'</section>';
-  h+='<section class="gsec">'+C.counsel+C.privacy+'</section>';
+  h+='<section class="gsec">'+C.counsel+C.privacySend+'</section>';
 
   contactBody.innerHTML=h;
   /* The frame goes up with the panel. It was behind a Show button, on the
@@ -2855,18 +2938,23 @@ function renderContact(){
 }
 
 function renderContactFoot(){
-  var U=COPY.ui;
-  var ready=!!(ASK.q||'').trim();
-  var h='<button class="btn solid" id="cSend"'+(ready&&CONTACT.email?'':' disabled')+' title="'
-   +esc(!ready?U.writeFirstTip:(CONTACT.email?U.sendTip:U.sendNoEmailTip))
-   +'">'+esc(U.send)+'</button>'
-   +'<button class="btn" id="cCopy"'+(ready?'':' disabled')+' title="'
-   +esc(ready?U.copyTip:U.writeFirstTip)
+  var U=COPY.ui, ok=askReady();
+  var ready=ok.q&&ok.email&&ok.phone, wrote=!!(ASK.q||'').trim();
+  var canSend=ready&&!MAIL.sending&&(MAIL.on||!!CONTACT.email);
+  var tip=!ok.q?U.writeFirstTip:(!ok.email?U.needEmailTip:(!ok.phone?U.needPhoneTip
+    :(MAIL.on?U.sendMailTip:(CONTACT.email?U.sendTip:U.sendNoEmailTip))));
+  var note=MAIL.sending?U.sending
+    :(MAIL.err?fill(U.sendFailed,{message:MAIL.err})
+    :(MAIL.sent?fill(U.sentOk,{email:MAIL.sent})
+    :(MAIL.on?U.footMail:(wrote?U.footReady:U.footEmpty))));
+  var h='<button class="btn solid" id="cSend"'+(canSend?'':' disabled')+' title="'+esc(tip)+'">'
+   +esc(MAIL.sending?U.sending:U.send)+'</button>'
+   +'<button class="btn" id="cCopy"'+(wrote?'':' disabled')+' title="'
+   +esc(wrote?U.copyTip:U.writeFirstTip)
    +'">'+esc(U.copy)+'</button>'
    +'<button class="btn" data-cclose="1">'+esc(U.backToTree)+'</button>'
-   +'<span class="grow"></span><span class="fnote">'
-   +esc(ready?U.footReady:U.footEmpty)
-   +'</span>';
+   +'<span class="grow"></span><span class="fnote'+(MAIL.err?' err':(MAIL.sent?' ok':''))+'">'
+   +esc(note)+'</span>';
   contactFoot.innerHTML=h;
 }
 
@@ -2891,6 +2979,7 @@ function mountCal(){
 }
 
 function openContact(){
+  checkMail();
   contactFocus=document.activeElement;
   renderContact();
   contactEl.hidden=false;
@@ -2902,11 +2991,45 @@ function closeContact(){
   contactEl.hidden=true;
   if(contactFocus&&contactFocus.focus) try{ contactFocus.focus({preventScroll:true}); }catch(e){}
 }
+/* Send: by email from the server where it is set up, the question and how
+   to reach the reader laid out for whoever maintains the tool; otherwise in
+   the reader's own email program, as before. */
 function sendMail(){
-  if(!CONTACT.email||!(ASK.q||'').trim()) return;
-  var m=mailText();
-  window.location.href='mailto:'+encodeURIComponent(CONTACT.email)
-   +'?subject='+encodeURIComponent(m.subject)+'&body='+encodeURIComponent(m.body);
+  var ok=askReady();
+  if(!ok.q||!ok.email||!ok.phone||MAIL.sending) return;
+  if(!MAIL.on){
+    if(!CONTACT.email) return;
+    var m=mailText();
+    window.location.href='mailto:'+encodeURIComponent(CONTACT.email)
+     +'?subject='+encodeURIComponent(m.subject)+'&body='+encodeURIComponent(m.body);
+    return;
+  }
+  var lines=ASK.path?pathLines():[];
+  var result=(terminal&&!resultLocked()&&ASK.path)?verdict(terminal).t:'';
+  if(result) lines=lines.slice(0,-1);
+  var hp=document.getElementById('askHp');
+  var body={question:ASK.q,name:ASK.name,email:ASK.email,phone:ASK.phone,
+            answers:lines,result:result,website:hp?hp.value:''};
+  MAIL.sending=true; MAIL.err=''; MAIL.sent='';
+  renderContactFoot();
+  var req=(window.TAS&&TAS.api)?TAS.api('/contact',{method:'POST',body:body})
+    :fetch('/api/contact',{method:'POST',credentials:'same-origin',
+       headers:{'Content-Type':'application/json',Accept:'application/json','X-TAS-App':'1'},
+       body:JSON.stringify(body)}).then(function(r){
+         return r.json().catch(function(){ return {}; }).then(function(d){
+           if(!r.ok) throw new Error((d&&d.message)||('HTTP '+r.status));
+           return d;
+         });
+       });
+  req.then(function(){
+    MAIL.sending=false; MAIL.sent=ASK.email.trim(); ASK.q='';
+    var q=document.getElementById('askQ'); if(q) q.value='';
+    renderContactFoot();
+  },function(err){
+    MAIL.sending=false;
+    MAIL.err=(err&&err.message)||'something went wrong';
+    renderContactFoot();
+  });
 }
 /* A long path can push a mailto past what some mail clients accept, and a
    reader may have no mail client registered at all \u2014 so the text is always
@@ -2945,7 +3068,10 @@ contactEl.addEventListener('input',function(e){
   if(t.id==='askQ') ASK.q=t.value;
   else if(t.id==='askName') ASK.name=t.value;
   else if(t.id==='askEmail') ASK.email=t.value;
+  else if(t.id==='askPhone') ASK.phone=t.value;
   else return;
+  /* typing again clears what the last send said */
+  MAIL.err=''; if(t.id==='askQ') MAIL.sent='';
   /* the new-tab link carries the prefill live; the mounted frame is not
      touched, so nobody loses a half-finished booking to a keystroke */
   var tab=document.getElementById('calTab');
@@ -3065,7 +3191,7 @@ function saveDocument(){
     return;
   }
   TAS.auth.requireSignIn(
-    '<b>Guests cannot save.</b> Sign in and this result becomes a document you can edit, print and open again months from now. As a guest, <b>Print</b> is the way to keep it.'
+    '<b>Guests cannot save.</b> Sign in and this result becomes a document you can edit, print and open again months from now.'
   ).then(function(user){
     if(!user) return;
     var v=terminal?verdict(terminal):verdictCopy('progress');
@@ -3170,10 +3296,11 @@ if(haveAccounts()){
   });
   TAS.auth.on('change',function(){
     paintKeepable();
+    paintResultLock();
     /* the result panel is open at the moment someone signs in from it */
     if(!sheet.hidden&&terminal) paintSheet();
   });
-  TAS.auth.ready().then(paintKeepable);
+  TAS.auth.ready().then(function(){ paintKeepable(); paintResultLock(); });
 }
 paintKeepable();
 

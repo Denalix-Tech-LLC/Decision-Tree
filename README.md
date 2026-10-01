@@ -107,20 +107,49 @@ is the whole session.
 
 ## Accounts, guests and saved work
 
-A reader can use the whole tool without an account, and that is a supported way to use
-it rather than a degraded one: answer every question, re-route the tree, open the
-result, print it. Nothing is sent anywhere and nothing is asked for.
+A reader can answer every question and re-route the tree without an account. Nothing is
+sent anywhere and nothing is asked for.
 
-What a guest cannot do is **keep** any of it. The path is gone when the tab closes, and
-the editor's working copy lives in `localStorage` on one machine.
+The **full result and its print-out** need the reader to sign in, wherever there are
+accounts to sign in to. When the path reaches an ending, the card at the end of the tree
+says "Sign in to see your result" and opens the sign-in dialog; the **Result** button and
+Print stay hidden until then, and the answers are kept as they are while the reader signs
+in. A deployment with no database — or one whose database is down — has nobody to sign
+in, so there the result opens for everyone, as it always did.
+
+What a guest cannot do either is **keep** anything. The path is gone when the tab closes,
+and the editor's working copy lives in `localStorage` on one machine.
 
 A guest is not shown the controls that would only refuse them. **Save** in the top bar,
 **Save as document** in the result and **My trees** in the editor appear when there is
 an account to save to and are absent before that — a row of buttons whose only outcome
 is a dialog explaining they cannot is furniture, not an offer. Signing in lives in one
 place, the account button in the top bar, and everything appears the moment it means
-something. What a guest gets instead is **Print**, which is the thing that actually
-keeps a result for them, and a line in the result saying so.
+something.
+
+### Contact, by email
+
+The **Contact** panel takes the reader's question, email address and phone number (and a
+name, if they like), and can include their answers from the tree. Where email is set up,
+**Send** emails it to whoever maintains the tool: one message laid out to be read and
+answered — the question, who asked and how to reach them, their answers and result — with
+the reader as Reply-To, so replying answers them directly. Where it is not set up, Send
+opens the reader's own email program as before, and **Copy** always works.
+
+It goes through [Resend](https://resend.com) (free for 100 emails a day) over its HTTPS
+API, so there is no new dependency. Set, in Vercel and in `.env`:
+
+| Variable | Value |
+|---|---|
+| `RESEND_API_KEY` | a key from Resend → API Keys |
+| `CONTACT_TO` | who receives the questions (one address, or a comma-separated list). Without it, the email published under `/admin` → Content → Contact is used |
+| `CONTACT_FROM` | the sender, on a domain you have verified at Resend, e.g. `TAS Decision Tree <contact@your-tribe.org>`. Without a verified domain Resend only accepts its test sender, which delivers to the Resend account's own address |
+| `TAS_CONTACT_PER_DAY` | optional cap on emails a day for the whole deployment (default 100, Resend's free daily limit) |
+
+The recipient is never taken from the request, so the form cannot be pointed at anyone
+else's inbox. A hidden field catches simple bots, and sends are limited to five an hour
+per client address, counted in the database like sign-in attempts. Without a database the
+count is kept per server instance, which is weaker.
 
 Signing in adds three kinds of saved work and changes nothing else:
 
@@ -227,8 +256,8 @@ makes no external requests. Two shared scripts sit beside them: `tree-data.js` (
 content) and `account.js` (accounts, saved work, and the dialogs that explain them).
 
 The API is one Vercel serverless function, `api/[...route].js`, written in plain Node
-ESM. One runtime dependency — `pg` — and no build step. The eighteen endpoints live in
-`api/_routes/` and the catch-all dispatches to them — see **One function, eighteen
+ESM. One runtime dependency — `pg` — and no build step. The twenty-one endpoints live in
+`api/_routes/` and the catch-all dispatches to them — see **One function, twenty-one
 endpoints** below for why. Passwords are hashed with `scrypt` from
 `node:crypto`; sessions are opaque random tokens in an `HttpOnly` cookie, stored as
 SHA-256 so a database dump cannot be replayed as a login. Google sign-in is the OAuth
@@ -309,10 +338,10 @@ No build configuration is needed beyond `vercel.json` (clean URLs, security head
 used for local testing is not installed on every deploy). Vercel installs `pg` and
 turns each file under `api/` into a function; nothing else runs at deploy time.
 
-### One function, eighteen endpoints
+### One function, twenty-one endpoints
 
 Vercel turns every file under `api/` into its own serverless function, and the Hobby
-plan allows twelve. This project has eighteen endpoints, so a deployment was refused
+plan allows twelve. This project has twenty-one endpoints, so a deployment was refused
 outright:
 
 ```

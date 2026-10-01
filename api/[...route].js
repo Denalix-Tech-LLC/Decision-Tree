@@ -2,11 +2,11 @@
    THE ONLY SERVERLESS FUNCTION
    Vercel turns every file under api/ into its own function, and the Hobby
    plan allows twelve. This project had eighteen routes, so a deployment was
-   refused outright. It has twenty now.
+   refused outright. It has twenty-one now.
 
    The routes themselves did not need to change: they moved to api/_routes/,
    where the leading underscore keeps Vercel from counting them, and this
-   catch-all dispatches to them. One function, twenty endpoints, and the
+   catch-all dispatches to them. One function, twenty-one endpoints, and the
    URLs the client calls are exactly what they were.
 
    Why the table below is written out by hand rather than resolved from disk:
@@ -25,6 +25,7 @@ import { json } from './_lib/http.js';
 
 import health from './_routes/health.js';
 import tree from './_routes/tree.js';
+import contact from './_routes/contact.js';
 
 import authAccount from './_routes/auth/account.js';
 import authLogin from './_routes/auth/login.js';
@@ -51,6 +52,7 @@ import mediaItem from './_routes/media/[hash].js';
 export const STATIC_ROUTES = {
   health,
   tree,
+  contact,
   'auth/account': authAccount,
   'auth/login': authLogin,
   'auth/logout': authLogout,
