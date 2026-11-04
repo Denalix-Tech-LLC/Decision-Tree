@@ -39,8 +39,8 @@ export default route({
 
     if (await databaseFull()) {
       throw storageFull(
-        'This deployment has run out of room for new accounts. Existing accounts can still ' +
-          'sign in. The site owner needs to clear space (npm run db:prune) or raise TAS_DB_BYTES.'
+        'This site has run out of room for new accounts. Existing accounts can still sign in. ' +
+          'Please let the people who run this site know, using Contact.'
       );
     }
 

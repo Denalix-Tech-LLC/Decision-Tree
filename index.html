@@ -87,6 +87,15 @@ a{color:var(--accent-ink)}
 .bar{flex:none;display:flex;align-items:center;gap:12px;padding:10px clamp(12px,2.5vw,20px);
   background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:7}
 .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+/* The brand is also the way home: a link to the start of the tree, for a
+   reader who has got lost or stuck. It looks exactly as the brand always has
+   — no underline, the brand's own colours — and only says it is a link on
+   focus. The link holds the mark and the words, not the empty run of bar
+   beside them, so a stray click on the bar does not start the tree over. */
+.brand .home{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;
+  border-radius:9px}
+.brand .home:hover{color:inherit;text-decoration:none}
+.brand .home:focus-visible{outline:3px solid var(--accent-soft);outline-offset:3px}
 .brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);
   display:grid;place-items:center;color:var(--on-accent)}
 .brand .mk svg{width:17px;height:17px}
@@ -660,11 +669,16 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
 <div class="shell">
   <header class="bar">
     <div class="brand">
-      <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
-      <span>
-        <span class="kk" id="brandKicker">Clean Air Act · Treated as a State</span>
-        <h1 id="brandTitle">TAS Decision Tree</h1>
-      </span>
+      <!-- Home. A real link to /, so it works with no script and opens in a
+           new tab on a modified click; a plain click is caught by goHome(),
+           which takes the reader back to question one without a reload. -->
+      <a class="home" id="brandHome" href="/" title="Back to the start of the tree" aria-label="Back to the start of the tree">
+        <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
+        <span>
+          <span class="kk" id="brandKicker">Clean Air Act · Treatment as a State</span>
+          <h1 id="brandTitle">TAS Decision Tree</h1>
+        </span>
+      </a>
     </div>
     <div class="acts">
       <button class="btn" id="btnGuide" title="How to use this tool — the five-screen introduction">
@@ -672,7 +686,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
         <span class="lb">Guide</span>
       </button>
       <span class="cuewrap">
-        <button class="btn" id="btnContact" title="Talk to a person">
+        <button class="btn" id="btnContact" title="Reach a person">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span class="lb">Contact</span>
         </button>
@@ -708,9 +722,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
     </div>
 
     <div class="zoom">
-      <button class="btn icon" id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button class="btn icon" id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
-      <button class="btn icon" id="zFit" aria-label="Fit tree to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg></button>
+      <button class="btn icon" id="zIn" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="btn icon" id="zOut" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <button class="btn icon" id="zFit" aria-label="Fit tree to screen" title="Fit tree to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg></button>
     </div>
     <div class="hint" id="hint">Click a branch to grow the tree</div>
   </div>
@@ -801,7 +815,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="bg" data-cclose="1"></div>
   <div class="doc narrow">
     <div class="dhead">
-      <div><span class="kk" id="contactKicker">Contact</span><h3 id="contactTitle">Talk to a person</h3></div>
+      <div><span class="kk" id="contactKicker">Contact</span><h3 id="contactTitle">Reach a person</h3></div>
       <span class="grow"></span>
       <button class="btn sm" id="contactClose" data-cclose="1" aria-label="Back to the tree">Close &#10005;</button>
     </div>
@@ -1110,9 +1124,9 @@ function adoptContent(d){
       'font-family:var(--serif);color:var(--ink)">'+
       '<h2 style="font-family:var(--display);font-weight:400;font-size:26px;'+
       'text-transform:uppercase;letter-spacing:.02em;margin:0 0 10px">The questions did not load</h2>'+
-      '<p style="color:var(--muted)">This page reads them from <code>tree-data.js</code>, '+
-      'and that file did not arrive. Reload; if it happens again the file is missing '+
-      'from the deployment.</p></div>';
+      '<p style="color:var(--muted)">This page reads them from a file on this site, '+
+      'and that file did not arrive. Reload the page. If it happens again, the file is '+
+      'missing from this site: please let the person or people who maintain this tool know.</p></div>';
   });
 })();
 
@@ -1152,6 +1166,14 @@ function paintChrome(){
   if(hasWords(B.pageTitle)) document.title=B.pageTitle;
   setText('brandKicker',B.kicker);
   setText('brandTitle',B.title);
+  /* the brand doubles as the way home, and says so on hover and to a screen
+     reader; the fallback covers content saved before the words were editable */
+  var home=document.getElementById('brandHome');
+  if(home){
+    var homeTip=hasWords(U.homeTip)?U.homeTip:'Back to the start of the tree';
+    home.title=homeTip;
+    home.setAttribute('aria-label',homeTip);
+  }
   /* the top bar; Contact's tooltip belongs to updateContactCue, below */
   setButton('btnGuide',U.guide,U.guideTip);
   setButton('btnContact',U.contact,null);
@@ -1164,7 +1186,13 @@ function paintChrome(){
   setText('noticeLabel',U.noticeLabel);
   var t=document.getElementById('noticeTxt');
   if(t&&DISC.bar) t.textContent=DISC.bar;
-  setAria('zIn',U.zoomIn); setAria('zOut',U.zoomOut); setAria('zFit',U.zoomFit);
+  /* the zoom buttons are icons alone, so their words go in the tooltip too:
+     a reader hovering the four corners should see "Fit", not guess at it */
+  [['zIn',U.zoomIn],['zOut',U.zoomOut],['zFit',U.zoomFit]].forEach(function(z){
+    setAria(z[0],z[1]);
+    var zb=document.getElementById(z[0]);
+    if(zb&&z[1]!=null) zb.title=z[1];
+  });
   /* the result sheet's frame; its body is resultHtml() */
   setAria('sheet',U.sheetLabel);
   setText('sheetKicker',U.sheetKicker);
@@ -2503,7 +2531,9 @@ function printableHtml(){
       if(o.options){
         var pick=o.chooser?pickAt(o.chooser):-1;
         h+='<ul>'+o.options.map(function(x,i){
-          var pc=function(k,items){ return items&&items.length?'<br>'+k+': '+items.join('; ')+'.':''; };
+          /* the labels in bold, so a reader scanning the printout finds the
+             pros and the cons without reading every line to get there */
+          var pc=function(k,items){ return items&&items.length?'<br><b>'+k+':</b> '+items.join('; ')+'.':''; };
           return '<li><b>'+x.h+'</b>'+(i===pick?' '+esc(P.yourChoice):'')+(x.d?' — '+x.d:'')
             +pc(esc(R.pros),x.pros)+pc(esc(R.cons),x.cons)+'</li>';
         }).join('')+'</ul>';
@@ -2529,7 +2559,17 @@ function printableHtml(){
   h+='<h3>'+esc(P.next)+'</h3><ul>'+NEXT.map(function(s){return '<li><b>'+s.h+'</b>'+(s.d?' '+s.d:'')+'</li>';}).join('')+'</ul>';
   h+='<h3>'+esc(P.reference)+'</h3><ul>'+LINKS.map(function(l){return '<li>'+esc(l.t)+' — '+esc(l.u)+'</li>';}).join('')+'</ul>';
   h+='<div class="pd">'+DISC.print+'</div>';
-  return h;
+  return oneSpace(h);
+}
+/* No double spaces in a generated document. A browser page folds a run of
+   spaces into one, but the document editor at /work keeps every space it is
+   given — so a stray double space in the content ("the Clean Air Act  programs",
+   typed into a pros list at /admin) showed in the saved document as a gap.
+   Folded here, the one place the printout and the saved document are both
+   made, so neither can carry one whatever the content says. Runs of spaces
+   and non-breaking spaces become one space; single ones are left alone. */
+function oneSpace(s){
+  return String(s).replace(/(?: |\u00a0|&nbsp;|&#160;){2,}/g,' ');
 }
 function doPrint(){
   if(resultLocked()) return;
@@ -2579,7 +2619,7 @@ var WALK_ART=[
     +'<rect class="wq" x="86" y="88" width="148" height="26" rx="7"/><text class="wt on" x="97" y="105">Question 2</text>'
     +'</svg>',
   /* 3 · Nothing you do is stuck */
-  '<svg viewBox="0 0 320 100" role="img" aria-label="A greyed branch, and the x that cuts the tree back">'
+  '<svg viewBox="0 0 320 100" role="img" aria-label="A grayed branch, and the x that cuts the tree back">'
     +'<rect class="wq" x="86" y="8" width="148" height="28" rx="7"/><text class="wt on" x="97" y="26">An answered question</text>'
     +'<circle cx="228" cy="14" r="8" fill="var(--surface)" stroke="var(--alert)" stroke-width="1.4"/>'
     +'<path d="M225,11 L231,17 M231,11 L225,17" stroke="var(--alert)" stroke-width="1.6" stroke-linecap="round"/>'
@@ -2833,14 +2873,18 @@ function whoHtml(){
     return '<li><span class="k">'+k+'</span><span class="v'+(todo?' todo':'')+'">'+v+'</span></li>'; }
   var U=COPY.ui, C=COPY.contact;
   var any=CONTACT.name||CONTACT.role||CONTACT.email||CONTACT.phone;
-  if(!any) return '<p class="cpick">'+C.whoTodo+'</p>';
+  /* nobody set: whoTodo's neutral line, or nothing — the caller then leaves
+     the whole section out */
+  if(!any) return hasWords(C.whoTodo)?'<p class="cpick">'+C.whoTodo+'</p>':'';
   var h='<ul class="cwho">';
   if(CONTACT.name) h+=row(esc(U.whoName),esc(CONTACT.name));
   if(CONTACT.role) h+=row(esc(U.whoRole),esc(CONTACT.role));
   if(CONTACT.email) h+=row(esc(U.whoEmail),'<a href="mailto:'+encodeURIComponent(CONTACT.email)+'">'+esc(CONTACT.email)+'</a>');
   if(CONTACT.phone) h+=row(esc(U.whoPhone),esc(CONTACT.phone));
+  /* A missing email used to add whoTodo under the rows as a setup reminder.
+     whoTodo is a reader's line now, not a reminder, and a missing address is
+     already said where it matters — on Send's tooltip (sendNoEmailTip). */
   h+='</ul>';
-  if(!CONTACT.email) h+='<p class="cpick">'+C.whoTodo+'</p>';
   return h;
 }
 
@@ -2917,15 +2961,22 @@ function renderContact(){
      +'<a class="btn" href="'+esc(cal.url)+'" target="_blank" rel="noopener noreferrer">'+esc(U.calLinkOpen)+'</a>'
      +'</div></div>';
   }else{
-    /* Said plainly rather than left as an empty heading. A reader needs to know
-       the question box is the only way through; whoever deployed the tool needs
-       to know why, and where to fix it. */
+    /* Said plainly rather than left as an empty heading: a reader needs to
+       know the question box is the way through. noCal is reader-facing text
+       only — how to set up a calendar belongs to /admin, never to this panel. */
     h+='<p class="cpick">'+C.noCal+'</p>';
   }
   h+='</section>';
 
-  h+='<section class="gsec"><h4>'+esc(C.whoH)+'</h4>'+whoHtml()+'</section>';
-  h+='<section class="gsec">'+C.counsel+C.privacySend+'</section>';
+  /* With nobody configured there is nothing to list, and the panel says so
+     in neutral words (whoTodo) or leaves the section out — it never shows a
+     reader the setup notes. */
+  var who=whoHtml();
+  if(who) h+='<section class="gsec"><h4>'+esc(C.whoH)+'</h4>'+who+'</section>';
+  /* The counsel paragraph that used to sit here moved to the guide's
+     Getting help section: it is about the decision, not about reaching a
+     person, so this ends on what is sent and where. */
+  h+='<section class="gsec">'+(C.privacySend||'')+'</section>';
 
   contactBody.innerHTML=h;
   /* The frame goes up with the panel. It was behind a Show button, on the
@@ -3222,6 +3273,12 @@ function saveDocument(){
 }
 
 /* ---- reopening saved work ---- */
+/* A title in quotation marks at the end of a sentence, American style: the
+   period goes inside the closing mark, unless the title already ends in one. */
+function quoteEnd(t){
+  t=String(t==null?'':t);
+  return '“'+t+(/[.?!]$/.test(t)?'':'.')+'”';
+}
 function applyRun(item){
   restoring=true;
   if(item.snapshot) adoptContent(item.snapshot);
@@ -3241,7 +3298,7 @@ function applyRun(item){
     TAS.ui.toast('Part of that saved path no longer fits the tree — '+(wanted-path.length)+
       ' answer'+(wanted-path.length===1?'':'s')+' could not be placed. What is shown is the rest.','warn',{ms:9000});
   }else{
-    TAS.ui.toast('Opened “'+item.title+'”. Carry on where you left off.','good');
+    TAS.ui.toast('Opened '+quoteEnd(item.title)+' Carry on where you left off.','good');
   }
 }
 function applyTree(item){
@@ -3252,7 +3309,7 @@ function applyTree(item){
   build();
   view.s=1; focusFrontier();
   paintSaveLabel();
-  TAS.ui.toast('Showing your saved tree: “'+item.title+'”.','good');
+  TAS.ui.toast('Showing your saved tree: '+quoteEnd(item.title),'good');
 }
 
 /* /?run=<id> reopens a saved path · /?tree=<id> previews a saved tree
@@ -3373,6 +3430,34 @@ function reset(){
   unwindTimers.push(setTimeout(freshTree,kids.length*step+380));
 }
 document.getElementById('btnReset').addEventListener('click',reset);
+/* The brand in the top bar is the way home. A reader who is stuck — a dialog
+   they cannot get out of, a session that ran out under them — wanted
+   something in the corner that simply goes back to the beginning. On this
+   page that is done in place: every overlay is put away and the tree starts
+   over exactly as Start over does, with no reload to lose the page to. A
+   click with a modifier key, or with any button but the main one, is left to
+   the browser, so the link still opens in a new tab or window when asked.
+
+   The one exception is a saved tree opened from /work (?tree=): its
+   questions are not the site's, and the only honest way back to the site's
+   own is to load it, so that click goes through as an ordinary link. */
+function goHome(e){
+  if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+  if(loadedTreeId) return;
+  e.preventDefault();
+  /* put away whatever is open, without the focus hand-backs each one's
+     close would do: focus stays on the link the reader just pressed */
+  if(!walkEl.hidden){ walkEl.hidden=true; try{ localStorage.setItem(WALK_KEY,'1'); }catch(err){} }
+  if(!guideEl.hidden){ guideEl.hidden=true; try{ localStorage.setItem(GUIDE_KEY,'1'); }catch(err){} }
+  contactEl.hidden=true;
+  infoEl.hidden=true; infoShown=null;
+  sheet.hidden=true;
+  /* the address loses any ?run=, ?guide= or ?walk= it arrived with, so a
+     reload from here lands where the reader now is: the start */
+  try{ if(location.search||location.hash) history.replaceState(null,'','/'); }catch(err){}
+  if(!started) start(); else reset();
+}
+document.getElementById('brandHome').addEventListener('click',goHome);
 /* a choice made mid-withdrawal cancels it rather than fighting it */
 nodesEl.addEventListener('pointerdown',stopUnwind,true);
 document.getElementById('btnSound').addEventListener('click',function(){

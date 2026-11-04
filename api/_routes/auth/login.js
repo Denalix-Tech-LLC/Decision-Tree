@@ -38,7 +38,7 @@ export default route({
         error: 'use_google',
         message:
           'That account signs in with Google — use the Google button. ' +
-          'You can add a password afterwards under Account settings.',
+          'You can add a password afterward under Account settings.',
       });
       return;
     }

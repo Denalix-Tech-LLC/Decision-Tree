@@ -14,9 +14,10 @@
    instead of throwing.
 
    Guest access is a supported way to use this tool, not a degraded one. A
-   guest answers every question, prints every result and edits the tree in
-   their own browser. What a guest cannot do is keep any of it anywhere but
-   that browser, and every button that would imply otherwise says so first.
+   guest answers every question and re-routes the tree as often as they like.
+   Where there are accounts, the full result and its printout need a sign-in
+   (index.html, resultLocked), and keeping anything always does; the copy
+   below says exactly that, and nothing more generous.
    ========================================================================= */
 (function () {
   'use strict';
@@ -137,7 +138,7 @@
                   res.status,
                   res.status === 404 ? 'no_api' : 'server_error',
                   res.status === 404
-                    ? 'This deployment has no saving service — the tool works, but nothing can be kept.'
+                    ? 'This site has no saving service — the tool works, but nothing can be kept.'
                     : 'The server returned ' + res.status + '.'
                 );
               }
@@ -150,6 +151,36 @@
         throw ApiError(0, 'offline', 'No connection to the server. Nothing was saved.');
       }
     );
+  }
+
+  /* ---- a database that is waking up ------------------------------------ */
+  /* The production database sleeps when nobody has used it for a while, and
+     the first request after a long quiet can fail while it wakes: a 503
+     storage_unavailable, a gateway error, or no answer at all. That is how a
+     browser left open overnight came back to "No saving" and no name in the
+     top bar. So a READ that fails that way is asked once more, after a short
+     pause, before anyone is told storage is down or that they are signed out.
+
+     Reads only. A write that failed may still have landed, and sending it
+     again could keep it twice, so writes are never retried here. */
+  var WAKE_MS = 1500;
+  function waking(err) {
+    return (
+      !!err &&
+      (err.code === 'storage_unavailable' ||
+        err.code === 'offline' ||
+        err.status === 502 ||
+        err.status === 503 ||
+        err.status === 504)
+    );
+  }
+  function readTwice(run) {
+    return run().catch(function (err) {
+      if (!waking(err)) throw err;
+      return new Promise(function (resolve) {
+        setTimeout(resolve, WAKE_MS);
+      }).then(run);
+    });
   }
 
   /* ===== auth ============================================================ */
@@ -191,7 +222,9 @@
   var refreshing = null;
   function refresh(force) {
     if (refreshing && !force) return refreshing;
-    refreshing = api('/auth/me')
+    refreshing = readTwice(function () {
+      return api('/auth/me');
+    })
       .then(function (data) {
         setState({
           ready: true,
@@ -209,13 +242,17 @@
         return state;
       })
       .catch(function (err) {
+        /* /api/auth/me answers 200 with storage 'unconfigured' when there is
+           no database at all, so a storage_unavailable from it means one is
+           configured and did not answer — even after the second try above.
+           Only a missing API (a static host) is "unconfigured". */
         setState({
           ready: true,
           user: null,
           admin: false,
           adminReason: null,
           recentAuthUntil: null,
-          storage: err.code === 'storage_unavailable' || err.code === 'no_api' ? 'unconfigured' : 'unreachable',
+          storage: err.code === 'no_api' ? 'unconfigured' : 'unreachable',
         });
         return state;
       })
@@ -307,14 +344,19 @@
       if (opts.trash) q.push('trash=1');
       if (opts.limit) q.push('limit=' + encodeURIComponent(opts.limit));
       if (opts.offset) q.push('offset=' + encodeURIComponent(opts.offset));
-      return api(kindPath(kind) + (q.length ? '?' + q.join('&') : ''));
+      var path = kindPath(kind) + (q.length ? '?' + q.join('&') : '');
+      /* a read, so a sleeping database gets its second chance (readTwice) */
+      return readTwice(function () {
+        return api(path);
+      });
     },
     get: function (kind, id, opts) {
-      return api(kindPath(kind) + '/' + encodeURIComponent(id) + ((opts && opts.trash) ? '?trash=1' : '')).then(
-        function (d) {
-          return d.item;
-        }
-      );
+      var path = kindPath(kind) + '/' + encodeURIComponent(id) + ((opts && opts.trash) ? '?trash=1' : '');
+      return readTwice(function () {
+        return api(path);
+      }).then(function (d) {
+        return d.item;
+      });
     },
     create: function (kind, body) {
       return api(kindPath(kind), { method: 'POST', body: body }).then(function (d) {
@@ -793,11 +835,27 @@
   }
 
   /* ---- the sign-in dialog --------------------------------------------- */
+  /* What a guest can and cannot do where there are accounts (storage ready).
+     It must match index.html: the full result and its Print are locked until
+     sign-in (resultLocked), and the editor at /admin belongs to one account,
+     so neither is offered to a guest here. */
   var GUEST_COPY =
-    'You can use every part of this tool as a guest — answer the questions, print the result, ' +
-    'edit the tree. What a guest cannot do is <b>keep</b> any of it: nothing is stored on the ' +
-    'server, and a saved draft lives only in this browser, on this machine. Clear the browser ' +
-    'and it is gone.';
+    'As a guest you can answer every question and re-route the tree as often as you like. ' +
+    'Opening the full result, printing it and <b>keeping</b> anything need an account: nothing ' +
+    'a guest does is stored, and the path is gone when the tab closes.';
+  /* The same, for when the site's storage did not answer (state.storage
+     'unreachable'): why saved work is out of reach, what still works, and
+     the line shown when asking again did not help. Shared with /work, whose
+     gate says the same thing. */
+  var OUTAGE_LEAD =
+    'The site’s storage did not answer, so saved work cannot be opened right now. Nothing you ' +
+    'saved has been lost. The storage sleeps when the site has been quiet and usually wakes ' +
+    'within seconds, so try again in a moment.';
+  var OUTAGE_COPY =
+    'As a guest you can still answer the questions, re-route the tree, and open and print the ' +
+    'result while the storage is not answering. <b>Keeping</b> anything needs an account, and ' +
+    'signing in works again as soon as the storage answers.';
+  var STILL_DOWN = 'Still no answer. Give it a minute, then try again.';
 
   function authDialog(opts) {
     opts = opts || {};
@@ -822,10 +880,11 @@
       if (state.storage !== 'ready') {
         m.body.appendChild(
           message(
-            '<b>Saving is not available on this deployment.</b> ' +
-              (state.storage === 'unconfigured'
-                ? 'No database is configured for it, so there are no accounts to sign in to. Everything else works.'
-                : 'The database did not answer. Try again in a moment; everything else works.'),
+            state.storage === 'unconfigured'
+              ? '<b>Saving is not available on this site.</b> It has no database, so there are no ' +
+                  'accounts to sign in to. Everything else works.'
+              : '<b>Signing in is not available right now.</b> The site’s storage did not answer, ' +
+                  'so accounts cannot be reached for the moment. Try again in a moment.',
             'warn'
           )
         );
@@ -1087,7 +1146,7 @@
       m.body.appendChild(
         message(
           'There is no way to confirm it here: this account signs in with Google, and Google ' +
-            'sign-in is not available on this deployment right now. Sign out and sign in again ' +
+            'sign-in is not available on this site right now. Sign out and sign in again ' +
             'once it is.',
           null
         )
@@ -1800,8 +1859,8 @@
            not a deployment without one. */
         chip.title =
           state.storage === 'unconfigured'
-            ? 'This deployment has no storage — nothing can be saved to an account'
-            : 'The database did not answer — saving is unavailable right now';
+            ? 'This site has no storage — nothing can be saved to an account'
+            : 'The site’s storage did not answer — signing in and saving are unavailable right now';
       } else {
         chip.appendChild(icon(ICON_SIGNIN));
         chip.appendChild(el('span', { text: 'Sign in' }));
@@ -1814,20 +1873,64 @@
     return { chip: chip, paint: paint };
   }
 
+  /* Two different situations, told apart because the words differ. A site
+     with no database has no accounts at all, so nothing is locked and Print
+     is the way to take a copy. A database that did not answer is usually
+     waking up (see readTwice): accounts exist, they are just out of reach
+     for a moment, so this offers to ask again instead of a page reload. */
   function storageDialog() {
-    var m = modal({ title: 'Saving is not set up here', kicker: 'Guest use only' });
-    m.body.appendChild(
-      message(
-        state.storage === 'unconfigured'
-          ? 'This deployment has no database behind it, so there are no accounts and nothing can be kept on the server. ' +
-              'Everything else works: answer the questions, print the result, edit the tree in this browser.'
-          : 'The database did not answer, so signing in and saving are unavailable right now. Everything else works.',
-        'warn'
-      )
+    var down = state.storage !== 'unconfigured';
+    var m = modal(
+      down
+        ? { title: 'Saved work cannot be reached right now', kicker: 'Storage is not answering' }
+        : { title: 'Saving is not set up here', kicker: 'Guest use only' }
     );
-    m.body.appendChild(
-      message(GUEST_COPY + '<br><br>Use <b>Print</b> to keep a copy of anything that matters.', null)
-    );
+    if (down) {
+      m.body.appendChild(message(OUTAGE_LEAD, 'warn'));
+      m.body.appendChild(message(OUTAGE_COPY, null));
+      var note = message('', 'warn');
+      note.hidden = true;
+      m.body.appendChild(note);
+      m.foot.appendChild(
+        el('button', {
+          class: 'tasa-b',
+          type: 'button',
+          text: 'Try again',
+          onclick: function (e) {
+            var b = e.currentTarget;
+            b.disabled = true;
+            b.textContent = 'Trying…';
+            note.hidden = true;
+            refresh(true).then(function (s) {
+              b.disabled = false;
+              b.textContent = 'Try again';
+              if (s.storage === 'ready') {
+                m.close(null);
+                toast(
+                  s.user
+                    ? 'Storage is answering again. Signed in as ' + (s.user.name || s.user.email) + '.'
+                    : 'Storage is answering again. You can sign in now.',
+                  'good'
+                );
+                return;
+              }
+              note.innerHTML = STILL_DOWN;
+              note.hidden = false;
+            });
+          },
+        })
+      );
+    } else {
+      m.body.appendChild(
+        message(
+          'This site has no database behind it, so there are no accounts and nothing can be kept ' +
+            'on the server. Everything else works: answer the questions, open and print the result, ' +
+            'and edit the tree in this browser.',
+          'warn'
+        )
+      );
+      m.body.appendChild(message('Use <b>Print</b> to keep a copy of anything that matters.', null));
+    }
     m.foot.appendChild(el('span', { class: 'grow' }));
     m.foot.appendChild(
       el('button', {
@@ -1929,6 +2032,9 @@
       on: events.on,
       guestNudge: guestNudge,
       guestCopy: GUEST_COPY,
+      outageLead: OUTAGE_LEAD,
+      outageCopy: OUTAGE_COPY,
+      stillDown: STILL_DOWN,
     },
     store: store,
     ui: {
@@ -1999,7 +2105,7 @@
       linked:
         'Signed in with Google, and joined to the account already registered on that address.',
       attached: 'Google is attached to your account. Either way in now works.',
-      cancelled: 'That Google sign-in was cancelled. Nothing has changed.',
+      cancelled: 'That Google sign-in was canceled. Nothing has changed.',
     }[mark];
     if (said) toast(said, mark === 'cancelled' ? null : 'good', { ms: 6000 });
   }

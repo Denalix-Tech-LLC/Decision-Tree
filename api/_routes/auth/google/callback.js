@@ -52,11 +52,12 @@ export default route({
     clearFlow(req, res);
 
     if (!isConfigured() || !isGoogleEnabled()) {
+      console.warn('[api] Google callback reached, but storage or GOOGLE_CLIENT_ID/SECRET is not configured');
       return errorPage(
         res,
         503,
         'Google sign-in is not set up here',
-        'This deployment is not configured for it. You can still use the tool, and sign in with an email address and a password if the deployment has storage.'
+        'This site is not set up for Google sign-in. You can still use the tool, and sign in with an email address and a password if this site keeps accounts.'
       );
     }
 

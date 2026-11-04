@@ -37,7 +37,8 @@ export function mailFrom() {
 export async function sendMail({ to, replyTo, subject, html, text }) {
   const key = String(process.env.RESEND_API_KEY || '').trim();
   if (!key) {
-    throw unavailable('mail_unconfigured', 'Email is not set up on this deployment yet.');
+    console.warn('[api] mail_unconfigured: RESEND_API_KEY is not set');
+    throw unavailable('mail_unconfigured', 'Email is not set up on this site yet.');
   }
   let res;
   try {

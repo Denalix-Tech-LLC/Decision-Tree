@@ -47,6 +47,10 @@ button,input,select,textarea,.btn{font-family:var(--sans)}
 .bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px clamp(10px,2vw,18px);
   background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh1);z-index:20;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+/* the brand is the way back to the start of the reader's tree: a link that
+   looks as it always did, with a focus ring for the keyboard */
+a.brand{color:inherit;text-decoration:none;border-radius:8px}
+a.brand:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
 .brand .mk{flex:none;width:28px;height:28px;border-radius:8px;background:var(--accent);
   display:grid;place-items:center;color:var(--on-accent)}
 .brand .mk svg{width:16px;height:16px}
@@ -342,17 +346,17 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
 
 <div class="shell">
   <header class="bar">
-    <div class="brand">
+    <a class="brand" href="/" title="Back to the start of the tree">
       <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
-      <span><span class="kk">Clean Air Act · TAS</span><h1>Tree Editor</h1></span>
-    </div>
+      <span><span class="kk">Clean Air Act · Treatment as a State</span><h1>Tree Editor</h1></span>
+    </a>
     <span class="dirty" id="dirty"><i></i>Unsaved changes</span>
     <button class="warnbtn" id="warnBtn" hidden></button>
     <div class="acts">
       <button class="btn" id="bAddQ" title="Add a new question, unattached — then point an option at it">+ Question</button>
       <button class="btn" id="bImport" title="Paste an exported tree back in, replacing what is here">Import</button>
-      <button class="btn" id="bExport" title="Download tree-data.js to hand your change to everyone else. Your own preview is already up to date.">Export…</button>
-      <button class="btn danger" id="bReset" title="Throw away your edits and the saved draft, back to what the repo ships">Revert</button>
+      <button class="btn" id="bExport" title="Download your content as a file, to hand your change to everyone else. Your own preview is already up to date.">Export…</button>
+      <button class="btn danger" id="bReset" title="Throw away your edits and the saved draft, back to the content the site was built with">Revert</button>
       <button class="btn" id="bCloud" hidden title="Keep this tree on your account, or open one you saved earlier">My trees</button>
       <button class="btn" id="bPublish" hidden title="Put what is on screen in front of every reader">Publish…</button>
       <button class="btn" id="bOpen" title="Open the reader's tree in a new tab — it reads your saved edits, so it shows exactly what you have now">Preview ↗</button>
@@ -374,7 +378,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
         <button class="btn" id="zAll" title="Shrink the whole tree into view">◱</button>
         <button class="btn" id="zWide" title="Hide the side panel and give the tree the full width">⤡</button>
       </div>
-      <div class="tip" id="tip">Edits save as you go — <b>Preview</b> shows them · <b>Publish</b> puts them in front of readers · <b>Export</b> hands them to the repo</div>
+      <div class="tip" id="tip">Edits save as you go — <b>Preview</b> shows them · <b>Publish</b> puts them in front of readers · <b>Export</b> downloads them as a file</div>
     </div>
 
     <aside class="side">
@@ -407,7 +411,7 @@ dialog textarea{min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospa
     <p class="hint" id="dlgHint" style="font-family:var(--sans);font-size:11.5px;color:var(--faint);margin:8px 0 0"></p></div>
   <div class="df">
     <button class="btn" id="dlgClose">Close</button>
-    <button class="btn" id="dlgSave" hidden>Download tree-data.js</button>
+    <button class="btn" id="dlgSave" hidden>Download the file</button>
     <button class="btn solid" id="dlgOk" hidden>Load this</button>
   </div>
 </dialog>
@@ -442,13 +446,13 @@ var DISC_FIELDS=[
   ['boundary','Boundary risk', 'The danger card in the result, when a boundary answer came up. HTML.'],
   ['authority','Eligibility is not authority','Its own card in the result, above the criteria. HTML.'],
   ['result','Foot of the result','Closing note in the result panel. HTML.'],
-  ['print','On the print-out', 'This one has to stand alone months later with none of the tool around it. HTML.'],
-  ['cites','About the citations','Shown at the foot of the result panel (not in the print-out). HTML.']
+  ['print','On the printout', 'This one has to stand alone months later with none of the tool around it. HTML.'],
+  ['cites','About the citations','Shown at the foot of the result panel (not in the printout). HTML.']
 ];
 var CONTACT_FIELDS=[
   ['name','Name',''],
   ['role','Role or title',''],
-  ['email','Email','Shown under \u201cWho this reaches\u201d. Where this deployment sends mail itself (RESEND_API_KEY), Send emails the form to CONTACT_TO, or else to this address once it is published. Otherwise Send opens the reader\u2019s own email program to this address, and without it only Copy is offered.'],
+  ['email','Email','Shown under \u201cWho this reaches.\u201d Where this site sends mail itself (RESEND_API_KEY), Send emails the form to CONTACT_TO, or else to this address once it is published. Otherwise Send opens the reader\u2019s own email program to this address, and without it only Copy is offered.'],
   ['phone','Phone',''],
   ['calendly','Calendly event link','The Calendly link for the event people should book \u2014 e.g. https://calendly.com/your-name/30min. It embeds in the Contact panel, and whatever the reader typed in the question box is carried into it as a prefill. Another scheduling service still works as a link, it just will not embed.']
 ];
@@ -505,7 +509,7 @@ function questionIds(){ return Object.keys(T.NODES); }
    editor and the tree can disagree now. */
 var saveTimer=null;
 var HELD_TEXT='the draft already in this browser could not be checked, so it has been left '
-  +'as it was — Reset replaces it';
+  +'as it was — Revert replaces it';
 function saveNow(){
   if(draftHeld){ setStatus('failed',HELD_TEXT); return; }
   try{
@@ -1352,14 +1356,14 @@ function renderPane(){
     pane.appendChild(h);
     pane.appendChild(field('Label above the question',q.tag,function(v){ q.tag=v; redraw(); }));
     pane.appendChild(field('Short name (shown on other cards)',q.short,function(v){ q.short=v; redraw(); },
-      {hint:'Labels this question in the print-out’s answers, the result’s answer cards, saved-path titles and the Contact email, and on this canvas where an option says where it leads.'}));
+      {hint:'Labels this question in the printout’s answers, the result’s answer cards, saved-path titles and the Contact email, and on this canvas where an option says where it leads.'}));
     pane.appendChild(field('The question',q.q,function(v){ q.q=v; redraw(); },{area:true,rows:3}));
     pane.appendChild(field('Note shown under it (optional)',q.note,function(v){ q.note=v; },{area:true,rows:4,hint:'Use for a risk warning or extra context.'}));
     var chk=document.createElement('label'); chk.className='chk f';
     var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!q.risky;
     cb.onchange=function(){ q.risky=cb.checked; markDirty(); render(); };
     chk.appendChild(cb); chk.appendChild(document.createTextNode('Treat as a risk decision — amber styling, the '
-      +'“worth a word with counsel” cue on Contact, and the Boundary-risk card in the result and print-out, '
+      +'“worth a word with counsel” cue on Contact, and the Boundary-risk card in the result and printout, '
       +'which carries the chosen answer’s detail'));
     pane.appendChild(chk);
 
@@ -1455,8 +1459,8 @@ function caaEditor(o,k){
   if(!(kind in OPENI)) OPENI[kind]=-1;
   var sub=document.createElement('div'); sub.className='hint';
   sub.textContent=arr.length
-    ?'CAA sections ('+arr.length+') — readers tick these in the result and in the panel its “unlocks” link opens.'
-    :'No CAA sections of its own. Add one, or point its link at another pathway’s below.';
+    ?'Clean Air Act sections ('+arr.length+') — readers check these in the result and in the panel its “unlocks” link opens.'
+    :'No Clean Air Act sections of its own. Add one, or point its link at another pathway’s below.';
   pane.appendChild(sub);
   var chooser=o.chooser&&T.NODES[o.chooser];
   var ways=[{v:'',t:'Any route'}].concat(chooser?(chooser.a||[]).map(function(a,i){
@@ -1599,12 +1603,12 @@ function renderResultContent(){
         return {t:line.slice(0,i<0?line.length:i).trim(),u:i<0?'':line.slice(i+2).trim()};
       });
     },{area:true,rows:4}));
-  note('The result’s labels and fixed headings — “Recommended pathway”, “Next steps” and the rest — are under Wording.');
+  note('The result’s labels and fixed headings — “Recommended pathway,” “Next steps” and the rest — are under Wording.');
 }
 
 function renderDisclaimers(){
   contentHead('Disclaimers','Seven placements, because they do different jobs.');
-  note('A placement left blank shows readers what tree-data.js ships, so a disclaimer can be reworded '
+  note('A placement left blank shows readers the site’s built-in wording, so a disclaimer can be reworded '
     +'here but not removed.');
   DISC_FIELDS.forEach(function(f){
     pane.appendChild(field(f[1],T.DISC[f[0]],function(v){ T.DISC[f[0]]=v; },
@@ -1614,7 +1618,7 @@ function renderDisclaimers(){
 
 function renderContact(){
   contentHead('Contact','Who the Contact button reaches.');
-  note('Until these are filled in the panel says so plainly rather than naming anyone. '
+  note('Until these are filled in, the panel names no one, and Checks says so. '
     +'The panel’s own wording, and the email it drafts, are under Wording.');
   CONTACT_FIELDS.forEach(function(f){
     pane.appendChild(field(f[1],T.CONTACT[f[0]],function(v){ T.CONTACT[f[0]]=v; },{hint:f[2]}));
@@ -1734,12 +1738,12 @@ function sectionsEditor(arr,kind,o){
   /* A list from an older draft or published tree is kept whole, so a change
      to the shipped one never reaches it on its own; this puts it back. */
   if(o.shipped&&JSON.stringify(arr)!==JSON.stringify(o.shipped)){
-    var rs=button('Reset to shipped',function(){
-      if(!confirm('Replace every '+o.noun+' here with what tree-data.js ships? Your changes to this list are lost.')) return;
+    var rs=button('Reset to original',function(){
+      if(!confirm('Replace every '+o.noun+' here with the site’s built-in list? Your changes to this list are lost.')) return;
       arr.length=0; clone(o.shipped).forEach(function(x){ arr.push(x); });
       OPENI[kind]=-1; markDirty(); refreshPane();
     },'sm');
-    rs.title='This list differs from the one tree-data.js ships';
+    rs.title='This list differs from the site’s built-in one';
     row.appendChild(rs);
   }
   pane.appendChild(row);
@@ -1751,7 +1755,7 @@ function renderElig(){
   renderGroup(['elig','The two boxes before Question 1',
     'Title, tag, sub and open are on the box; lead is the information box under it (plain text — “contact us” '
     +'becomes a link to the Contact panel). intro takes HTML and heads the panel the box opens. Leave the '
-    +'title empty and readers get what tree-data.js ships, as everywhere in Wording.']);
+    +'title empty and readers get the built-in wording, as everywhere in Wording.']);
   pane.appendChild(sectionTitle('The requirements'));
   note('What the panel lists, in order: a heading and some HTML each, like the guide.');
   sectionsEditor(T.COPY.eligSec,'elig',{noun:'requirement',min:1,max:20,shipped:(BASE.COPY||{}).eligSec,
@@ -1766,7 +1770,7 @@ function renderGuide(){
     +'Publish, and the preview here strips it too. The “what this tool is not” box is under Disclaimers.');
   sectionsEditor(T.GUIDE,'guide',{noun:'section',min:1,max:GUIDE_MAX,shipped:BASE.GUIDE,
     minMsg:'The guide keeps at least one section. An empty guide would be read as an older draft that '
-      +'never had one, and the shipped guide would quietly come back in its place.',
+      +'never had one, and the built-in guide would quietly come back in its place.',
     htmlHint:'<p> for paragraphs; <b>, <i>, <code>, <ul><li>. <a href="#" data-open-contact>contact us</a> opens the Contact panel.'});
 }
 
@@ -1799,13 +1803,13 @@ var VERDICTS=[
   ['tgt','Targeted unlocked'],
   ['par','Only Administrative unlocked'],
   ['none','No pathway unlocked'],
-  ['progress','A print-out or document made before the path reaches an ending']
+  ['progress','A printout or document made before the path reaches an ending']
 ];
 var GROUPS=[
   ['brand','Name and title','The top bar and the browser tab.'],
   ['tree','Under the canvas','The hint line under the tree, and the word before a pathway on an answer.'],
   ['result','Result panel','Labels and fixed paragraphs in the result. What changes with the path is under Pathways and on each option.'],
-  ['print','Print-out','Headings on the printed page.'],
+  ['print','Printout','Headings on the printed page.'],
   ['contact','Contact panel','The panel’s own wording, and the email it drafts. Who it reaches is under Contact.'],
   ['ui','Buttons and controls','Every other label on the reader’s page — the top bar, the walkthrough’s controls, the guide, the result sheet, zoom.']
 ];
@@ -1825,7 +1829,7 @@ var COPY_HINTS={
   'result.lockedGo':'The button on that card, before sign-in.',
   'result.lockedReason':'Heads the sign-in dialog that card opens. HTML.',
   'result.caaSeeAlso':'{name} becomes the pathway whose sections it lends — keep it in.',
-  'result.caaIntro':'Heads a pathway’s CAA sections in the panel its “unlocks” link opens. HTML.',
+  'result.caaIntro':'Heads a pathway’s Clean Air Act sections in the panel its “unlocks” link opens. HTML.',
   'result.noneBody':'HTML.',
   'result.sectionsNote':'HTML.',
   'result.criteriaLead':'HTML.',
@@ -1834,7 +1838,7 @@ var COPY_HINTS={
   'contact.whoTodo':'HTML.',
   'contact.calNote':'HTML.',
   'contact.calLinkNote':'HTML.',
-  'contact.mailSubject':'Used only when Send opens the reader’s own email program, and in Copy — not in mail this deployment sends itself.',
+  'contact.mailSubject':'Used only when Send opens the reader’s own email program, and in Copy — not in mail this site sends itself.',
   'contact.mailIntro':'Used only when Send opens the reader’s own email program, and in Copy.',
   'contact.mailSign':'Used only when Send opens the reader’s own email program, and in Copy.',
   'ui.sentOk':'{email} becomes the reader’s address — keep it in.',
@@ -1858,8 +1862,8 @@ function copyField(label,obj,key,shipped,opt){
      its place, so an emptied field shows that line greyed out: what readers
      will actually get, not a blank the page never renders. */
   ctrl.placeholder=shipped;
-  r=document.createElement('button'); r.type='button'; r.className='reset'; r.textContent='Reset to shipped';
-  r.title='Put back what tree-data.js ships: '+(shipped.length>140?shipped.slice(0,140)+'…':shipped);
+  r=document.createElement('button'); r.type='button'; r.className='reset'; r.textContent='Reset to original';
+  r.title='Put back the built-in wording: '+(shipped.length>140?shipped.slice(0,140)+'…':shipped);
   r.onclick=function(){ obj[key]=shipped; ctrl.value=shipped; markDirty(); paint(); };
   ctrl.parentNode.insertBefore(r,ctrl.nextSibling);
   paint();
@@ -1917,9 +1921,9 @@ function renderGroup(g){
 }
 function renderWording(){
   contentHead('Wording','Every other line a reader meets, grouped by where they meet it.');
-  note('A line an older draft never had falls back to what tree-data.js ships, so nothing here goes '
-    +'blank by itself. The same goes for a line emptied here: readers see what tree-data.js ships for '
-    +'it, shown greyed out in the empty field, so a line can be reworded from here but not removed.');
+  note('A line an older draft never had falls back to the site’s built-in wording, so nothing here goes '
+    +'blank by itself. The same goes for a line emptied here: readers see the built-in wording for '
+    +'it, shown grayed out in the empty field, so a line can be reworded from here but not removed.');
   var V=T.COPY.verdicts, BV=(BASE.COPY&&isGroup(BASE.COPY.verdicts))?BASE.COPY.verdicts:{};
   if(isGroup(V)){
     pane.appendChild(sectionTitle('Verdicts'));
@@ -1986,9 +1990,9 @@ function repaintLook(){ if(tab==='content'&&csec==='look') refreshPane(); }
 function uploadBlocked(){
   if(!window.TAS) return 'Uploading needs the account service, which did not load on this page.';
   var s=TAS.auth.state;
-  if(!s.ready) return 'Checking whether this deployment can keep a photograph…';
-  if(s.storage==='unconfigured') return 'This deployment has no storage, so there is nowhere to keep an uploaded '
-    +'photograph. The shipped photograph, or none, works without it.';
+  if(!s.ready) return 'Checking whether this site can keep a photograph…';
+  if(s.storage==='unconfigured') return 'This site has no storage, so there is nowhere to keep an uploaded '
+    +'photograph. The built-in photograph, or none, works without it.';
   if(s.storage!=='ready') return 'Storage is not answering right now, so an upload would have nowhere to go. Try again shortly.';
   /* the same reasons the gate gives, in the same words, since the server
      refuses an upload for exactly the reasons it refuses a publish */
@@ -2030,8 +2034,8 @@ function shrinkToJpeg(bmp){
    account.js puts on every write (X-TAS-App), which is what the server's
    write guard checks for and a form on another site cannot send. */
 var MEDIA_ERRORS={
-  bad_image:'The server did not recognise it as a JPEG, PNG or WebP image.',
-  limit_reached:'This deployment already holds as many uploaded images as it allows.',
+  bad_image:'The server did not recognize it as a JPEG, PNG or WebP image.',
+  limit_reached:'This site already has as many uploaded images as it allows.',
   too_large:'It is larger than the server accepts.',
   auth_required:'You are signed out. Sign in again and upload it once more.',
   forbidden:'Only the editor’s account can upload a photograph, and only once its address is verified.'
@@ -2045,7 +2049,7 @@ function postMedia(blob){
       try{ d=text?JSON.parse(text):null; }catch(e){ d=null; }
       if(!res.ok){
         var e=new Error((d&&d.message)||(d&&MEDIA_ERRORS[d.error])
-          ||(res.status===404?'This deployment has no upload service.':'The server returned '+res.status+'.'));
+          ||(res.status===404?'This site has no upload service.':'The server returned '+res.status+'.'));
         e.code=d&&d.error; e.status=res.status;
         throw e;
       }
@@ -2129,7 +2133,7 @@ function renderLook(){
   var th=T.THEME;
   contentHead('Appearance','The photograph behind the tree, on every page of the tool.');
   var thumb=document.createElement('div'); thumb.className='lookthumb';
-  if(th.photo==='') thumb.textContent='No photograph — the plain page colour shows';
+  if(th.photo==='') thumb.textContent='No photograph — the plain page color shows';
   pane.appendChild(thumb);
   note('The page behind this panel is the live preview, at the strength readers will see. The '
     +'thumbnail shows the picture at full strength, so the focal point is easy to judge.');
@@ -2139,9 +2143,9 @@ function renderLook(){
   var radios=document.createElement('div'); radios.className='radios';
   radios.setAttribute('role','radiogroup'); radios.setAttribute('aria-label','Photograph');
   [
-    {v:PHOTO_SHIPPED,t:'Shipped photograph',d:'land.jpg, the file served beside the pages.'},
+    {v:PHOTO_SHIPPED,t:'Built-in photograph',d:'land.jpg, the file served beside the pages.'},
     {v:up,t:'Uploaded photograph',d:up?'The one uploaded from here.':'Upload one below first.',off:!up},
-    {v:'',t:'No photograph',d:'No picture at all: the plain page colour shows behind the tree.'}
+    {v:'',t:'No photograph',d:'No picture at all: the plain page color shows behind the tree.'}
   ].forEach(function(o){
     var l=document.createElement('label'); if(o.off) l.className='off';
     var r=document.createElement('input'); r.type='radio'; r.name='photo-src'; r.disabled=!!o.off;
@@ -2170,20 +2174,20 @@ function renderLook(){
     var bm=document.createElement('div'); bm.className='upmsg'; bm.textContent=blocked; pane.appendChild(bm);
   }else if(!upMsg){
     note('JPEG, PNG or WebP. It is shrunk here first — 2400 pixels on the long edge at most, under '
-      +'1.5 MB as a JPEG — then kept on this deployment and served from it, so readers still make no '
+      +'1.5 MB as a JPEG — then kept on this site and served from it, so readers still make no '
       +'request anywhere else.');
   }
 
   pane.appendChild(sectionTitle('Framing'));
   pane.appendChild(rangeField('Vertical focus',th.position,0,100,1,function(v){ return Math.round(v)+'%'; },
     function(v){ th.position=v; lookChanged(); },
-    '0% keeps the top of the picture in view, 100% the bottom. Shipped at '+lookClean(BASE.THEME).position+'%.'));
+    '0% keeps the top of the picture in view, 100% the bottom. The built-in setting is '+lookClean(BASE.THEME).position+'%.'));
   opacityField('Strength in the light theme','opacityLight',LOOK_DEFAULT_OP.light);
   opacityField('Strength in the dark theme','opacityDark',LOOK_DEFAULT_OP.dark);
 
   var rights=document.createElement('div'); rights.className='rights';
-  rights.innerHTML='<b>Choosing the image is a decision for the Tribe deploying this, not a default to be '
-    +'shipped.</b> A photograph of one nation’s country used as decoration on a tool other nations open '
+  rights.innerHTML='<b>Choosing the image is a decision for the Tribe running this site, not a default to be '
+    +'left in place.</b> A photograph of one nation’s country used as decoration on a tool other nations open '
     +'makes a claim about whose land it is. Use a photograph the Tribe owns or has cleared, and check the rights — the file is served '
     +'publicly alongside the page.';
   pane.appendChild(rights);
@@ -2337,7 +2341,7 @@ function renamedPathways(out){
       return t.indexOf(was)>=0;
     });
     if(!hits.length) return;
-    var where=hits.slice(0,3).map(function(h){ return h.where; }).join(', ')
+    var where=hits.slice(0,3).map(function(h){ return h.where; }).join('; ')
       +(hits.length>3?' and '+(hits.length-3)+' more':'');
     out.push({bad:false,t:(hits[0].guide?'The guide':'The content')+' still says “'+was+'”',
       d:'That pathway is called “'+(now||'(no name)')+'” now, but '+where+' still use'
@@ -2380,10 +2384,22 @@ function checks(){
   if(T.THEME&&MEDIA_RE.test(T.THEME.photo)&&window.TAS&&TAS.auth.state.ready&&TAS.auth.state.storage!=='ready'){
     out.push({bad:false,t:'The uploaded photograph has nowhere to come from',
       d:TAS.auth.state.storage==='unconfigured'
-        ? 'This deployment has no storage, so readers will get a 404 for it and see the plain page colour instead. Choose the shipped photograph or none under Appearance, or attach a database.'
-        : 'Storage is not answering right now, so readers will get an error for it and see the plain page colour until it is back.',
+        ? 'This site has no storage, so readers will get a 404 for it and see the plain page color instead. Choose the built-in photograph or none under Appearance, or attach a database.'
+        : 'Storage is not answering right now, so readers will get an error for it and see the plain page color until it is back.',
       content:'look'});
   }
+  /* The reader's Contact panel no longer tells readers how to set the site
+     up, so a missing contact is said here, to the one person who can fix it.
+     All empty is the larger gap and already covers the calendar. */
+  var C=isGroup(T.CONTACT)?T.CONTACT:{};
+  if(!CONTACT_FIELDS.some(function(f){ return hasWords(C[f[0]]); }))
+    out.push({bad:false,t:'Readers’ questions have no named recipient',
+      d:'Every Contact field is empty, so the Contact panel names no one and offers no time to book. Fill in Content → Contact.',
+      content:'contact'});
+  else if(!hasWords(C.calendly))
+    out.push({bad:false,t:'Readers cannot book a time',
+      d:'There is no Calendly link, so the Contact panel has no calendar. Paste a Calendly event link into Content → Contact.',
+      content:'contact'});
   return out;
 }
 function openTab(k){
@@ -2425,14 +2441,14 @@ function renderChecks(){
 document.getElementById('bSave').onclick=function(){
   clearTimeout(saveTimer);
   var bad=checks().filter(function(c){return c.bad;});
-  if(bad.length&&!confirm(bad.length+' problem(s) would ship with this draft:\n\n'
+  if(bad.length&&!confirm(bad.length+' problem(s) would be saved with this draft:\n\n'
       +bad.slice(0,6).map(function(b){return '• '+b.t;}).join('\n')
       +(bad.length>6?'\n…':'')+'\n\nSave anyway?')) return;
   if(draftHeld){ alert('Not saved: '+HELD_TEXT+'.'); return; }
   try{
     localStorage.setItem(DRAFT_KEY,JSON.stringify(T));
     markDirty(false);
-    alert('Saved. The tree at / will use this draft in this browser.\n\nTo ship it to everyone, use Export and replace tree-data.js in the repo.');
+    alert('Saved. The tree at / will use this draft in this browser.\n\nTo put it in front of everyone, use Publish where it is offered, or Export and have the downloaded file replace tree-data.js among the files the site is built from.');
   }catch(e){ alert('Could not save: '+e.message); }
 };
 document.getElementById('bExport').onclick=function(){
@@ -2449,21 +2465,21 @@ document.getElementById('bExport').onclick=function(){
   }
   window.__exportBody=body;
   openDlg('Export — for publishing to everyone',body,
-    'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, replace tree-data.js in the repo, and commit.'
+    'Your edits are ALREADY LIVE for you: the tree at / is reading them from this browser right now, so Preview will show them. This file is only for handing the change to everyone else — download it, and have it replace tree-data.js, the content file among the files the site is built from.'
     /* an uploaded photograph is a row in this deployment's database, and the
        file names it by address — so the file carries it only as far as that
        database reaches */
     +(T.THEME&&MEDIA_RE.test(T.THEME.photo)
-      ? ' The photograph is one uploaded to this deployment: the file names it, but only a deployment with the same database can serve it — anywhere else readers see the plain page colour.'
+      ? ' The photograph is one uploaded to this site: the file names it, but only a site with the same database can serve it — anywhere else readers see the plain page color.'
       : ''),false);
   document.getElementById('dlgSave').hidden=false;
 };
 document.getElementById('bImport').onclick=function(){
   openDlg('Import — replace the tree',''
-    ,'Paste a previously exported tree-data.js, or raw JSON. It replaces everything currently in the editor, so export first if you want to keep this version.',true);
+    ,'Paste a previously exported file (tree-data.js), or raw JSON. It replaces everything currently in the editor, so export first if you want to keep this version.',true);
 };
 document.getElementById('bReset').onclick=function(){
-  if(!confirm('Discard the working copy and the saved draft, and go back to what the repo ships?')) return;
+  if(!confirm('Discard the working copy and the saved draft, and go back to the content the site was built with?')) return;
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
   fromPublished=false;
   draftHeld=false;
@@ -2866,7 +2882,7 @@ function verifyStepsHtml(addr){
   var esc2=TAS.ui.esc, a=addr?'<b>'+esc2(addr)+'</b>':'that address';
   return '<p><b>Sign in with Google as '+(addr?esc2(addr):'that address')+'</b> — Google has already '
     +'checked the address, and the server takes its word for it.'
-    +(googleOffered()?'':' (Google sign-in is not turned on for this deployment, so this way is closed here.)')
+    +(googleOffered()?'':' (Google sign-in is not turned on for this site, so this way is closed here.)')
     +'</p><p>Or the site owner, from a machine with the database address, runs '
     +'<code>node scripts/admin-user.mjs verify '+(addr?esc2(addr):'&lt;address&gt;')+'</code> '
     +'to vouch for '+a+' directly.</p>';
@@ -2874,7 +2890,7 @@ function verifyStepsHtml(addr){
 function verifyStepsText(addr){
   var a=addr||'the address';
   return 'Verify '+a+' first: sign in with Google as '+a
-    +(googleOffered()?'':' (not turned on for this deployment)')
+    +(googleOffered()?'':' (not turned on for this site)')
     +', or have the site owner run "node scripts/admin-user.mjs verify '+(addr||'<address>')+'".';
 }
 var UNSET_HTML=
@@ -2885,7 +2901,7 @@ var UNSET_HTML=
   +'<p>To publish, set <b>ADMIN_EMAIL</b> to the editor’s address wherever <b>DATABASE_URL</b> '
   +'is set and redeploy, then verify that address: sign in with Google as it, or have the site '
   +'owner run <code>node scripts/admin-user.mjs verify &lt;address&gt;</code>.</p>';
-var UNSET_TEXT='ADMIN_EMAIL is not set on this deployment, so the server refuses every publish and '
+var UNSET_TEXT='ADMIN_EMAIL is not set on this site, so the server refuses every publish and '
   +'upload, from every account. Set ADMIN_EMAIL to the editor’s address wherever DATABASE_URL is '
   +'set, redeploy, and verify that address.';
 
@@ -3027,7 +3043,7 @@ function paintGate(){
   acts.push(el('a',{class:'btn',href:'/work',text:'My work'}));
   gateShow('Not this account','The editor is someone else’s',
     who
-    +'<p>This deployment limits the editor to one account, and the server does not accept this one. '
+    +'<p>This site limits the editor to one account, and the server does not accept this one. '
     +'Nothing is wrong with your account — it just is not the one that edits the tree.</p>'
     +'<p>Sign in with the account that does.</p>'
     +(emailVerified(st.user)===true?'':
@@ -3110,7 +3126,7 @@ function publishDialog(){
   var el=TAS.ui.el, esc2=TAS.ui.esc;
   var m=TAS.ui.modal({title:'Publish this tree',kicker:'In front of every reader',wide:true});
   var noteF=TAS.ui.field({id:'tas-pub-note',label:'What changed (optional)',maxlength:300,
-    hint:'Kept with the published copy. A line for whoever looks next.'});
+    hint:'Kept with the published copy. A line for the next person to look.'});
   var state=el('div',{style:'font-size:13px;color:var(--muted);margin:0 0 12px',text:'Checking…'});
 
   function draw(pub){
@@ -3120,11 +3136,11 @@ function publishDialog(){
       pub&&pub.published
         ? 'A tree is published now, last updated <b>'+esc2(new Date(pub.publishedAt).toLocaleString())+'</b>'
           +(pub.note?' — '+esc2(pub.note):'')+'. Publishing again replaces it.'
-        : 'Nothing is published yet, so readers are seeing <b>tree-data.js</b>, the file the repo ships. '
+        : 'Nothing is published yet, so readers are seeing the content the site was built with. '
           +'Publishing puts this working copy in front of them instead.',
       pub&&pub.published?'good':null));
     if(pub&&pub.published&&!fromPublished&&!hadDraft) m.body.appendChild(TAS.ui.message(
-      '<b>This working copy did not start from the published tree.</b> It is the file the repo ships. '
+      '<b>This working copy did not start from the published tree.</b> It is the content the site was built with. '
       +'Publishing it replaces every change published since — reload with no draft in this browser to start from the published tree instead.','bad'));
     /* Offering a Publish the server is certain to refuse, and explaining
        afterwards, is the wrong way round: with no editor named, say why now
@@ -3153,12 +3169,12 @@ function publishDialog(){
     m.foot.innerHTML='';
     if(pub&&pub.published){
       m.foot.appendChild(el('button',{class:'tasa-b danger',type:'button',text:'Withdraw',
-        title:'Unpublish, and let readers fall back to tree-data.js',
+        title:'Unpublish, and let readers fall back to the content the site was built with',
         onclick:function(e){
           var b=e.currentTarget; b.disabled=true;
           TAS.api('/tree',{method:'DELETE'}).then(function(){
             b.disabled=false;
-            TAS.ui.toast('Withdrawn. Readers fall back to the file the repo ships.',null);
+            TAS.ui.toast('Withdrawn. Readers see the content the site was built with again.',null);
             load();
           },function(err){ b.disabled=false; if(!showRefusal(err,m)) TAS.ui.report(err,'withdraw the published tree'); });
         }}));
