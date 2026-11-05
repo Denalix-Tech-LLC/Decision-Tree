@@ -1,5 +1,8 @@
 <meta charset="utf-8">
 <title>My work — TAS Decision Tree</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- the palette and the backdrop, shared with the other pages -->
 <link rel="stylesheet" href="theme.css">
@@ -27,9 +30,13 @@ a{color:var(--accent-ink)}
 .brand .home>span{min-width:0}
 .brand .home:hover h1{color:var(--accent-ink)}
 .brand .home:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);
-  display:grid;place-items:center;color:var(--on-accent)}
-.brand .mk svg{width:17px;height:17px}
+/* The Environment Sovereignty & Equity emblem. Its ring lettering is drawn on
+   transparency in the brand navy, which all but disappears on the dark
+   theme's bar; a white disc is how an emblem like this is shown on a dark
+   ground, and on the light theme it changes nothing. */
+.brand .mk{flex:none;width:38px;height:38px;border-radius:50%;background:#fff;
+  display:grid;place-items:center;padding:1px}
+.brand .mk img{width:100%;height:100%;display:block}
 .brand .kk{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
   display:block;line-height:1.3;white-space:nowrap}
 .brand h1{font-family:var(--display);font-weight:400;font-size:19px;margin:0;line-height:1.15;
@@ -164,7 +171,7 @@ a{color:var(--accent-ink)}
       <!-- title and aria-label are repainted from COPY.ui.homeTip when the
            content carries one; this is what shows if it does not -->
       <a class="home" id="brandHome" href="/" title="Back to the start of the tree" aria-label="Back to the start of the tree">
-        <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
+        <span class="mk" aria-hidden="true"><img src="logo.svg" alt="" width="38" height="38" decoding="async"></span>
         <span>
           <span class="kk">Clean Air Act · Treatment as a State</span>
           <h1>My work</h1>
