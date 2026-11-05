@@ -18,6 +18,15 @@ a{color:var(--accent-ink)}
   padding:10px clamp(12px,2.5vw,20px);background:var(--surface);border-bottom:1px solid var(--border);
   box-shadow:var(--sh1);z-index:20}
 .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+/* The brand is the way back to the start of the tree, where a reader expects
+   it to be: someone stuck here (a sign-in that lapsed, storage that did not
+   answer) always has one sure way out. It looks as it did; only the focus
+   ring and a quiet hover say it is a link. */
+.brand .home{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;
+  border-radius:10px}
+.brand .home>span{min-width:0}
+.brand .home:hover h1{color:var(--accent-ink)}
+.brand .home:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);
   display:grid;place-items:center;color:var(--on-accent)}
 .brand .mk svg{width:17px;height:17px}
@@ -42,7 +51,12 @@ a{color:var(--accent-ink)}
 
 .wrap{flex:1;width:min(1000px,100%);margin:0 auto;padding:22px clamp(12px,3vw,24px) 60px}
 
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 18px;overflow-x:auto}
+/* Nothing on this page sits on the photograph itself: the tabs, the heading
+   of each list, the document's title, its save status and the note under it
+   each paint their own surface, so the text keeps its contrast (WCAG AA in
+   both themes) whatever picture the editor chose. */
+.tabs{display:flex;gap:4px;margin:0 0 18px;overflow-x:auto;padding:4px 4px 0;
+  background:var(--surface);border:1px solid var(--border);border-radius:11px;box-shadow:var(--sh1)}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;font-family:var(--sans);
   font-size:13px;font-weight:600;letter-spacing:var(--track);color:var(--muted);padding:10px 12px;
   white-space:nowrap;border-radius:8px 8px 0 0}
@@ -50,7 +64,8 @@ a{color:var(--accent-ink)}
 .tabs button:hover{color:var(--accent-ink)}
 .tabs .n{font-size:11px;color:var(--faint);margin-left:5px}
 
-.head{display:flex;align-items:flex-end;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+.head{display:flex;align-items:flex-end;gap:12px;margin:0 0 14px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:14px 16px;box-shadow:var(--sh1)}
 .head h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0;line-height:1.1;
   text-transform:uppercase;letter-spacing:.02em}
 .head p{margin:3px 0 0;font-size:13.5px;color:var(--muted);max-width:62ch}
@@ -84,19 +99,23 @@ a{color:var(--accent-ink)}
 .gate ul{margin:0 0 16px;padding-left:20px;color:var(--muted);font-size:14.5px}
 .gate li{margin:0 0 5px}
 .gate .row2{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+.gate .note{font-family:var(--sans);font-size:13px;color:var(--muted);margin:12px 0 0}
+.gate .note:empty{display:none}
 
 /* ---- document editor -------------------------------------------------- */
 .ed{display:none}
 .ed.on{display:block}
 .ed .edbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
 .ed .edbar .grow{flex:1}
-.ed .status{font-family:var(--sans);font-size:11.5px;color:var(--faint);white-space:nowrap}
+.ed .status{font-family:var(--sans);font-size:11.5px;color:var(--muted);white-space:nowrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px 8px}
+.ed .status:empty{display:none}
 .ed .status.saving{color:var(--risk)} .ed .status.saved{color:var(--good)} .ed .status.failed{color:var(--alert)}
 .ed input.title{width:100%;font-family:var(--display);font-weight:400;font-size:27px;line-height:1.1;
-  text-transform:uppercase;letter-spacing:.02em;background:transparent;color:var(--ink);
-  border:0;border-bottom:1px solid transparent;padding:4px 0;margin:0 0 4px}
-.ed input.title:hover{border-bottom-color:var(--border)}
-.ed input.title:focus{outline:0;border-bottom-color:var(--accent)}
+  text-transform:uppercase;letter-spacing:.02em;background:var(--surface);color:var(--ink);
+  border:1px solid var(--border);border-radius:10px;padding:6px 12px;margin:0 0 10px}
+.ed input.title:hover{border-color:var(--border-strong)}
+.ed input.title:focus{outline:0;border-color:var(--accent)}
 .ed .tools{display:flex;gap:4px;flex-wrap:wrap;padding:7px;background:var(--surface-2);
   border:1px solid var(--border);border-radius:10px 10px 0 0;border-bottom:0;position:sticky;top:52px;z-index:10}
 .ed .tools button{border:1px solid transparent;background:none;color:var(--ink);border-radius:7px;
@@ -122,14 +141,16 @@ a{color:var(--accent-ink)}
 .ed .paper td,.ed .paper th{border:1px solid var(--border);padding:6px 9px;text-align:left}
 .ed .paper svg{max-width:100%;height:auto}
 .ed .paper hr{border:0;border-top:1px solid var(--border);margin:18px 0}
-.ed .fnote{font-size:12px;color:var(--faint);margin:12px 2px 0;line-height:1.5}
+.ed .fnote{font-size:12.5px;color:var(--muted);margin:12px 0 0;line-height:1.5;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;padding:9px 13px;box-shadow:var(--sh1)}
+.ed .fnote:empty{display:none}
 
 @media print{
   .env,.bar,.tabs,.head,.ed .edbar,.ed .tools,.ed .fnote{display:none!important}
   body{background:#fff;color:#111}
   .wrap{width:auto;padding:0}
   .ed .paper{border:0;box-shadow:none;padding:0;background:#fff;color:#111}
-  .ed input.title{color:#111;font-size:24px}
+  .ed input.title{color:#111;font-size:24px;background:none;border:0;padding:0}
 }
 </style>
 
@@ -140,11 +161,15 @@ a{color:var(--accent-ink)}
 <div class="shell">
   <header class="bar">
     <div class="brand">
-      <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
-      <span>
-        <span class="kk">Clean Air Act · Treated as a State</span>
-        <h1>My work</h1>
-      </span>
+      <!-- title and aria-label are repainted from COPY.ui.homeTip when the
+           content carries one; this is what shows if it does not -->
+      <a class="home" id="brandHome" href="/" title="Back to the start of the tree" aria-label="Back to the start of the tree">
+        <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
+        <span>
+          <span class="kk">Clean Air Act · Treatment as a State</span>
+          <h1>My work</h1>
+        </span>
+      </a>
     </div>
     <div class="acts">
       <!-- The way back to the tree stays at every width; the editor is the one
@@ -197,6 +222,12 @@ a{color:var(--accent-ink)}
    depend on an account, so a page that cannot load account.js still gets
    the right photograph behind its explanation. */
 if(window.TAS_LOOK) TAS_LOOK.boot();
+/* The brand's tooltip, from the content when it has one (COPY.ui.homeTip),
+   so the words match the other pages. Also before anything that can stop. */
+(function(){
+  var tip=window.COPY&&COPY.ui&&COPY.ui.homeTip, a=document.getElementById('brandHome');
+  if(tip&&a){ a.title=tip; a.setAttribute('aria-label',tip); }
+})();
 /* ===========================================================================
    MY WORK
    Three lists and a document editor. Everything here goes through TAS.store,
@@ -212,10 +243,10 @@ if(!window.TAS){
   document.getElementById('gate').innerHTML=
     '<div class="gate"><span class="kk">Something is missing</span>'
     +'<h2>This page could not load</h2>'
-    +'<p><code>account.js</code> did not load, and this page is nothing without it. '
-    +'Reload, and if it happens again the file is missing from the deployment.</p>'
-    +'<div class="row2"><a class="btn solid" href="/">Open the tree</a>'
-    +'<a class="btn" href="/admin">Open the editor</a></div></div>';
+    +'<p>A file this page needs did not arrive, and saved work cannot be shown without it. '
+    +'Reload the page. If it happens again, part of this site is missing: please let the person '
+    +'or people who maintain this tool know, using <b>Contact</b> on the tree.</p>'
+    +'<div class="row2"><a class="btn solid" href="/">Open the tree</a></div></div>';
   throw new Error('account.js did not load');
 }
 var ui=TAS.ui, store=TAS.store, esc=ui.esc, el=ui.el;
@@ -239,7 +270,7 @@ var KINDS=[
   {key:'documents',label:'Documents', title:'Documents',
    blurb:'A document starts as the result the tree produced and becomes whatever you make of it. Edit it here, print it, and it stays on your account.'},
   {key:'trees',  label:'Trees',       title:'Saved trees',
-   blurb:'A tree is the content itself — the questions, the options, the pathways and the result copy.'},
+   blurb:'A tree is the content itself — the questions, the options, the pathways and the wording of the result.'},
   {key:'trash',  label:'Deleted',     title:'Deleted',
    blurb:'Nothing is thrown away when you delete it. It waits here until you restore it or delete it for good.'}
 ];
@@ -297,7 +328,7 @@ function render(){
     current==='runs'?el('a',{class:'btn solid',href:'/',text:'Open the tree'}):
     (current==='trees'&&canEdit())?el('a',{class:'btn solid',href:'/admin',text:'Open the editor'}):null
   ]));
-  var list=el('div',{class:'list',text:'Loading…'});
+  var list=el('div',{class:'list'},[el('div',{class:'empty',text:'Loading…'})]);
   panel.appendChild(list);
   if(current==='trash') return loadTrash(list);
   store.list(current).then(function(d){
@@ -327,11 +358,11 @@ function drawList(list,kind,items,isTrash){
 
 function emptyFor(kind){
   var copy={
-    runs:['Nothing saved yet','Answer the questions in the tree and press <b>Save path</b> in the top bar. It will be here when you come back.','Open the tree','/'],
-    documents:['No documents yet','Reach a result in the tree, then use <b>Save as document</b>. You can edit every word of it here afterwards.','Open the tree','/'],
+    runs:['Nothing saved yet','Answer the questions in the tree and press <b>Save</b> in the top bar. Your path will be here when you come back.','Open the tree','/'],
+    documents:['No documents yet','Reach a result in the tree, then use <b>Save as document</b>. You can edit every word of it here afterward.','Open the tree','/'],
     trees:canEdit()
-      ? ['No saved trees','The editor keeps a working copy in this browser. <b>Save to my account</b> in the editor puts a copy here, where it survives this machine.','Open the editor','/admin']
-      : ['No saved trees','A tree is the content itself \u2014 the questions and what they recommend. Editing it is limited to one account on this deployment, so nothing lands here unless that is you.','Open the tree','/'],
+      ? ['No saved trees','The editor keeps a working copy in this browser. <b>Save to my account</b> in the editor puts a copy here, where you can open it from any browser.','Open the editor','/admin']
+      : ['No saved trees','A tree is the content itself \u2014 the questions and what they recommend. Only the account that edits this site can change it, so nothing lands here unless that is you.','Open the tree','/'],
     trash:['Nothing deleted','Anything you delete waits here rather than going straight out.','Back to your work','#runs']
   }[kind];
   return el('div',{class:'empty'},[
@@ -429,9 +460,9 @@ function rename(kind,it){
 /* ---------- the document editor ---------- */
 var doc=null, dirty=false, saveTimer=null;
 var TOOLS=[
-  {cmd:'bold',label:'B',title:'Bold (ctrl+B)',style:'font-weight:800'},
-  {cmd:'italic',label:'I',title:'Italic (ctrl+I)',style:'font-style:italic'},
-  {cmd:'underline',label:'U',title:'Underline',style:'text-decoration:underline'},
+  {cmd:'bold',label:'B',title:'Bold (ctrl+B, or command+B on a Mac)',style:'font-weight:800'},
+  {cmd:'italic',label:'I',title:'Italic (ctrl+I, or command+I on a Mac)',style:'font-style:italic'},
+  {cmd:'underline',label:'U',title:'Underline (ctrl+U, or command+U on a Mac)',style:'text-decoration:underline'},
   {sep:1},
   {block:'H2',label:'Heading',title:'A section heading'},
   {block:'H3',label:'Sub',title:'A smaller label'},
@@ -444,8 +475,8 @@ var TOOLS=[
   {cmd:'removeFormat',label:'Clear',title:'Strip formatting from the selection'},
   {rule:1,label:'Rule',title:'A horizontal rule'},
   {sep:1},
-  {cmd:'undo',label:'Undo',title:'Undo (ctrl+Z)'},
-  {cmd:'redo',label:'Redo',title:'Redo (ctrl+shift+Z)'}
+  {cmd:'undo',label:'Undo',title:'Undo (ctrl+Z, or command+Z on a Mac)'},
+  {cmd:'redo',label:'Redo',title:'Redo (ctrl+shift+Z, or command+shift+Z on a Mac)'}
 ];
 function buildTools(){
   var t=document.getElementById('edTools'); t.innerHTML='';
@@ -504,7 +535,7 @@ function openDoc(id){
     document.getElementById('edFoot').innerHTML=
       'Created '+esc(fmtDate(item.createdAt))+
       (m.generatedFrom?' from '+esc(m.generatedFrom):'')+
-      '. Edits save themselves; <b>Save</b> forces it now. '+
+      '. Edits save themselves; <b>Save</b> (or ctrl+S, command+S on a Mac) saves your document immediately. '+
       'Printing uses your browser’s print dialog, so <i>Save as PDF</i> is there too.';
     setStatus('saved','Saved '+fmtDate(item.updatedAt));
     if(location.hash!=='#doc/'+id) history.replaceState(null,'','#doc/'+id);
@@ -574,27 +605,39 @@ function paintGate(){
   g.hidden=false;
   g.innerHTML='';
   var card=el('div',{class:'gate'});
-  if(s.storage!=='ready'){
+  if(s.storage==='unconfigured'){
+    /* A site with no database at all: no accounts, so nothing is locked. */
     card.appendChild(el('span',{class:'kk',text:'Guest use only'}));
     card.appendChild(el('h2',{text:'There is nowhere to keep work here'}));
-    card.appendChild(el('p',{html:s.storage==='unconfigured'
-      ? 'This deployment has no database behind it, so it has no accounts and nothing can be saved on the server. Everything else works.'
-      : 'The database did not answer, so saved work cannot be read right now. Everything else works.'}));
-    card.appendChild(el('p',{html:TAS.auth.guestCopy}));
+    card.appendChild(el('p',{text:'This site has no database behind it, so it has no accounts and nothing can be saved. '
+      +'Everything else works: answer the questions, open and print the result, and edit the tree in this browser.'}));
     card.appendChild(el('div',{class:'row2'},[
       el('a',{class:'btn solid',href:'/',text:'Open the tree'}),
       /* with no storage there are no accounts, so the editor is not gated
          either and this link goes somewhere that works */
       el('a',{class:'btn',href:'/admin',text:'Open the editor'})
     ]));
+  }else if(s.storage!=='ready'){
+    /* Storage that did not answer, even after account.js asked twice: most
+       often a database still waking after a quiet spell. The words come from
+       account.js, so this and the account button's panel say the same. */
+    card.appendChild(el('span',{class:'kk',text:'Storage is not answering'}));
+    card.appendChild(el('h2',{text:'Saved work cannot be reached right now'}));
+    card.appendChild(el('p',{html:TAS.auth.outageLead}));
+    card.appendChild(el('p',{html:TAS.auth.outageCopy}));
+    var note=el('p',{class:'note',role:'status','aria-live':'polite'});
+    var again=el('button',{class:'btn solid',type:'button',text:'Try again',
+      onclick:function(){ retryStorage(again,note); }});
+    card.appendChild(el('div',{class:'row2'},[again,el('a',{class:'btn',href:'/',text:'Open the tree'})]));
+    card.appendChild(note);
   }else{
     card.appendChild(el('span',{class:'kk',text:'You are a guest'}));
     card.appendChild(el('h2',{text:'Sign in to keep your work'}));
-    card.appendChild(el('p',{text:'An account holds three things, and nothing else:'}));
+    card.appendChild(el('p',{text:'An account keeps three things, and nothing else:'}));
     card.appendChild(el('ul',{},[
-      el('li',{html:'<b>Saved paths</b> — the answers you gave the tree, so you can return to a decision mid-way and carry on.'}),
-      el('li',{html:'<b>Documents</b> — the result the tree produced, editable, printable, and still there next month.'}),
-      el('li',{html:'<b>Trees</b> — your own version of the questions and recommendations, kept off this one machine.'})
+      el('li',{html:'<b>Saved paths</b> — the answers you gave the tree, so you can return to a decision midway and carry on.'}),
+      el('li',{html:'<b>Documents</b> — the result the tree produced, editable, printable, and still there months later.'}),
+      el('li',{html:'<b>Trees</b> — for the person who edits this site: their version of the questions and recommendations, saved so it opens from any browser.'})
     ]));
     card.appendChild(el('p',{html:TAS.auth.guestCopy}));
     card.appendChild(el('div',{class:'row2'},[
@@ -604,6 +647,20 @@ function paintGate(){
     ]));
   }
   g.appendChild(card);
+}
+/* Try again: ask the server once more, without reloading the page.
+   TAS.auth.refresh already gives a sleeping database its second chance. If
+   storage answers, the 'change' listener below repaints the page (this gate
+   for a guest, the lists for someone signed in), so all that is left to
+   handle here is "still no answer". Nothing is written, so nothing can be
+   sent twice. */
+function retryStorage(btn,note){
+  btn.disabled=true; btn.textContent='Trying…'; note.textContent='';
+  TAS.auth.refresh(true).then(function(s){
+    if(s.storage==='ready') return;
+    btn.disabled=false; btn.textContent='Try again';
+    note.textContent=TAS.auth.stillDown;
+  });
 }
 
 /* ---------- boot ---------- */

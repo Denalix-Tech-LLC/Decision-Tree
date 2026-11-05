@@ -32,15 +32,16 @@ export default route({
         res,
         503,
         'Signing in is not set up here',
-        'This deployment has no database behind it, so it has no accounts. Everything else in the tool works.'
+        'This site does not keep accounts, so there is nothing to sign in to. Everything else in the tool works.'
       );
     }
     if (!isGoogleEnabled()) {
+      console.warn('[api] Google sign-in requested, but GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set');
       return errorPage(
         res,
         503,
         'Google sign-in is not set up here',
-        'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not configured on this deployment. You can still sign in with an email address and a password.'
+        'This site is not set up for Google sign-in. You can still sign in with an email address and a password.'
       );
     }
     const q = queryOf(req);

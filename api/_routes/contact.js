@@ -173,7 +173,7 @@ export default route({
     if (!mailConfigured() || !to.length) {
       throw unavailable(
         'mail_unconfigured',
-        'Email is not set up on this deployment yet. Use Copy, and send it from your own email.'
+        'Email is not set up on this site yet. Use Copy, and send it from your own email.'
       );
     }
 

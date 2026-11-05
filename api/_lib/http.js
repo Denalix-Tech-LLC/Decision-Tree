@@ -39,16 +39,22 @@ export const unavailable = (code, message) => new HttpError(503, code, message);
 export const upstreamFailed = (code, message) => new HttpError(502, code, message);
 /* The whole database is near its ceiling (records.js databaseFull). 507
    Insufficient Storage: not this request's fault, and not fixed by
-   retrying it smaller. */
-export const storageFull = (message) =>
-  new HttpError(
+   retrying it smaller. The message goes to a reader, so it says what
+   happened in plain words; what the operator has to do goes to the log,
+   where whoever runs the site will look for it. */
+export const storageFull = (message) => {
+  console.warn(
+    '[api] storage_full: the database is near TAS_DB_BYTES. Clear space with ' +
+      '`npm run db:prune -- --trash 90 --media`, or raise TAS_DB_BYTES on a bigger database.'
+  );
+  return new HttpError(
     507,
     'storage_full',
     message ||
-      'This deployment has run out of room for new saved work. Nothing already saved is affected, ' +
-        'and signing in still works. The site owner needs to clear space (npm run db:prune) ' +
-        'or raise TAS_DB_BYTES on a bigger database.'
+      'This site has run out of room for new saved work. Nothing already saved is affected, ' +
+        'and signing in still works. Please let the people who run this site know, using Contact.'
   );
+};
 
 export function json(res, status, body) {
   res.statusCode = status;
@@ -347,8 +353,8 @@ function sendError(req, res, err) {
     return json(res, 503, {
       error: 'storage_unavailable',
       message:
-        'Saving is not set up on this deployment yet — DATABASE_URL is not configured. ' +
-        'The tool still works; nothing can be saved to an account.',
+        'Saving is not set up on this site yet. The tool still works; nothing can be saved ' +
+        'to an account.',
     });
   }
   /* A database that is there but unreachable reads the same way to a user as
