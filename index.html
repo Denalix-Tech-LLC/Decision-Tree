@@ -1,5 +1,8 @@
 <meta charset="utf-8">
 <title>TAS Decision Tree</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- the palette and the backdrop, shared with /admin and /work -->
 <link rel="stylesheet" href="theme.css">
@@ -96,9 +99,13 @@ a{color:var(--accent-ink)}
   border-radius:9px}
 .brand .home:hover{color:inherit;text-decoration:none}
 .brand .home:focus-visible{outline:3px solid var(--accent-soft);outline-offset:3px}
-.brand .mk{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent);
-  display:grid;place-items:center;color:var(--on-accent)}
-.brand .mk svg{width:17px;height:17px}
+/* The Environment Sovereignty & Equity emblem. Its ring lettering is drawn on
+   transparency in the brand navy, which all but disappears on the dark
+   theme's bar; a white disc is how an emblem like this is shown on a dark
+   ground, and on the light theme it changes nothing. */
+.brand .mk{flex:none;width:38px;height:38px;border-radius:50%;background:#fff;
+  display:grid;place-items:center;padding:1px}
+.brand .mk img{width:100%;height:100%;display:block}
 .brand .kk{font-family:var(--sans);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--accent);display:block;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand h1{font-family:var(--display);font-weight:400;font-size:19px;margin:0;line-height:1.15;
@@ -387,6 +394,16 @@ body.running .hint{opacity:1}
 .notice b{flex:none;font-family:var(--sans);font-weight:600;font-size:9.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--accent)}
 @media (max-width:560px){ .notice b{display:none} }
+/* The draft strip. A draft saved from /admin outranks the published tree in
+   this browser, silently, for as long as it sits in storage — so a reviewer
+   who once typed in the editor went on seeing that old snapshot in her
+   result, printouts and saved documents, and reported fixed wording as
+   unfixed. This says so, in the risk wash rather than the quiet grey of the
+   standing bar, because it is something to act on, not background. */
+.notice.draft{align-items:center;flex-wrap:wrap;row-gap:4px;background:var(--risk-bg);
+  border-bottom-color:var(--risk-line);box-shadow:inset 3px 0 0 var(--risk-line);
+  color:var(--ink);font-size:12.5px}
+.notice.draft .btn{flex:none}
 
 /* ---------- document overlays: the guide, and contact ----------
    Both are reading surfaces rather than controls, so they sit centred in a
@@ -673,7 +690,7 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
            new tab on a modified click; a plain click is caught by goHome(),
            which takes the reader back to question one without a reload. -->
       <a class="home" id="brandHome" href="/" title="Back to the start of the tree" aria-label="Back to the start of the tree">
-        <span class="mk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V13M12 13L6 7M12 13l6-6M12 13V4M4 7h4M16 7h4"/></svg></span>
+        <span class="mk" aria-hidden="true"><img src="logo.svg" alt="" width="38" height="38" decoding="async"></span>
         <span>
           <span class="kk" id="brandKicker">Clean Air Act · Treatment as a State</span>
           <h1 id="brandTitle">TAS Decision Tree</h1>
@@ -714,6 +731,9 @@ ol.steps .d{color:var(--muted);font-size:12.5px}
   <div class="rail"><i id="railFill"></i></div>
   <p class="notice"><b id="noticeLabel">Note</b><span id="noticeTxt">General information to support your discussion
     — not legal advice, and not an official EPA product. Confirm with Tribal legal counsel.</span></p>
+  <!-- shown only while a draft from /admin is what this page is drawing; see .notice.draft -->
+  <div class="notice draft" id="draftNotice" role="status" hidden><span id="draftNoticeTxt"></span>
+    <button type="button" class="btn sm" id="draftDiscard"></button></div>
 
   <div class="stage" id="stage">
     <div class="viewport" id="viewport">
@@ -1068,13 +1088,27 @@ function adoptContent(d){
   if(LOOK) LOOK.apply(THEME);
   if(chromeReady) repaint();
 }
+/* Whether a draft from /admin is in this browser's storage. Set even when the
+   draft will not parse: it still holds back the published tree (see below),
+   so the reader still needs the strip that says so and the way to clear it. */
+var DRAFT_HELD=false;
 (function(){
   try{ adoptContent(window.TAS_TREE); }catch(e){}
   try{
     var raw=localStorage.getItem('tas-tree-draft');
-    if(raw) adoptContent(JSON.parse(raw));
+    if(raw){ DRAFT_HELD=true; adoptContent(JSON.parse(raw)); }
   }catch(e){}
 })();
+/* The strip's one button. It asks first: for the person actually editing at
+   /admin, that draft is unpublished work, and this is the only copy. */
+document.getElementById('draftDiscard').addEventListener('click',function(){
+  var U=COPY.ui||{};
+  var ask=hasWords(U.draftDiscardConfirm)?U.draftDiscardConfirm:
+    'Discard the draft saved in this browser? Any changes in it that have not been published will be lost.';
+  if(!window.confirm(ask)) return;
+  try{ localStorage.removeItem('tas-tree-draft'); }catch(e){}
+  location.reload();
+});
 
 /* The published tree, from /api/tree. Fetched rather than waited for: the
    page draws immediately from tree-data.js, and the published version — which
@@ -1186,6 +1220,16 @@ function paintChrome(){
   setText('noticeLabel',U.noticeLabel);
   var t=document.getElementById('noticeTxt');
   if(t&&DISC.bar) t.textContent=DISC.bar;
+  /* the draft strip; the fallbacks cover a tree-data.js older than its words */
+  var dn=document.getElementById('draftNotice');
+  if(dn){
+    dn.hidden=!DRAFT_HELD;
+    setText('draftNoticeTxt',hasWords(U.draftNotice)?U.draftNotice:
+      'You are seeing a draft saved in this browser from the editor, not the published tree.');
+    setButton('draftDiscard',hasWords(U.draftDiscard)?U.draftDiscard:'Discard draft',
+      hasWords(U.draftDiscardTip)?U.draftDiscardTip:
+      'Delete the draft saved in this browser and show the published tree');
+  }
   /* the zoom buttons are icons alone, so their words go in the tooltip too:
      a reader hovering the four corners should see "Fit", not guess at it */
   [['zIn',U.zoomIn],['zOut',U.zoomOut],['zFit',U.zoomFit]].forEach(function(z){
@@ -1949,8 +1993,13 @@ nodesEl.addEventListener('keydown',function(e){
     choose(t.dataset.node,parseInt(t.dataset.ai,10));
   }
 });
+/* account.js's sign-in, account and save dialogs are modal, but they live
+   outside this page's own surfaces: each is a .tasa-ovl appended to body
+   while open and removed on close. A key pressed over one belongs to it,
+   even when focus sits on one of its buttons rather than a field. */
+function accountModalOpen(){ return !!document.querySelector('.tasa-ovl:not([hidden])'); }
 document.addEventListener('keydown',function(e){
-  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(e.metaKey||e.ctrlKey||e.altKey||accountModalOpen()) return;
   /* topmost surface first */
   if(e.key==='Escape'){
     if(!guideEl.hidden){ closeGuide(); return; }
@@ -1958,7 +2007,11 @@ document.addEventListener('keydown',function(e){
     if(!infoEl.hidden){ closeInfo(); return; }
     if(!sheet.hidden){ closeSheet(); return; }
   }
-  /* a number key must not answer a question the reader cannot see */
+  /* a number key must not answer a question the reader cannot see, nor
+     steal a digit typed into a field (an email address in the sign-in
+     dialog, a document name in the save dialog) */
+  var t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName||''))) return;
   if(!guideEl.hidden||!contactEl.hidden||!infoEl.hidden) return;
   var n=parseInt(e.key,10);
   if(!n||!started) return;
@@ -2048,10 +2101,17 @@ stage.addEventListener('pointerup',function(e){
   drag=null; stage.classList.remove('grabbing');
   try{ stage.releasePointerCapture(e.pointerId); }catch(err){}
 });
+/* A Safari trackpad pinch in progress (see the gesture listeners below), and
+   when it last moved. The time is there because a gestureend can be missed —
+   the fingers lift with the pointer off the page — and a stale gesture must
+   not go on swallowing ctrl+wheel for good. */
+var gesture=null;
+function gestureLive(){ return !!gesture&&Date.now()-gesture.t<500; }
 stage.addEventListener('wheel',function(e){
   e.preventDefault();
   /* Scrolling PANS the canvas. Only an explicit zoom gesture (ctrl/cmd+wheel,
      pinch, or the +/-/Fit buttons) is allowed to change the tree's size. */
+  if(e.ctrlKey&&gestureLive()) return;    /* the same pinch, already zoomed by its gesture events */
   if(e.ctrlKey||e.metaKey){
     /* ctrl+wheel is also what a two-finger trackpad pinch arrives as, in
        dozens of tiny events. A fixed step per event flung the tree to the
@@ -2064,6 +2124,34 @@ stage.addEventListener('wheel',function(e){
   if(e.shiftKey){ view.tx-=e.deltaY; }
   else { view.tx-=e.deltaX; view.ty-=e.deltaY; }
   applyView();
+},{passive:false});
+/* Safari does not send a trackpad pinch as ctrl+wheel the way Chrome and
+   Firefox do. It sends its own gesturestart / gesturechange / gestureend,
+   with event.scale running from 1 at the start of the pinch — and with
+   nothing listening, Safari's page zoom took the pinch and the whole page
+   grew instead of the tree. Each change zooms by the ratio to the last one,
+   so the tree follows the fingers; zoomBy keeps the usual floor. */
+function gesturePoint(e){
+  var r=stage.getBoundingClientRect();
+  if(isFinite(e.clientX)&&isFinite(e.clientY)&&(e.clientX||e.clientY))
+    return [e.clientX-r.left,e.clientY-r.top];
+  return [r.width/2,r.height/2];
+}
+stage.addEventListener('gesturestart',function(e){
+  e.preventDefault();
+  gesture={scale:e.scale>0?e.scale:1,t:Date.now()};
+},{passive:false});
+stage.addEventListener('gesturechange',function(e){
+  e.preventDefault();
+  if(!(e.scale>0)) return;
+  if(!gesture) gesture={scale:1,t:0};
+  var p=gesturePoint(e);
+  zoomBy(e.scale/gesture.scale,p[0],p[1]);
+  gesture.scale=e.scale; gesture.t=Date.now();
+},{passive:false});
+stage.addEventListener('gestureend',function(e){
+  e.preventDefault();
+  gesture=null;
 },{passive:false});
 var pinch=null;
 stage.addEventListener('touchstart',function(e){
@@ -2083,6 +2171,24 @@ stage.addEventListener('touchend',function(){ pinch=null; },{passive:true});
 document.getElementById('zIn').addEventListener('click',function(){ zoomBy(1.2); });
 document.getElementById('zOut').addEventListener('click',function(){ zoomBy(1/1.2); });
 document.getElementById('zFit').addEventListener('click',fit);
+/* The same three from the keyboard: + (or =, which is + without shift) zooms
+   in, - zooms out, 0 fits. On a Mac, ctrl+scroll is the system's own screen
+   zoom and never reaches the page, so a key that always works matters. Only
+   bare keys (shift allowed, since + and _ need it on most layouts): command
+   and ctrl with +/- are the browser's own page zoom and stay theirs. Not
+   while typing, and not under an overlay — the tree there is not what the
+   reader is looking at. 0 never answers a question: the number keys above
+   start at 1. */
+document.addEventListener('keydown',function(e){
+  if(e.metaKey||e.ctrlKey||e.altKey||e.defaultPrevented) return;
+  var t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName||''))) return;
+  if(!walkEl.hidden||!guideEl.hidden||!contactEl.hidden||!infoEl.hidden||!sheet.hidden||accountModalOpen()) return;
+  var k=e.key, c=e.code;
+  if(k==='+'||k==='='||c==='NumpadAdd'){ e.preventDefault(); zoomBy(1.2); }
+  else if(k==='-'||k==='_'||c==='NumpadSubtract'){ e.preventDefault(); zoomBy(1/1.2); }
+  else if(k==='0'){ e.preventDefault(); fit(); }
+});
 /* A resize used to only refit the view, but the card widths are decided when
    the tree is built — so turning a phone sideways kept the narrow fan it was
    drawn with, and turning it back kept the wide one off the edge. If the

@@ -932,6 +932,10 @@
         type: 'email',
         autocomplete: mode ? 'email' : 'username',
         placeholder: 'you@example.org',
+        /* With a Google button above, a reader can take Google to be the
+           only way in (Alison's second review asked exactly that). A
+           password account takes any address, a Tribal one included. */
+        hint: 'Any email address works, including your Tribe’s.',
       });
       var pw = field({
         id: 'tasa-pw',
