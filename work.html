@@ -147,6 +147,13 @@ a{color:var(--accent-ink)}
 .ed .paper table{border-collapse:collapse;width:100%;margin:0 0 12px;font-size:14px}
 .ed .paper td,.ed .paper th{border:1px solid var(--border);padding:6px 9px;text-align:left}
 .ed .paper svg{max-width:100%;height:auto}
+/* A drawing is one block that cannot be typed into (see fixDrawings). On
+   screen it says so when the pointer is over it; an outline takes no room,
+   and none of this is for print, so the printed page is unchanged. */
+@media screen{
+  .ed .paper [data-fixed-drawing]{cursor:default;border-radius:6px}
+  .ed .paper [data-fixed-drawing]:hover{outline:1px dashed var(--border-strong);outline-offset:4px}
+}
 .ed .paper hr{border:0;border-top:1px solid var(--border);margin:18px 0}
 .ed .fnote{font-size:12.5px;color:var(--muted);margin:12px 0 0;line-height:1.5;background:var(--surface);
   border:1px solid var(--border);border-radius:10px;padding:9px 13px;box-shadow:var(--sh1)}
@@ -482,9 +489,95 @@ var TOOLS=[
   {cmd:'removeFormat',label:'Clear',title:'Strip formatting from the selection'},
   {rule:1,label:'Rule',title:'A horizontal rule'},
   {sep:1},
-  {cmd:'undo',label:'Undo',title:'Undo (ctrl+Z, or command+Z on a Mac)'},
-  {cmd:'redo',label:'Redo',title:'Redo (ctrl+shift+Z, or command+shift+Z on a Mac)'}
+  {cmd:'undo',label:'Undo',title:'Undo (ctrl+Z, or command+Z on a Mac)',history:1},
+  {cmd:'redo',label:'Redo',title:'Redo (ctrl+shift+Z, or command+shift+Z on a Mac)',history:1}
 ];
+
+/* ---------- drawings in a document ---------- */
+/* The route a reader took is drawn as an SVG inside the document (index.html
+   printTree). The browser lets a caret into that drawing's <text> as if it
+   were prose, and a command such as Bold then wraps HTML <b> round SVG
+   text, which SVG does not draw: the words vanish. That is what a reviewer
+   met clicking B under "The route taken" (Alison's second review).
+
+   SVG elements do not reliably honour contenteditable themselves, so each
+   drawing is put inside an HTML block that is contenteditable="false": the
+   caret goes before it or after it, never into it, and Delete or Backspace
+   beside it takes the whole drawing (undo brings it back). The commands
+   below also refuse to run on a selection that reaches into one.
+
+   The wrapper belongs to the editor alone. It is put on every time a
+   document is loaded — so documents saved before this existed are covered —
+   and taken off again whenever the body leaves the editor (saving,
+   duplicating), so the account keeps the drawing exactly as the tree made
+   it. The server's filter would drop contenteditable anyway (api/_lib/
+   markup.js keeps div, title and data-*, nothing else of this); taking the
+   wrapper off here means nothing depends on what it keeps. */
+var FIXED='data-fixed-drawing';
+var DRAWING_TIP='The record of the route taken. It cannot be edited, only deleted as a whole: '
+  +'click just beside it and press Delete or Backspace.';
+/* Wrap each top-level drawing in root once. Safe to run again on a body that
+   is already wrapped, or that was saved with a wrapper some other way: an
+   existing wrapper is reused and only its attributes are put back. Returns
+   how many wrappers it added. */
+function fixDrawings(root){
+  var svgs=root.querySelectorAll('svg'), added=0;
+  for(var i=0;i<svgs.length;i++){
+    var s=svgs[i], p=s.parentNode;
+    if(!p||(p.closest&&p.closest('svg'))) continue;   /* an svg inside a drawing goes with it */
+    var w=p;
+    if(!(w.nodeType===1&&w.hasAttribute(FIXED))){
+      w=s.ownerDocument.createElement('div');
+      w.setAttribute(FIXED,'');
+      p.insertBefore(w,s);
+      w.appendChild(s);
+      added++;
+    }
+    w.setAttribute('contenteditable','false');
+    w.setAttribute('title',DRAWING_TIP);
+  }
+  return added;
+}
+/* The body as it should be kept: each wrapper replaced by what it holds. On
+   a copy, so the page the person is editing (and its undo history) is left
+   alone. */
+function bodyHtml(){
+  var c=document.getElementById('edBody').cloneNode(true);
+  var ws=c.querySelectorAll('['+FIXED+']');
+  for(var i=0;i<ws.length;i++){
+    var w=ws[i];
+    while(w.firstChild) w.parentNode.insertBefore(w.firstChild,w);
+    w.parentNode.removeChild(w);
+  }
+  return c.innerHTML;
+}
+function inDrawing(node){
+  var e=node&&(node.nodeType===1?node:node.parentNode);
+  return !!(e&&e.closest&&e.closest('['+FIXED+'],svg'));
+}
+/* Whether the selection starts or ends in a drawing, or spans one. A caret
+   that only sits next to a drawing does not count: formatting what is typed
+   there is ordinary editing. */
+function touchesDrawing(){
+  var sel=window.getSelection();
+  if(!sel||!sel.rangeCount) return false;
+  var ws=document.getElementById('edBody').querySelectorAll('['+FIXED+'],svg');
+  for(var r=0;r<sel.rangeCount;r++){
+    var rg=sel.getRangeAt(r);
+    if(inDrawing(rg.startContainer)||inDrawing(rg.endContainer)) return true;
+    if(rg.collapsed) continue;
+    for(var i=0;i<ws.length;i++) if(rg.intersectsNode(ws[i])) return true;
+  }
+  return false;
+}
+/* The guard every formatting command goes through: true (and a word to say
+   why) when it must not run. Nothing is changed, so nothing in the drawing
+   can be lost. */
+function refuseOnDrawing(){
+  if(!touchesDrawing()) return false;
+  ui.toast('The route drawing cannot be formatted. Select only the text above or below it.','warn');
+  return true;
+}
 function buildTools(){
   var t=document.getElementById('edTools'); t.innerHTML='';
   TOOLS.forEach(function(x){
@@ -494,6 +587,9 @@ function buildTools(){
       onclick:function(){
         var body=document.getElementById('edBody');
         body.focus();
+        /* Undo and redo are left free: they act on the history, not on the
+           selection, and undo is how a drawing deleted by mistake comes back. */
+        if(!x.history&&refuseOnDrawing()) return;
         if(x.rule) document.execCommand('insertHorizontalRule');
         else if(x.block) document.execCommand('formatBlock',false,x.block);
         else document.execCommand(x.cmd);
@@ -515,7 +611,7 @@ function touch(){
 function saveDoc(quiet){
   if(!doc) return Promise.resolve();
   clearTimeout(saveTimer);
-  var body=document.getElementById('edBody').innerHTML;
+  var body=bodyHtml();
   var title=document.getElementById('edTitle').value;
   return store.update('documents',doc.id,{title:title,bodyHtml:body,edited:true}).then(function(item){
     dirty=false; doc.title=item.title; doc.updatedAt=item.updatedAt;
@@ -538,6 +634,7 @@ function openDoc(id){
     doc=item;
     document.getElementById('edTitle').value=item.title||'';
     document.getElementById('edBody').innerHTML=item.bodyHtml||'';
+    fixDrawings(document.getElementById('edBody'));
     var m=item.meta||{};
     document.getElementById('edFoot').innerHTML=
       'Created '+esc(fmtDate(item.createdAt))+
@@ -563,8 +660,19 @@ function closeDoc(){
 document.getElementById('edBody').addEventListener('paste',function(e){
   if(!e.clipboardData) return;
   e.preventDefault();
+  /* never typed into a drawing, even by paste; a selection that spans one
+     replaces it whole, which is deleting it, and that is allowed */
+  var sel=window.getSelection();
+  if(sel&&sel.rangeCount&&(inDrawing(sel.getRangeAt(0).startContainer)||inDrawing(sel.getRangeAt(0).endContainer))) return;
   var text=e.clipboardData.getData('text/plain')||'';
   document.execCommand('insertText',false,text);
+});
+/* The browser's own formatting shortcuts go through the same guard as the
+   toolbar: ctrl+B on a selection in the drawing would do what B does. */
+document.getElementById('edBody').addEventListener('keydown',function(e){
+  if(!(e.ctrlKey||e.metaKey)||e.altKey) return;
+  var k=(e.key||'').toLowerCase();
+  if((k==='b'||k==='i'||k==='u')&&refuseOnDrawing()) e.preventDefault();
 });
 document.getElementById('edBody').addEventListener('input',touch);
 document.getElementById('edTitle').addEventListener('input',touch);
@@ -579,7 +687,7 @@ document.getElementById('edDup').addEventListener('click',function(){
   if(!doc) return;
   store.create('documents',{
     title:(doc.title||'Untitled document')+' (copy)',
-    kind:doc.kind,bodyHtml:document.getElementById('edBody').innerHTML,
+    kind:doc.kind,bodyHtml:bodyHtml(),
     runId:doc.runId,meta:doc.meta||{},edited:true
   }).then(function(item){ ui.toast('Copied.','good'); openDoc(item.id); },ui.report);
 });

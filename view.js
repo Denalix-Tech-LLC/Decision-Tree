@@ -86,12 +86,22 @@
 
      Scaling by the size of the delta makes the gesture proportional to how
      far the fingers move. Capping each event at STEP leaves a mouse notch
-     exactly where it was. deltaMode 1 is lines (Firefox), 2 is pages. */
+     exactly where it was. deltaMode 1 is lines (Firefox), 2 is pages.
+
+     Command+wheel on a Mac gets three times the rate. A pinch always arrives
+     with ctrlKey, never metaKey, so command alone is a deliberate mouse zoom —
+     and Safari reports a mouse notch as a deltaY of about 4, which at the
+     pinch rate zoomed 4% a notch and read to a reviewer as "command does
+     nothing". At 0.03 that notch is the same 12% as everywhere else (the STEP
+     cap still holds), while ctrl+wheel and the pinch are exactly as before.
+     ctrl+wheel cannot be the Mac answer: there it is the system's own screen
+     zoom, and the browser never sees it. */
   function wheelFactor(e) {
     var dy = e.deltaY || 0;
     if (e.deltaMode === 1) dy *= 16;
     else if (e.deltaMode === 2) dy *= 400;
-    var k = Math.exp(-dy * 0.01);
+    var rate = e.metaKey && !e.ctrlKey ? 0.03 : 0.01;
+    var k = Math.exp(-dy * rate);
     return Math.min(STEP, Math.max(1 / STEP, k));
   }
 

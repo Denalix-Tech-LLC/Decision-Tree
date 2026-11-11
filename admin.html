@@ -2593,8 +2593,47 @@ stage.addEventListener('pointerup',function(e){
   drag=null; stage.classList.remove('grabbing');
   try{ stage.releasePointerCapture(e.pointerId); }catch(err){}
 });
+/* Safari does not deliver a trackpad pinch as ctrl+wheel the way Chrome and
+   Firefox do. It sends its own gesturestart / gesturechange / gestureend,
+   with the pinch so far as event.scale, and with nothing listening Safari's
+   own page zoom took the pinch: the toolbar and the side panel swelled along
+   with the canvas. event.scale is cumulative from the start of the gesture,
+   so each change zooms by its ratio to the one before. While a gesture is
+   live, any ctrl+wheel events Safari also sends are the same pinch a second
+   time, and the wheel handler below leaves them alone. Other browsers never
+   fire these events, so this costs them nothing. */
+var gesture=null;
+stage.addEventListener('gesturestart',function(e){
+  e.preventDefault();
+  gesture={scale:e.scale||1,t:Date.now()};
+},{passive:false});
+stage.addEventListener('gesturechange',function(e){
+  e.preventDefault();
+  if(!gesture||!window.TASView||!e.scale) return;
+  var k=e.scale/gesture.scale;
+  gesture.scale=e.scale; gesture.t=Date.now();
+  var r=stage.getBoundingClientRect();
+  /* about the fingers, as the wheel zooms about the pointer; a GestureEvent
+     that carries no position (missing, or reported as 0,0) falls back to the
+     middle of the stage, as the reader's does */
+  var ok=isFinite(e.clientX)&&isFinite(e.clientY)&&(e.clientX||e.clientY);
+  var cx=ok?e.clientX-r.left:null, cy=ok?e.clientY-r.top:null;
+  TASView.zoom(view,r,k,cx,cy,TASView.floorFor(r,window.__box,40,0.2,0.75));
+  applyView();
+},{passive:false});
+stage.addEventListener('gestureend',function(e){
+  e.preventDefault();
+  gesture=null;
+},{passive:false});
+/* a gesture cut off by a switch of window, or by fingers lifting with the
+   pointer off the stage, may never send its gestureend, and a gesture left
+   "live" would swallow every ctrl+wheel zoom after it. Blur catches the
+   first; for the second, a gesture that has not moved in half a second no
+   longer counts as live (the same rule as the reader's gestureLive). */
+window.addEventListener('blur',function(){ gesture=null; });
 stage.addEventListener('wheel',function(e){
   e.preventDefault();
+  if(gesture&&e.ctrlKey&&Date.now()-gesture.t<500) return;
   if(e.ctrlKey||e.metaKey){
     /* This used to carry its own copy of the zoom-about-a-point arithmetic
        and its own limits, with the same fixed 12% step per event as the
